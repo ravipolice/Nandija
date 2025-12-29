@@ -20,7 +20,7 @@ const getSecretToken = (): string => {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, title, fileBase64, mimeType, category, description, userEmail, externalUrl } = body;
+    const { title, fileBase64, mimeType, category, description, userEmail, externalUrl } = body;
 
     // For Firebase uploads, externalUrl is provided instead of fileBase64
     if (!title || (!fileBase64 && !externalUrl)) {

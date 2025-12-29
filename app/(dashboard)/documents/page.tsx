@@ -138,11 +138,6 @@ export default function DocumentsPage() {
     setUploadProgress(0);
 
     try {
-      const safeName = (formData.name || uploadFileState.name)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "") || "document";
-      const extension = uploadFileState.name.split(".").pop() || "bin";
       const mimeType = uploadFileState.type || getMimeTypeFromExtension(uploadFileState.name);
 
       // Simulate upload progress up to 90% while work is in flight

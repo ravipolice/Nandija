@@ -119,9 +119,6 @@ export async function fetchDocuments(): Promise<DocumentItem[]> {
       });
     }
 
-    // Combine both sources (Firestore takes precedence for duplicates by URL)
-    const allDocs: RawApiDocument[] = [...firestoreDocs, ...apiDocs];
-    
     // Remove duplicates by URL (prefer Firestore entries)
     const uniqueDocs = new Map<string, RawApiDocument>();
     firestoreDocs.forEach(doc => {

@@ -153,3 +153,4 @@ npm run build 2>&1 | grep -i "api\|route\|documents"
 3. **Try Edge Runtime** - Change to `export const runtime = 'edge';`
 4. **Check Vercel Status** - Make sure there are no service issues
 
+

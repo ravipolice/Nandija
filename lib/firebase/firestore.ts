@@ -10,11 +10,8 @@ import {
   query,
   where,
   orderBy,
-  limit,
   Timestamp,
   QueryConstraint,
-  getDocsFromCache,
-  getDocsFromServer,
 } from "firebase/firestore";
 import { db } from "./config";
 
@@ -621,9 +618,6 @@ export const createNotification = async (
   });
 };
 
-// Documents API URL (same as mobile app)
-const DOCUMENTS_API_URL = "https://script.google.com/macros/s/AKfycby-7jOc_naI1_XDVzG1qAGvNc9w3tIU4ZwmCFGUUCLdg0_DEJh7oouF8a9iy5E93-p9zg/exec";
-
 // Documents
 export const getDocumentsList = async (): Promise<Document[]> => {
   try {
@@ -820,9 +814,6 @@ export const getDocumentsList = async (): Promise<Document[]> => {
 export const createDocument = async (data: Omit<Document, "id">): Promise<string> => {
   return createDoc<Document>("documents", data);
 };
-
-// Gallery API URL (same Apps Script as Documents)
-const GALLERY_API_URL = DOCUMENTS_API_URL; // Same script, different action
 
 // Gallery: merge Firebase (Storage metadata in Firestore) + Apps Script
 export const getGalleryImages = async (): Promise<GalleryImage[]> => {

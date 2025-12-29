@@ -133,12 +133,6 @@ export default function GalleryPage() {
 
         setUploadProgress(0);
 
-        const safeName = (formData.title || uploadFileState.name)
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "") || "image";
-        const extension = uploadFileState.name.split(".").pop() || "jpg";
-
         // Simulate upload progress to 90% while work happens
         const progressInterval = setInterval(() => {
           setUploadProgress((prev) => {

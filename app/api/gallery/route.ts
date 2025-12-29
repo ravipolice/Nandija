@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 // Force dynamic rendering (MANDATORY for Next.js 15 API routes on Vercel)
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ const GALLERY_API_URL =
   process.env.NEXT_PUBLIC_GALLERY_API ||
   "https://script.google.com/macros/s/AKfycbwXIhqfYWER3Z2KBlcrqZjyWCBfacHOeKCo_buWaZ6nG7qQpWaN91V7Y-IclzmOvG73/exec";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   // Gallery Apps Script works without action parameter (test URL confirms this)
   // The Gallery script returns data directly when called without action
   // But include action for compatibility if needed

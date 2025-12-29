@@ -39,7 +39,7 @@ export default function OfficersPage() {
     }
     return defaultOfficerColumnWidths;
   });
-  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const [_resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
   const [formData, setFormData] = useState({
     agid: "",
     rank: "",

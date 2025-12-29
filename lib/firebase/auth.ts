@@ -36,6 +36,10 @@ export const signOut = async () => {
 
 export const getCurrentUser = (): Promise<User | null> => {
   return new Promise((resolve) => {
+    if (typeof window === "undefined" || !auth) {
+      resolve(null);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
       resolve(user);

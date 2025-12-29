@@ -105,3 +105,4 @@ After adding all variables:
 - Check Firebase Console → Authentication → Authorized domains
 - Make sure Vercel domain is added
 
+

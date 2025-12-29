@@ -128,3 +128,4 @@ npm run build
 3. Check if there are any Vercel-specific configuration needed
 4. Consider using Vercel Edge Functions if needed
 
+

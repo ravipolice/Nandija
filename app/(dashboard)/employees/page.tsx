@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { getEmployees, deleteEmployee, Employee } from "@/lib/firebase/firestore";
 import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
 
 type SortField = "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "isApproved";
 type SortDirection = "asc" | "desc";

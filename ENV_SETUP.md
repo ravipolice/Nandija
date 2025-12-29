@@ -92,3 +92,4 @@ If you need to update Firebase configuration:
 - Make sure `NEXT_PUBLIC_STATIC_EXPORT=false` (or not set)
 - If set to `true`, API routes will be disabled
 
+

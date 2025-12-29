@@ -1,4 +1,27 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/gallery/delete/route": "app/api/gallery/delete/route.js",
+  "/api/documents/upload/route": "app/api/documents/upload/route.js",
+  "/api/gallery/route": "app/api/gallery/route.js",
+  "/api/gallery/upload/route": "app/api/gallery/upload/route.js",
+  "/api/test/route": "app/api/test/route.js",
+  "/api/documents/route": "app/api/documents/route.js",
+  "/api/documents/upload-firebase/route": "app/api/documents/upload-firebase/route.js",
+  "/api/gallery/upload-firebase/route": "app/api/gallery/upload-firebase/route.js",
+  "/login/page": "app/login/page.js",
+  "/(dashboard)/documents/page": "app/(dashboard)/documents/page.js",
+  "/(dashboard)/approvals/page": "app/(dashboard)/approvals/page.js",
+  "/(dashboard)/employees/edit/page": "app/(dashboard)/employees/edit/page.js",
+  "/(dashboard)/employees/page": "app/(dashboard)/employees/page.js",
+  "/(dashboard)/employees/new/page": "app/(dashboard)/employees/new/page.js",
+  "/(dashboard)/districts/page": "app/(dashboard)/districts/page.js",
+  "/(dashboard)/officers/edit/page": "app/(dashboard)/officers/edit/page.js",
   "/(dashboard)/page": "app/(dashboard)/page.js",
-  "/(dashboard)/documents/page": "app/(dashboard)/documents/page.js"
+  "/(dashboard)/ranks/page": "app/(dashboard)/ranks/page.js",
+  "/(dashboard)/gallery/page": "app/(dashboard)/gallery/page.js",
+  "/(dashboard)/officers/page": "app/(dashboard)/officers/page.js",
+  "/(dashboard)/upload/page": "app/(dashboard)/upload/page.js",
+  "/(dashboard)/links/page": "app/(dashboard)/links/page.js",
+  "/(dashboard)/stations/page": "app/(dashboard)/stations/page.js",
+  "/(dashboard)/notifications/page": "app/(dashboard)/notifications/page.js"
 }
