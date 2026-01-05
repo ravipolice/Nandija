@@ -25,54 +25,6 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/documents": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "Next-Action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/documents",
-      "dataRoute": "/documents.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/employees": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "Next-Action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/employees",
-      "dataRoute": "/employees.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/employees/new": {
       "experimentalBypassFor": [
         {
@@ -121,7 +73,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/links": {
+    "/": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -134,8 +86,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/links",
-      "dataRoute": "/links.rsc",
+      "srcRoute": "/",
+      "dataRoute": "/index.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -145,7 +97,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/gallery": {
+    "/approvals": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -158,32 +110,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/gallery",
-      "dataRoute": "/gallery.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/officers": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "Next-Action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/officers",
-      "dataRoute": "/officers.rsc",
+      "srcRoute": "/approvals",
+      "dataRoute": "/approvals.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -208,6 +136,30 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/ranks",
       "dataRoute": "/ranks.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/officers": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "Next-Action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/officers",
+      "dataRoute": "/officers.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -265,7 +217,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/districts": {
+    "/gallery": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -278,8 +230,56 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/districts",
-      "dataRoute": "/districts.rsc",
+      "srcRoute": "/gallery",
+      "dataRoute": "/gallery.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/documents": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "Next-Action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/documents",
+      "dataRoute": "/documents.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/links": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "Next-Action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/links",
+      "dataRoute": "/links.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -313,7 +313,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/approvals": {
+    "/employees": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -326,8 +326,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/approvals",
-      "dataRoute": "/approvals.rsc",
+      "srcRoute": "/employees",
+      "dataRoute": "/employees.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -337,7 +337,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/": {
+    "/districts": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -350,8 +350,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/",
-      "dataRoute": "/index.rsc",
+      "srcRoute": "/districts",
+      "dataRoute": "/districts.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -389,8 +389,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "00b7cbca1456f3876de0b51da02fb9ef",
-    "previewModeSigningKey": "2f5950a4438d6608c964e5e677965df86e37fb561f6eac9b9fe255fef0327719",
-    "previewModeEncryptionKey": "10cb0867acce92d3012f0f666490bb6836870f844f40aabc472c99f4077699d4"
+    "previewModeId": "fd426751ebdc599ac56bcbd7168fd885",
+    "previewModeSigningKey": "7e0653421214c40faed9c5dc1bd0cd8edbd200ae9d49aae0f534398d5783e982",
+    "previewModeEncryptionKey": "c91885b201e4004cc40c951e8291569c11da2b16a96ac54da6da663427d77ed5"
   }
 }
