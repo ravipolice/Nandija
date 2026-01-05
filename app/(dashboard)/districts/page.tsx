@@ -111,12 +111,12 @@ export default function DistrictsPage() {
       if (editingId) {
         await updateDistrict(editingId, {
           name: formData.name.trim(),
-          range: formData.range.trim() || undefined,
+          range: formData.range.trim() || "",
         });
       } else {
         await createDistrict({
           name: formData.name.trim(),
-          range: formData.range.trim() || undefined,
+          range: formData.range.trim() || "",
         });
       }
       handleCancel();
@@ -205,7 +205,7 @@ export default function DistrictsPage() {
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.name }}
               >
@@ -216,7 +216,7 @@ export default function DistrictsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.range }}
               >
@@ -227,7 +227,7 @@ export default function DistrictsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.status }}
               >
@@ -238,7 +238,7 @@ export default function DistrictsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.actions }}
               >
