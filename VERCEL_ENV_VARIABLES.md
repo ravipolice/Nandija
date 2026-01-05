@@ -106,3 +106,6 @@ After adding all variables:
 - Make sure Vercel domain is added
 
 
+
+
+

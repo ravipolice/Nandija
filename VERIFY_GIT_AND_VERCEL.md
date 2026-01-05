@@ -92,3 +92,6 @@ git log origin/master --oneline -5
 6. ⬜ Check environment variables (especially `NEXT_PUBLIC_STATIC_EXPORT`)
 
 
+
+
+

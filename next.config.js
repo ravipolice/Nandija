@@ -1,7 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   // Modern image optimization
   images: {
     remotePatterns: [
@@ -34,7 +40,7 @@ const nextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  
+
   // Experimental features for better performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns'],

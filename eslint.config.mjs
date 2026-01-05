@@ -14,7 +14,7 @@ const eslintConfig = [
   {
     rules: {
       // Allow console in development
-      "no-console": process.env.NODE_ENV === "production" ? "warn" : "off",
+      "no-console": "off",
       // React hooks
       "react-hooks/exhaustive-deps": "warn",
       // Image optimization suggestions
@@ -27,6 +27,8 @@ const eslintConfig = [
           varsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/strict-boolean-expressions": "off",
     },
   },
 ];

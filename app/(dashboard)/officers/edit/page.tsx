@@ -140,9 +140,10 @@ export default function EditOfficerPage() {
       return;
     }
 
-    // Validate mobile number format
-    if (formData.mobile && formData.mobile.length !== 10) {
-      alert("Mobile number must be 10 digits");
+    // Validate mobile number format - allow "NM" or 10 digits
+    const mobileUpper = formData.mobile.trim().toUpperCase();
+    if (mobileUpper && mobileUpper !== "NM" && mobileUpper.length !== 10) {
+      alert("Mobile number must be 10 digits or 'NM' if not provided");
       return;
     }
 
@@ -153,7 +154,7 @@ export default function EditOfficerPage() {
         agid: formData.agid.trim() || undefined,
         rank: formData.rank.trim(),
         name: formData.name.trim(),
-        mobile: formData.mobile.trim(),
+        mobile: formData.mobile.trim().toUpperCase() || undefined,
         email: formData.email.trim() || undefined,
         landline: formData.landline.trim() || undefined,
         district: formData.district,
@@ -231,11 +232,12 @@ export default function EditOfficerPage() {
               Mobile *
             </label>
             <input
-              type="tel"
+              type="text"
               required
               value={formData.mobile}
               onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              placeholder="Enter 10 digits or 'NM' if not provided"
             />
           </div>
 

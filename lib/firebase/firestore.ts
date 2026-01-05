@@ -351,14 +351,22 @@ export const deleteEmployee = async (id: string): Promise<void> => {
 export const getOfficers = async (): Promise<Officer[]> => {
   const officers = await getDocuments<Officer>("officers", [orderBy("name")]);
   // Map cfd field to agid if cfd exists and agid doesn't
+  // Map station field to office for backward compatibility
   return officers.map(officer => ({
     ...officer,
     agid: officer.agid || officer.cfd || undefined,
+    office: (officer as any).station || officer.office,
   }));
 };
 
 export const getOfficer = async (id: string): Promise<Officer | null> => {
-  return getDocument<Officer>("officers", id);
+  const officer = await getDocument<Officer>("officers", id);
+  if (!officer) return null;
+  // Map station field to office for backward compatibility
+  return {
+    ...officer,
+    office: (officer as any).station || officer.office,
+  };
 };
 
 export const createOfficer = async (data: Omit<Officer, "id">): Promise<string> => {
