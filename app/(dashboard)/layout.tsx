@@ -35,13 +35,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-dark relative">
+    <div className="flex h-screen overflow-hidden bg-gradient-dark">
       <Sidebar />
       <main className="flex-1 overflow-y-auto bg-gradient-dark">
         {children}
-        <div className="fixed bottom-2 right-4 text-xs text-slate-500 opacity-50 pointer-events-none">
-          v2.2-PagesAPI
-        </div>
+
       </main>
     </div>
   );
