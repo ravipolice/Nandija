@@ -9,7 +9,7 @@
     "dev": "npm-run-all --parallel dev:server dev:browser",
     "dev:server": "next dev",
     "dev:browser": "node scripts/open-browser.js",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
