@@ -23,6 +23,7 @@ export default function NewEmployeePage() {
     metalNumber: "",
     district: "",
     station: "",
+    unit: "",
     bloodGroup: "",
     photoUrl: "",
     isAdmin: false,
@@ -86,8 +87,8 @@ export default function NewEmployeePage() {
   };
 
   const getSelectedRank = (rankName: string): Rank | undefined => {
-    return ranks.find(r => 
-      r.equivalent_rank === rankName || 
+    return ranks.find(r =>
+      r.equivalent_rank === rankName ||
       r.aliases?.includes(rankName) ||
       r.rank_id === rankName
     );
@@ -100,7 +101,7 @@ export default function NewEmployeePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate metal number for ranks that require it
     if (
       formData.rank &&
@@ -319,6 +320,20 @@ export default function NewEmployeePage() {
             </select>
           </div>
 
+          {/* Row 9b: Unit */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Unit (Optional)
+            </label>
+            <input
+              type="text"
+              value={formData.unit}
+              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              placeholder="e.g. Traffic, Crime"
+            />
+          </div>
+
           {/* Row 10: Blood Group */}
           <div>
             <label className="block text-sm font-medium text-slate-400">
@@ -326,16 +341,16 @@ export default function NewEmployeePage() {
             </label>
             <select
               value={formData.bloodGroup}
-                onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              >
-                <option value="">Select Blood Group</option>
-                {BLOOD_GROUPS.map((bg) => (
-                  <option key={bg} value={bg}>
-                    {bg}
-                  </option>
-                ))}
-              </select>
+              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Blood Group</option>
+              {BLOOD_GROUPS.map((bg) => (
+                <option key={bg} value={bg}>
+                  {bg}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Row 11: Photo URL */}

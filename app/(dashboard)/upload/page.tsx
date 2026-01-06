@@ -19,6 +19,7 @@ interface EmployeeCSVRow {
   photoUrl?: string;
   isAdmin?: string;
   isApproved?: string;
+  unit?: string;
 }
 
 interface OfficerCSVRow {
@@ -31,6 +32,7 @@ interface OfficerCSVRow {
   district: string;
   email?: string;
   photoUrl?: string;
+  unit?: string;
 }
 
 type UploadType = "employee" | "officer";
@@ -73,6 +75,7 @@ export default function UploadPage() {
           photoUrl: row.photoUrl?.trim() || "",
           isAdmin: row.isAdmin?.toLowerCase() === "true",
           isApproved: row.isApproved?.toLowerCase() !== "false",
+          unit: row.unit?.trim() || "",
         });
 
         success++;
@@ -108,6 +111,7 @@ export default function UploadPage() {
           email: row.email?.trim() || undefined,
           district: row.district.trim(),
           office: row.station.trim(), // Using station as office for officers
+          unit: row.unit?.trim() || "",
         });
 
         success++;
@@ -305,7 +309,7 @@ export default function UploadPage() {
               </p>
               <p className="text-sm text-gray-600">
                 Optional columns: email, mobile2, rank, metalNumber, bloodGroup,
-                photoUrl, isAdmin, isApproved
+                photoUrl, isAdmin, isApproved, unit
               </p>
             </>
           ) : (
@@ -318,7 +322,7 @@ export default function UploadPage() {
                 <code className="rounded bg-white px-1">station</code>
               </p>
               <p className="text-sm text-gray-600">
-                Optional columns: landline, rank, email, photoUrl
+                Optional columns: landline, rank, email, photoUrl, unit
               </p>
               <div className="mt-3 rounded bg-blue-50 p-3 text-xs text-blue-800">
                 <strong>Note:</strong> The <code>station</code> column will be saved as the officer&apos;s <code>office</code> field.

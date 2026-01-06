@@ -36,6 +36,7 @@ export default function EditEmployeePage() {
     metalNumber: "",
     district: "",
     station: "",
+    unit: "",
     bloodGroup: "",
     photoUrl: "",
     isAdmin: false,
@@ -45,7 +46,7 @@ export default function EditEmployeePage() {
   useEffect(() => {
     // Mark as mounted (client-side only)
     setMounted(true);
-    
+
     // Get ID from URL query parameter
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id") || "";
@@ -114,6 +115,7 @@ export default function EditEmployeePage() {
 
       // Preserve exact values as they are stored in the database
       const employeeStation = employee.station ?? "";
+      const employeeUnit = employee.unit ?? "";
       const employeeDistrict = employee.district ?? "";
       const employeeBloodGroup = employee.bloodGroup ?? "";
 
@@ -121,23 +123,23 @@ export default function EditEmployeePage() {
       if (employeeDistrict) {
         // Load stations for the district before setting form data
         const districtStations = await getStations(employeeDistrict);
-        
+
         // Normalize station names for comparison (trim and case-insensitive)
         const normalizedEmployeeStation = employeeStation.trim();
-        const stationExists = districtStations.some(s => 
+        const stationExists = districtStations.some(s =>
           s.name.trim().toLowerCase() === normalizedEmployeeStation.toLowerCase()
         );
-        
+
         // If the employee's station doesn't exist in the stations list, add it
         // This ensures the station value is always displayed, even if it was removed from the list
         if (normalizedEmployeeStation && !stationExists) {
-          districtStations.push({ 
-            id: "current", 
+          districtStations.push({
+            id: "current",
             name: normalizedEmployeeStation,
-            district: employeeDistrict 
+            district: employeeDistrict
           });
         }
-        
+
         // Set stations first, then set selectedDistrict
         setStations(districtStations);
         setSelectedDistrict(employeeDistrict);
@@ -155,6 +157,7 @@ export default function EditEmployeePage() {
         metalNumber: employee.metalNumber ?? "",
         district: employeeDistrict,
         station: employeeStation,
+        unit: employeeUnit,
         bloodGroup: employeeBloodGroup, // Preserve "??" exactly as stored
         photoUrl: employee.photoUrl ?? "",
         isAdmin: employee.isAdmin ?? false,
@@ -188,8 +191,8 @@ export default function EditEmployeePage() {
   };
 
   const getSelectedRank = (rankName: string): Rank | undefined => {
-    return ranks.find(r => 
-      r.equivalent_rank === rankName || 
+    return ranks.find(r =>
+      r.equivalent_rank === rankName ||
       r.aliases?.includes(rankName) ||
       r.rank_id === rankName
     );
@@ -386,19 +389,17 @@ export default function EditEmployeePage() {
                     onChange={(e) =>
                       setFormData({ ...formData, metalNumber: e.target.value })
                     }
-                    className={`mt-1 block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 ${
-                      formData.metalNumber?.trim()
+                    className={`mt-1 block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 ${formData.metalNumber?.trim()
                         ? "border-dark-border focus:border-primary-400 focus:ring-primary-400/50"
                         : "border-amber-300 focus:border-amber-500 focus:ring-amber-500"
-                    }`}
+                      }`}
                   />
-                  <p className={`mt-1 text-xs font-medium ${
-                    formData.metalNumber?.trim()
+                  <p className={`mt-1 text-xs font-medium ${formData.metalNumber?.trim()
                       ? "text-slate-500"
                       : "text-amber-600"
-                  }`}>
-                    {formData.metalNumber?.trim() 
-                      ? "✓ Metal number provided" 
+                    }`}>
+                    {formData.metalNumber?.trim()
+                      ? "✓ Metal number provided"
                       : "⚠ Required for this rank"}
                   </p>
                 </div>
@@ -453,6 +454,19 @@ export default function EditEmployeePage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                Unit (Optional)
+              </label>
+              <input
+                type="text"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                placeholder="e.g. Traffic, Crime"
+              />
             </div>
 
             <div>

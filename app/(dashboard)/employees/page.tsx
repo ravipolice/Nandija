@@ -5,10 +5,10 @@ import { getEmployees, deleteEmployee, Employee } from "@/lib/firebase/firestore
 import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
-type SortField = "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "isApproved";
+type SortField = "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "unit" | "isApproved";
 type SortDirection = "asc" | "desc";
 
-type ColumnKey = "photo" | "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "status" | "actions";
+type ColumnKey = "photo" | "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "unit" | "status" | "actions";
 
 const defaultColumnWidths: Record<ColumnKey, number> = {
   photo: 80,
@@ -21,6 +21,7 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
   bloodGroup: 120,
   district: 150,
   station: 150,
+  unit: 100,
   status: 100,
   actions: 100,
 };
@@ -115,7 +116,9 @@ export default function EmployeesPage() {
         emp.displayRank?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.bloodGroup?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.station.toLowerCase().includes(searchTerm.toLowerCase())
+        emp.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.station.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.unit?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       let aValue: string | number | boolean = "";
@@ -157,6 +160,10 @@ export default function EmployeesPage() {
         case "station":
           aValue = a.station || "";
           bValue = b.station || "";
+          break;
+        case "unit":
+          aValue = a.unit || "";
+          bValue = b.unit || "";
           break;
         case "isApproved":
           aValue = a.isApproved ? 1 : 0;
@@ -211,7 +218,7 @@ export default function EmployeesPage() {
         <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.photo }}
               >
@@ -222,7 +229,7 @@ export default function EmployeesPage() {
                   style={{ cursor: resizingColumn === "photo" ? "col-resize" : "col-resize" }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("kgid")}
                 style={{ width: columnWidths.kgid }}
@@ -241,7 +248,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("name")}
                 style={{ width: columnWidths.name }}
@@ -260,7 +267,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("rank")}
                 style={{ width: columnWidths.rank }}
@@ -279,7 +286,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("email")}
                 style={{ width: columnWidths.email }}
@@ -298,7 +305,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("mobile1")}
                 style={{ width: columnWidths.mobile1 }}
@@ -317,7 +324,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("mobile2")}
                 style={{ width: columnWidths.mobile2 }}
@@ -336,7 +343,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("bloodGroup")}
                 style={{ width: columnWidths.bloodGroup }}
@@ -355,7 +362,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("district")}
                 style={{ width: columnWidths.district }}
@@ -374,7 +381,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("station")}
                 style={{ width: columnWidths.station }}
@@ -393,7 +400,26 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
+                onClick={() => handleSort("unit")}
+                style={{ width: columnWidths.unit }}
+              >
+                <div className="flex items-center gap-1">
+                  Unit
+                  {sortField === "unit" && (
+                    sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
+                <div
+                  className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-purple-500 bg-transparent"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDown(e, "unit");
+                  }}
+                />
+              </th>
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("isApproved")}
                 style={{ width: columnWidths.status }}
@@ -412,7 +438,7 @@ export default function EmployeesPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 relative"
                 style={{ width: columnWidths.actions }}
               >
@@ -441,28 +467,28 @@ export default function EmployeesPage() {
                           if (!img.dataset.failed) {
                             img.dataset.failed = "1";
                             const photoUrl = employee.photoUrl || employee.photoUrlFromGoogle || "";
-                            
+
                             // Try to extract file ID from Google Drive URL
                             let fileId: string | null = null;
-                            
+
                             // Pattern 1: lh3.googleusercontent.com/d/FILE_ID
                             if (photoUrl.includes("lh3.googleusercontent.com")) {
                               const cdnMatch = photoUrl.match(/\/d\/([-\w]{25,})/);
                               if (cdnMatch) fileId = cdnMatch[1];
                             }
-                            
+
                             // Pattern 2: drive.google.com/uc?id=FILE_ID or /uc?export=view&id=FILE_ID
                             if (!fileId && photoUrl.includes("drive.google.com")) {
                               const driveMatch = photoUrl.match(/[?&]id=([-\w]{25,})/);
                               if (driveMatch) fileId = driveMatch[1];
                             }
-                            
+
                             // Pattern 3: /file/d/FILE_ID/
                             if (!fileId && photoUrl.includes("/file/d/")) {
                               const fileMatch = photoUrl.match(/\/file\/d\/([-\w]{25,})/);
                               if (fileMatch) fileId = fileMatch[1];
                             }
-                            
+
                             // Try fallback URLs if we have a file ID
                             if (fileId) {
                               if (!img.dataset.retried) {
@@ -477,7 +503,7 @@ export default function EmployeesPage() {
                                 return;
                               }
                             }
-                            
+
                             // Final fallback: placeholder with initial
                             img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Ccircle cx='24' cy='24' r='24' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='18' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3E" + (employee.name.charAt(0).toUpperCase() || "?") + "%3C/text%3E%3C/svg%3E";
                           }
@@ -517,13 +543,15 @@ export default function EmployeesPage() {
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.station }}>
                   {employee.station}
                 </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.unit }}>
+                  {employee.unit || "N/A"}
+                </td>
                 <td className="whitespace-nowrap px-6 py-4">
                   <span
-                    className={`inline-flex rounded-full px-2 text-xs font-semibold ${
-                      employee.isApproved
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
+                    className={`inline-flex rounded-full px-2 text-xs font-semibold ${employee.isApproved
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
+                      }`}
                   >
                     {employee.isApproved ? "Approved" : "Pending"}
                   </span>

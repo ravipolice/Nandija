@@ -6,9 +6,9 @@ import { Plus, Trash2, Edit, ChevronUp, ChevronDown } from "lucide-react";
 import { getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
 import Link from "next/link";
 
-type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office";
+type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
 type SortDirection = "asc" | "desc";
-type ColumnKey = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "actions";
+type ColumnKey = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit" | "actions";
 
 const defaultOfficerColumnWidths: Record<ColumnKey, number> = {
   rank: 100,
@@ -19,6 +19,7 @@ const defaultOfficerColumnWidths: Record<ColumnKey, number> = {
   landline: 120,
   district: 150,
   office: 150,
+  unit: 100,
   actions: 100,
 };
 
@@ -49,6 +50,7 @@ export default function OfficersPage() {
     landline: "",
     district: "",
     office: "",
+    unit: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -184,7 +186,13 @@ export default function OfficersPage() {
         break;
       case "office":
         aValue = a.office || "";
+      case "office":
+        aValue = a.office || "";
         bValue = b.office || "";
+        break;
+      case "unit":
+        aValue = a.unit || "";
+        bValue = b.unit || "";
         break;
     }
 
@@ -194,14 +202,14 @@ export default function OfficersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate mobile number format - allow "NM" or 10 digits
     const mobileUpper = formData.mobile.trim().toUpperCase();
     if (mobileUpper && mobileUpper !== "NM" && mobileUpper.length !== 10) {
       alert("Mobile number must be 10 digits or 'NM' if not provided");
       return;
     }
-    
+
     setSubmitting(true);
 
     try {
@@ -214,6 +222,7 @@ export default function OfficersPage() {
         landline: formData.landline.trim() || undefined,
         district: formData.district,
         office: formData.office.trim() || undefined,
+        unit: formData.unit.trim() || undefined,
       });
       setFormData({
         agid: "",
@@ -224,6 +233,7 @@ export default function OfficersPage() {
         landline: "",
         district: "",
         office: "",
+        unit: "",
       });
       setSelectedDistrict("");
       setStations([]);
@@ -343,7 +353,7 @@ export default function OfficersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  District * 
+                  District *
                 </label>
                 <select
                   required
@@ -380,6 +390,18 @@ export default function OfficersPage() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400">
+                  Unit (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                  placeholder="e.g. Traffic, Crime"
+                />
+              </div>
             </div>
             <div className="mt-4 flex gap-4">
               <button
@@ -402,6 +424,7 @@ export default function OfficersPage() {
                     landline: "",
                     district: "",
                     office: "",
+                    unit: "",
                   });
                   setSelectedDistrict("");
                   setStations([]);
@@ -419,7 +442,7 @@ export default function OfficersPage() {
         <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("agid")}
                 style={{ width: columnWidths.agid }}
@@ -438,7 +461,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("rank")}
                 style={{ width: columnWidths.rank }}
@@ -457,7 +480,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("name")}
                 style={{ width: columnWidths.name }}
@@ -476,7 +499,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("mobile")}
                 style={{ width: columnWidths.mobile }}
@@ -495,7 +518,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("email")}
                 style={{ width: columnWidths.email }}
@@ -514,7 +537,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("landline")}
                 style={{ width: columnWidths.landline }}
@@ -533,7 +556,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("district")}
                 style={{ width: columnWidths.district }}
@@ -552,7 +575,7 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
                 onClick={() => handleSort("office")}
                 style={{ width: columnWidths.office }}
@@ -571,7 +594,26 @@ export default function OfficersPage() {
                   }}
                 />
               </th>
-              <th 
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
+                onClick={() => handleSort("unit")}
+                style={{ width: columnWidths.unit }}
+              >
+                <div className="flex items-center gap-1">
+                  Unit
+                  {sortField === "unit" && (
+                    sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
+                <div
+                  className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary-500 bg-transparent"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDown(e, "unit");
+                  }}
+                />
+              </th>
+              <th
                 className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.actions }}
               >
@@ -609,6 +651,9 @@ export default function OfficersPage() {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.office }}>
                   {officer.office || "N/A"}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.unit }}>
+                  {officer.unit || "N/A"}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
