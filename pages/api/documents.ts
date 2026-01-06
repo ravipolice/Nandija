@@ -27,13 +27,7 @@ export const config = {
     },
 };
 
-// Configure the API route
-export const config = {
-    maxDuration: 60, // 60 seconds (max for Hobby plan)
-    api: {
-        externalResolver: true,
-    },
-};
+
 
 export default async function handler(
     req: NextApiRequest,
