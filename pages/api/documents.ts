@@ -27,6 +27,14 @@ export const config = {
     },
 };
 
+// Configure the API route
+export const config = {
+    maxDuration: 60, // 60 seconds (max for Hobby plan)
+    api: {
+        externalResolver: true,
+    },
+};
+
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -51,8 +59,8 @@ export default async function handler(
             console.log("📄 Pages API: Fetching documents...");
 
             const url = `${DOCUMENTS_API_URL}?action=${DOCUMENTS_GET_ACTION}${token && token !== "CHANGE_THIS_IN_PRODUCTION"
-                    ? `&token=${encodeURIComponent(token)}`
-                    : ""
+                ? `&token=${encodeURIComponent(token)}`
+                : ""
                 }`;
 
             const response = await fetch(url, {
