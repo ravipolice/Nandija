@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOfficers, createOfficer, deleteOfficer, Officer, getRanks, Rank } from "@/lib/firebase/firestore";
+import { getOfficers, createOfficer, deleteOfficer, Officer, getRanks, Rank, getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
+import { UNITS } from "@/lib/constants";
+import { serverTimestamp } from "firebase/firestore";
 import { Plus, Trash2, Edit, ChevronUp, ChevronDown } from "lucide-react";
-import { getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
 import Link from "next/link";
 
 type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
@@ -41,13 +42,16 @@ export default function OfficersPage() {
     return defaultOfficerColumnWidths;
   });
   const [_resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+
   const [formData, setFormData] = useState({
     agid: "",
     rank: "",
     name: "",
     mobile: "",
+    mobile2: "",
     email: "",
     landline: "",
+    landline2: "",
     district: "",
     office: "",
     unit: "",
@@ -203,10 +207,10 @@ export default function OfficersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate mobile number format - allow "NM" or 10 digits
+    // Validate mobile number format - allow "NM" or 10 digits if provided
     const mobileUpper = formData.mobile.trim().toUpperCase();
     if (mobileUpper && mobileUpper !== "NM" && mobileUpper.length !== 10) {
-      alert("Mobile number must be 10 digits or 'NM' if not provided");
+      alert("Mobile number must be 10 digits or 'NM' if provided");
       return;
     }
 
@@ -229,8 +233,10 @@ export default function OfficersPage() {
         rank: "",
         name: "",
         mobile: "",
+        mobile2: "",
         email: "",
         landline: "",
+        landline2: "",
         district: "",
         office: "",
         unit: "",
@@ -258,7 +264,12 @@ export default function OfficersPage() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-100">Officers</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold text-slate-100">Officers</h1>
+          <span className="rounded-full bg-dark-sidebar px-3 py-1 text-sm font-medium text-primary-400 border border-dark-border">
+            Total: {officers.length}
+          </span>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700"
@@ -317,15 +328,14 @@ export default function OfficersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  Mobile *
+                  Mobile
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.mobile}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                  placeholder="Enter 10 digits or 'NM' if not provided"
+                  placeholder="Enter 10 digits or 'NM'"
                 />
               </div>
               <div>
@@ -394,13 +404,18 @@ export default function OfficersPage() {
                 <label className="block text-sm font-medium text-slate-400">
                   Unit (Optional)
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                  placeholder="e.g. Traffic, Crime"
-                />
+                >
+                  <option value="">Select Unit (Optional)</option>
+                  {UNITS.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="mt-4 flex gap-4">
@@ -420,8 +435,10 @@ export default function OfficersPage() {
                     rank: "",
                     name: "",
                     mobile: "",
+                    mobile2: "",
                     email: "",
                     landline: "",
+                    landline2: "",
                     district: "",
                     office: "",
                     unit: "",

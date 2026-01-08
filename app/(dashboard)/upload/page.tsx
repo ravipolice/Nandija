@@ -20,6 +20,8 @@ interface EmployeeCSVRow {
   isAdmin?: string;
   isApproved?: string;
   unit?: string;
+  landline?: string;
+  landline2?: string;
 }
 
 interface OfficerCSVRow {
@@ -33,6 +35,8 @@ interface OfficerCSVRow {
   email?: string;
   photoUrl?: string;
   unit?: string;
+  mobile2?: string;
+  landline2?: string;
 }
 
 type UploadType = "employee" | "officer";
@@ -55,9 +59,15 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        if (!row.kgid || !row.name || !row.mobile1 || !row.district || !row.station) {
+        const missingFields = [];
+        if (!row.kgid) missingFields.push("kgid");
+        if (!row.name) missingFields.push("name");
+        if (!row.district) missingFields.push("district");
+        if (!row.station) missingFields.push("station");
+
+        if (missingFields.length > 0) {
           failed++;
-          errors.push(`Row ${i + 2}: Missing required fields (kgid, name, mobile1, district, station)`);
+          errors.push(`Row ${i + 2}: Missing required fields: ${missingFields.join(", ")}`);
           continue;
         }
 
@@ -76,6 +86,8 @@ export default function UploadPage() {
           isAdmin: row.isAdmin?.toLowerCase() === "true",
           isApproved: row.isApproved?.toLowerCase() !== "false",
           unit: row.unit?.trim() || "",
+          landline: row.landline?.trim() || "",
+          landline2: row.landline2?.trim() || "",
         });
 
         success++;
@@ -98,20 +110,30 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        if (!row.agid || !row.name || !row.mobile || !row.district || !row.station) {
+        const missingFields = [];
+        if (!row.agid) missingFields.push("agid");
+        if (!row.name) missingFields.push("name");
+        if (!row.district) missingFields.push("district");
+        // Station/Office is optional for officers
+
+        if (missingFields.length > 0) {
           failed++;
-          errors.push(`Row ${i + 2}: Missing required fields (agid, name, mobile, district, station)`);
+          errors.push(`Row ${i + 2}: Missing required fields: ${missingFields.join(", ")}`);
           continue;
         }
 
         await createOfficer({
+          agid: row.agid.trim(), // Correctly passing agid
           rank: row.rank?.trim() || "",
           name: row.name.trim(),
           mobile: row.mobile.trim(),
-          email: row.email?.trim() || undefined,
+          email: row.email?.trim() || "",
           district: row.district.trim(),
-          office: row.station.trim(), // Using station as office for officers
+          office: row.station.trim(),
           unit: row.unit?.trim() || "",
+          mobile2: row.mobile2?.trim() || "",
+          landline: row.landline?.trim() || "",
+          landline2: row.landline2?.trim() || "",
         });
 
         success++;
@@ -139,14 +161,90 @@ export default function UploadPage() {
       skipEmptyLines: true,
       complete: async (parseResults) => {
         try {
+          console.log("Parsed CSV Data:", parseResults.data[0]); // Debug log
+          console.log("Parsed CSV Meta:", parseResults.meta); // Debug log
           let uploadResults;
-          
+
+          // Helper to normalize keys (lowercase, trim, strip BOM) and filter empty rows
+          const normalizeData = (data: any[]) => {
+            if (!data || data.length === 0) return [];
+
+            // Get headers from first row to create a mapping
+            const firstRow = data[0];
+            const headerMap: Record<string, string> = {};
+
+            Object.keys(firstRow).forEach(key => {
+              // Remove BOM, trim, lower case
+              // eslint-disable-next-line no-control-regex
+              let cleanKey = key.replace(/^\ufeff/, '').trim().toLowerCase();
+              // Handle potential double quotes in headers
+              cleanKey = cleanKey.replace(/^"|"$/g, '');
+              headerMap[key] = cleanKey;
+            });
+
+            console.log("Header Mapping:", headerMap); // Debug log
+
+            return data.map((row) => {
+              const normalized: any = {};
+              Object.keys(row).forEach(key => {
+                const cleanKey = headerMap[key];
+                if (cleanKey) {
+                  normalized[cleanKey] = row[key]?.trim() || "";
+                }
+              });
+              return normalized;
+            }).filter(row => Object.values(row).some(val => val !== "")); // Filter completely empty rows
+          };
+
           if (uploadType === "employee") {
-            const rows = parseResults.data as EmployeeCSVRow[];
-            uploadResults = await handleEmployeeUpload(rows);
+            const rawData = parseResults.data as any[];
+            const normalizedData = normalizeData(rawData);
+            // Remap keys to match interface if needed, or rely on lowercase check in handleEmployeeUpload
+            // Since our interfaces use specific casing (e.g. photoUrl), we might need to map back or adjust handle functions.
+            // Let's adjust handle functions to be robust or map here.
+
+            // Map with aliases
+            const mappedRows = normalizedData.map((row: any) => ({
+              kgid: row.kgid || row.kgid_no || row.id || "",
+              name: row.name || row.employee_name || row.emp_name || "",
+              email: row.email || row.email_id || "",
+              mobile1: row.mobile1 || row.mobile || row.phone || row.phone_number || "",
+              mobile2: row.mobile2 || row.alt_mobile || "",
+              rank: row.rank || row.designation || "",
+              metalNumber: row.metalnumber || row.metal_number || row.badge_number || "",
+              district: row.district || row.place || row.unit_name || "",
+              station: row.station || row.police_station || row.ps || "",
+              bloodGroup: row.bloodgroup || row.blood_group || "",
+              photoUrl: row.photourl || row.photo_url || row.photo || "",
+              isAdmin: row.isadmin || "false",
+              isApproved: row.isapproved || "true",
+              unit: row.unit || "",
+              landline: row.landline || "",
+              landline2: row.landline2 || "",
+            })) as EmployeeCSVRow[];
+
+            uploadResults = await handleEmployeeUpload(mappedRows);
           } else {
-            const rows = parseResults.data as OfficerCSVRow[];
-            uploadResults = await handleOfficerUpload(rows);
+            const rawData = parseResults.data as any[];
+            const normalizedData = normalizeData(rawData);
+
+            // Map with aliases
+            const mappedRows = normalizedData.map((row: any) => ({
+              agid: row.agid || row.id || row.officer_id || "",
+              name: row.name || row.officer_name || "",
+              mobile: row.mobile || row.mobile_number || row.phone || "",
+              landline: row.landline || row.landline_number || "",
+              rank: row.rank || row.designation || "",
+              station: row.station || row.office || row.place || "",
+              district: row.district || "",
+              email: row.email || row.email_id || "",
+              photoUrl: row.photourl || row.photo_url || row.photo || "",
+              unit: row.unit || "",
+              mobile2: row.mobile2 || row.alt_mobile || "",
+              landline2: row.landline2 || "",
+            })) as OfficerCSVRow[];
+
+            uploadResults = await handleOfficerUpload(mappedRows);
           }
 
           setResults(uploadResults);
@@ -176,22 +274,20 @@ export default function UploadPage() {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setUploadType("employee")}
-          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-            uploadType === "employee"
-              ? "bg-primary-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
+          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${uploadType === "employee"
+            ? "bg-primary-600 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
         >
           <Users className="h-5 w-5" />
           Upload Employees
         </button>
         <button
           onClick={() => setUploadType("officer")}
-          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${
-            uploadType === "officer"
-              ? "bg-primary-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
+          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${uploadType === "officer"
+            ? "bg-primary-600 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
         >
           <Shield className="h-5 w-5" />
           Upload Officers
@@ -303,13 +399,12 @@ export default function UploadPage() {
               <p className="mb-2 text-sm text-gray-600">
                 Required columns: <code className="rounded bg-white px-1">kgid</code>,{" "}
                 <code className="rounded bg-white px-1">name</code>,{" "}
-                <code className="rounded bg-white px-1">mobile1</code>,{" "}
                 <code className="rounded bg-white px-1">district</code>,{" "}
                 <code className="rounded bg-white px-1">station</code>
               </p>
               <p className="text-sm text-gray-600">
-                Optional columns: email, mobile2, rank, metalNumber, bloodGroup,
-                photoUrl, isAdmin, isApproved, unit
+                Optional columns: email, mobile1, mobile2, rank, metalNumber, bloodGroup,
+                photoUrl, isAdmin, isApproved, unit, landline, landline2
               </p>
             </>
           ) : (
@@ -317,12 +412,11 @@ export default function UploadPage() {
               <p className="mb-2 text-sm text-gray-600">
                 Required columns: <code className="rounded bg-white px-1">agid</code>,{" "}
                 <code className="rounded bg-white px-1">name</code>,{" "}
-                <code className="rounded bg-white px-1">mobile</code>,{" "}
                 <code className="rounded bg-white px-1">district</code>,{" "}
                 <code className="rounded bg-white px-1">station</code>
               </p>
               <p className="text-sm text-gray-600">
-                Optional columns: landline, rank, email, photoUrl, unit
+                Optional columns: mobile, landline, rank, email, photoUrl, unit, mobile2, landline2
               </p>
               <div className="mt-3 rounded bg-blue-50 p-3 text-xs text-blue-800">
                 <strong>Note:</strong> The <code>station</code> column will be saved as the officer&apos;s <code>office</code> field.

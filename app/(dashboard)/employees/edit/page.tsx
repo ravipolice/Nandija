@@ -12,7 +12,7 @@ import {
   Station,
   Rank,
 } from "@/lib/firebase/firestore";
-import { BLOOD_GROUPS } from "@/lib/constants";
+import { BLOOD_GROUPS, UNITS } from "@/lib/constants";
 
 export default function EditEmployeePage() {
   const router = useRouter();
@@ -153,6 +153,8 @@ export default function EditEmployeePage() {
         email: employee.email ?? "",
         mobile1: employee.mobile1 ?? "",
         mobile2: employee.mobile2 ?? "",
+        landline: employee.landline ?? "",
+        landline2: employee.landline2 ?? "",
         rank: employee.rank ?? "",
         metalNumber: employee.metalNumber ?? "",
         district: employeeDistrict,
@@ -239,7 +241,13 @@ export default function EditEmployeePage() {
     setSaving(true);
 
     try {
-      await updateEmployee(employeeId, formData);
+      await updateEmployee(employeeId, {
+        ...formData,
+        mobile2: formData.mobile2,
+        landline: formData.landline,
+        landline2: formData.landline2,
+        unit: formData.unit,
+      });
       router.push("/employees");
     } catch (error) {
       console.error("Error updating employee:", error);
@@ -327,6 +335,34 @@ export default function EditEmployeePage() {
             />
           </div>
 
+          {/* Row 4b: Landline */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Landline (Optional)
+            </label>
+            <input
+              type="tel"
+              value={formData.landline}
+              onChange={(e) => setFormData({ ...formData, landline: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              placeholder="e.g. 080-12345678"
+            />
+          </div>
+
+          {/* Row 4c: Landline 2 */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Landline 2 (Optional)
+            </label>
+            <input
+              type="tel"
+              value={formData.landline2}
+              onChange={(e) => setFormData({ ...formData, landline2: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              placeholder="Alternate landline"
+            />
+          </div>
+
           {/* Row 5: KGID, Rank, Metal Number (all in same row) */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
@@ -390,13 +426,13 @@ export default function EditEmployeePage() {
                       setFormData({ ...formData, metalNumber: e.target.value })
                     }
                     className={`mt-1 block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 ${formData.metalNumber?.trim()
-                        ? "border-dark-border focus:border-primary-400 focus:ring-primary-400/50"
-                        : "border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                      ? "border-dark-border focus:border-primary-400 focus:ring-primary-400/50"
+                      : "border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                       }`}
                   />
                   <p className={`mt-1 text-xs font-medium ${formData.metalNumber?.trim()
-                      ? "text-slate-500"
-                      : "text-amber-600"
+                    ? "text-slate-500"
+                    : "text-amber-600"
                     }`}>
                     {formData.metalNumber?.trim()
                       ? "✓ Metal number provided"
@@ -456,17 +492,23 @@ export default function EditEmployeePage() {
               </select>
             </div>
 
+            {/* Row 9b: Unit */}
             <div>
               <label className="block text-sm font-medium text-slate-400">
                 Unit (Optional)
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                placeholder="e.g. Traffic, Crime"
-              />
+              >
+                <option value="">Select Unit (Optional)</option>
+                {UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

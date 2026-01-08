@@ -12,6 +12,7 @@ import {
   Station,
   Rank,
 } from "@/lib/firebase/firestore";
+import { UNITS } from "@/lib/constants";
 
 export default function EditOfficerPage() {
   const router = useRouter();
@@ -30,10 +31,13 @@ export default function EditOfficerPage() {
     rank: "",
     name: "",
     mobile: "",
+    mobile2: "",
     email: "",
     landline: "",
+    landline2: "",
     district: "",
     office: "",
+    unit: "",
   });
 
   const loadOfficer = async () => {
@@ -51,10 +55,13 @@ export default function EditOfficerPage() {
         rank: officer.rank || "",
         name: officer.name || "",
         mobile: officer.mobile || "",
+        mobile2: officer.mobile2 || "",
         email: officer.email || "",
         landline: officer.landline || "",
+        landline2: officer.landline2 || "",
         district: officer.district || "",
         office: officer.office || "",
+        unit: officer.unit || "",
       });
 
       // Set selected district to load stations
@@ -100,7 +107,7 @@ export default function EditOfficerPage() {
   useEffect(() => {
     // Mark as mounted (client-side only)
     setMounted(true);
-    
+
     // Get ID from URL query parameter
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id") || "";
@@ -140,10 +147,10 @@ export default function EditOfficerPage() {
       return;
     }
 
-    // Validate mobile number format - allow "NM" or 10 digits
+    // Validate mobile number format - allow "NM" or 10 digits if provided
     const mobileUpper = formData.mobile.trim().toUpperCase();
     if (mobileUpper && mobileUpper !== "NM" && mobileUpper.length !== 10) {
-      alert("Mobile number must be 10 digits or 'NM' if not provided");
+      alert("Mobile number must be 10 digits or 'NM' if provided");
       return;
     }
 
@@ -151,14 +158,17 @@ export default function EditOfficerPage() {
 
     try {
       await updateOfficer(officerId, {
-        agid: formData.agid.trim() || undefined,
+        agid: formData.agid.trim(),
         rank: formData.rank.trim(),
         name: formData.name.trim(),
-        mobile: formData.mobile.trim().toUpperCase() || undefined,
-        email: formData.email.trim() || undefined,
-        landline: formData.landline.trim() || undefined,
+        mobile: formData.mobile.trim().toUpperCase(),
+        mobile2: formData.mobile2.trim().toUpperCase(),
+        email: formData.email.trim(),
+        landline: formData.landline.trim(),
+        landline2: formData.landline2.trim(),
         district: formData.district,
-        office: formData.office.trim() || undefined,
+        office: formData.office.trim(),
+        unit: formData.unit.trim(),
       });
       router.push("/officers");
     } catch (error) {
@@ -229,15 +239,14 @@ export default function EditOfficerPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-400">
-              Mobile *
+              Mobile
             </label>
             <input
               type="text"
-              required
               value={formData.mobile}
               onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              placeholder="Enter 10 digits or 'NM' if not provided"
+              placeholder="Enter 10 digits or 'NM'"
             />
           </div>
 
@@ -308,6 +317,24 @@ export default function EditOfficerPage() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Unit (Optional)
+            </label>
+            <select
+              value={formData.unit}
+              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Unit (Optional)</option>
+              {UNITS.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-6 flex gap-4">
@@ -326,8 +353,8 @@ export default function EditOfficerPage() {
             Cancel
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 }
 

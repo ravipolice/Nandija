@@ -8,6 +8,7 @@ import {
   MapPin,
   Building2,
   TrendingUp,
+  Shield,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -60,6 +61,12 @@ export default function Dashboard() {
       gradient: "from-blue-500 to-blue-600",
     },
     {
+      title: "Total Officers",
+      value: stats?.officersCount || 0,
+      icon: Shield,
+      gradient: "from-indigo-600 to-violet-600",
+    },
+    {
       title: "Approved",
       value: stats?.approved || 0,
       icon: UserCheck,
@@ -91,8 +98,8 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Dashboard</h1>
         <p className="mt-2 text-slate-100-secondary">Welcome back! Here&apos;s your overview.</p>
       </div>
-      
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {statCards.map((card) => (
           <div
             key={card.title}
@@ -117,9 +124,10 @@ export default function Dashboard() {
 
       {stats && (
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Employee Section */}
           <div className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
             <h2 className="mb-4 text-xl font-semibold text-slate-100">Employees by District</h2>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {Object.entries(stats.byDistrict || {})
                 .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 10)
@@ -138,17 +146,38 @@ export default function Dashboard() {
           </div>
 
           <div className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold text-slate-100">Top Ranks</h2>
-            <div className="space-y-2">
-              {Object.entries(stats.byRank || {})
+            <h2 className="mb-4 text-xl font-semibold text-slate-100">Employee Ranks</h2>
+            <div className="max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-1">
+                {Object.entries(stats.byRank || {})
+                  .sort(([, a], [, b]) => (b as number) - (a as number))
+                  .map(([rank, count]) => (
+                    <div
+                      key={rank}
+                      className="flex items-center justify-between py-2 border-b border-dark-border/50"
+                    >
+                      <span className="text-slate-100-secondary text-sm">{rank}</span>
+                      <span className="font-semibold text-slate-100 text-sm">
+                        {count as number}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Officer Section */}
+          <div className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-200">Officers by District</h2>
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+              {Object.entries(stats.officersByDistrict || {})
                 .sort(([, a], [, b]) => (b as number) - (a as number))
-                .slice(0, 10)
-                .map(([rank, count]) => (
+                .map(([district, count]) => (
                   <div
-                    key={rank}
+                    key={district}
                     className="flex items-center justify-between py-2 border-b border-dark-border last:border-0"
                   >
-                    <span className="text-slate-100-secondary">{rank}</span>
+                    <span className="text-slate-100-secondary">{district}</span>
                     <span className="font-semibold text-slate-100">
                       {count as number}
                     </span>
@@ -156,6 +185,28 @@ export default function Dashboard() {
                 ))}
             </div>
           </div>
+
+          <div className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-200">Officer Ranks</h2>
+            <div className="max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-1">
+                {Object.entries(stats.officersByRank || {})
+                  .sort(([, a], [, b]) => (b as number) - (a as number))
+                  .map(([rank, count]) => (
+                    <div
+                      key={rank}
+                      className="flex items-center justify-between py-2 border-b border-dark-border/50"
+                    >
+                      <span className="text-slate-100-secondary text-sm">{rank}</span>
+                      <span className="font-semibold text-slate-100 text-sm">
+                        {count as number}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
     </div>

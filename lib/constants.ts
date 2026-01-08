@@ -59,3 +59,13 @@ export const BLOOD_GROUPS = [
   "??", // Unknown/Not updated
 ] as const;
 
+// Units
+export const UNITS = [
+  "Admin", "ASC Team", "BDDS", "C Room", "CAR", "CCB", "CCRB", "CDR", "CEN", "CID",
+  "Coast Guard", "Computer", "Court", "CSB", "CSP", "DAR", "DCIB", "DCRB", "DCRE",
+  "Dog Squad", "DSB", "ERSS", "ESCOM", "Excise", "Fire", "Forest", "FPB", "FRRO",
+  "FSL", "Guest House", "Health", "Home Guard", "INT", "ISD", "KLA", "L&O",
+  "Ministrial", "Minisrial", "Others", "Prison", "PTS", "Railway", "RTO",
+  "S INT", "Social Media", "Toll", "Traffic", "VVIP", "Wireless"
+] as const;
+
