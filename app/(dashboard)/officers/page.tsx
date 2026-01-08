@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { getOfficers, createOfficer, deleteOfficer, Officer, getRanks, Rank, getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
 import { UNITS } from "@/lib/constants";
-import { serverTimestamp } from "firebase/firestore";
-import { Plus, Trash2, Edit, ChevronUp, ChevronDown } from "lucide-react";
+
+import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search } from "lucide-react";
 import Link from "next/link";
 
 type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
@@ -32,6 +32,8 @@ export default function OfficersPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
@@ -190,8 +192,6 @@ export default function OfficersPage() {
         break;
       case "office":
         aValue = a.office || "";
-      case "office":
-        aValue = a.office || "";
         bValue = b.office || "";
         break;
       case "unit":
@@ -202,6 +202,21 @@ export default function OfficersPage() {
 
     const comparison = aValue.localeCompare(bValue);
     return sortDirection === "asc" ? comparison : -comparison;
+  });
+
+  const filteredOfficers = sortedOfficers.filter((officer) => {
+    const q = searchTerm.toLowerCase();
+
+    return (
+      (officer.name && officer.name.toLowerCase().includes(q)) ||
+      (officer.rank && officer.rank.toLowerCase().includes(q)) ||
+      (officer.agid && officer.agid.toLowerCase().includes(q)) ||
+      (officer.mobile && officer.mobile.toLowerCase().includes(q)) ||
+      (officer.email && officer.email.toLowerCase().includes(q)) ||
+      (officer.district && officer.district.toLowerCase().includes(q)) ||
+      (officer.office && officer.office.toLowerCase().includes(q)) ||
+      (officer.unit && officer.unit?.toLowerCase().includes(q))
+    );
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -279,6 +294,19 @@ export default function OfficersPage() {
         </button>
       </div>
 
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search officers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg bg-dark-card border border-dark-border py-2 pl-10 pr-4 text-slate-100 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+          />
+        </div>
+      </div>
+
       {showForm && (
         <div className="mb-6 rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
           <h2 className="mb-4 text-xl font-semibold text-slate-100">Add New Officer</h2>
@@ -308,8 +336,8 @@ export default function OfficersPage() {
                 >
                   <option value="">Select Rank</option>
                   {ranks.map((rank) => (
-                    <option key={rank.rank_id} value={rank.equivalent_rank}>
-                      {rank.rank_label} ({rank.equivalent_rank})
+                    <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
+                      {rank.rank_label} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
                     </option>
                   ))}
                 </select>
@@ -455,9 +483,9 @@ export default function OfficersPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-dark-card border border-dark-border shadow-lg" style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch' }}>
+      <div className="overflow-auto rounded-lg bg-dark-card border border-dark-border shadow-lg h-[calc(100vh-220px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
         <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
-          <thead className="bg-dark-sidebar border-b border-dark-border">
+          <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
@@ -643,7 +671,7 @@ export default function OfficersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
-            {sortedOfficers.map((officer) => (
+            {filteredOfficers.map((officer) => (
               <tr key={officer.id} className="hover:bg-dark-sidebar transition-colors">
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.agid }}>
                   {officer.agid || "N/A"}
@@ -692,7 +720,7 @@ export default function OfficersPage() {
             ))}
           </tbody>
         </table>
-        {sortedOfficers.length === 0 && (
+        {filteredOfficers.length === 0 && (
           <div className="py-12 text-center text-slate-400">
             No officers found
           </div>

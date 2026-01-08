@@ -10,17 +10,22 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     // Only redirect on client side
     if (typeof window === "undefined") return;
 
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (!isAdmin) {
+        // If logged in but not admin, redirect to user portal
+        router.push("/directory");
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading, isAdmin, router]);
 
   if (loading) {
     return (
@@ -30,7 +35,7 @@ export default function DashboardLayout({
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return null;
   }
 

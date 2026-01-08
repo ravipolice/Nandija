@@ -285,8 +285,8 @@ export default function NewEmployeePage() {
               >
                 <option value="">Select Rank</option>
                 {ranks.map((rank) => (
-                  <option key={rank.rank_id} value={rank.equivalent_rank}>
-                    {rank.rank_label} ({rank.equivalent_rank})
+                  <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
+                    {rank.rank_label} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
                   </option>
                 ))}
               </select>
@@ -305,14 +305,14 @@ export default function NewEmployeePage() {
                     setFormData({ ...formData, metalNumber: e.target.value })
                   }
                   className={`mt-1 block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 ${formData.metalNumber?.trim()
-                      ? "border-dark-border focus:border-primary-400 focus:ring-primary-400/50"
-                      : "border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                    ? "border-dark-border focus:border-primary-400 focus:ring-primary-400/50"
+                    : "border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                     }`}
                 />
                 <p
                   className={`mt-1 text-xs font-medium ${formData.metalNumber?.trim()
-                      ? "text-slate-500"
-                      : "text-amber-600"
+                    ? "text-slate-500"
+                    : "text-amber-600"
                     }`}
                 >
                   {formData.metalNumber?.trim()

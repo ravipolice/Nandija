@@ -41,6 +41,8 @@ export default function EditEmployeePage() {
     photoUrl: "",
     isAdmin: false,
     isApproved: true,
+    landline: "",
+    landline2: "",
   });
 
   useEffect(() => {
@@ -405,8 +407,8 @@ export default function EditEmployeePage() {
               >
                 <option value="">Select Rank</option>
                 {ranks.map((rank) => (
-                  <option key={rank.rank_id} value={rank.equivalent_rank}>
-                    {rank.rank_label} ({rank.equivalent_rank})
+                  <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
+                    {rank.rank_label} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
                   </option>
                 ))}
               </select>

@@ -101,8 +101,12 @@ export interface PendingRegistration {
   mobile2?: string;
   rank?: string;
   district: string;
+  unit?: string;
   station: string;
   pin: string;
+  metalNumber?: string;
+  bloodGroup?: string;
+  status?: "pending" | "approved" | "rejected";
   createdAt?: Timestamp;
 }
 
@@ -1179,3 +1183,48 @@ export const getEmployeeStats = async () => {
   };
 };
 
+// Helper to get pending registration by KGID
+export const getPendingRegistrationByKgid = async (kgid: string): Promise<PendingRegistration | null> => {
+  if (typeof window === "undefined" || !db) {
+    console.warn("Firestore not initialized (server-side or not available)");
+    return null;
+  }
+  try {
+    const q = query(
+      collection(db, "pending_registrations"),
+      where("kgid", "==", kgid),
+      where("status", "==", "pending")
+    );
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as PendingRegistration;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching pending registration:", error);
+    return null;
+  }
+};
+
+export const createPendingRegistration = async (data: Omit<PendingRegistration, "id" | "createdAt" | "status">): Promise<string> => {
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized (server-side or not available)");
+  }
+
+  // Check if already exists
+  const existing = await getPendingRegistrationByKgid(data.kgid);
+  if (existing) {
+    throw new Error("A pending registration with this KGID already exists.");
+  }
+
+  // Client-side duplicate check removed to prevent permission errors
+  // Firestore rules should enforce uniqueness or handled by admin approval flow
+  // const employeeQuery = query(collection(db, "employees"), where("kgid", "==", data.kgid));
+  // ...
+
+  return createDoc<PendingRegistration>("pending_registrations", {
+    ...data,
+    status: "pending",
+    createdAt: Timestamp.now(),
+  });
+};

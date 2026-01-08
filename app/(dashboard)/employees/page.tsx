@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getEmployees, deleteEmployee, Employee } from "@/lib/firebase/firestore";
-import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown, Download, FileSpreadsheet, FileJson } from "lucide-react";
 import Link from "next/link";
+import Papa from "papaparse";
+import { format } from "date-fns";
 
 type SortField = "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "unit" | "isApproved";
 type SortDirection = "asc" | "desc";
@@ -54,6 +56,57 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (employees.length === 0) return;
+
+    // Prepare data for CSV
+    const csvData = employees.map(emp => ({
+      KGID: emp.kgid || "",
+      Name: emp.name || "",
+      Rank: emp.displayRank || emp.rank || "",
+      Email: emp.email || "",
+      "Mobile 1": emp.mobile1 || "",
+      "Mobile 2": emp.mobile2 || "",
+      "Blood Group": emp.bloodGroup || "",
+      District: emp.district || "",
+      Station: emp.station || "",
+      Unit: emp.unit || "",
+      Status: emp.isApproved ? "Approved" : "Pending",
+      "Joined Date": emp.createdAt
+        ? format(
+          (emp.createdAt as any).toDate
+            ? (emp.createdAt as any).toDate()
+            : new Date(emp.createdAt),
+          'yyyy-MM-dd'
+        )
+        : ""
+    }));
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `employees_export_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportJSON = () => {
+    if (employees.length === 0) return;
+
+    const jsonString = JSON.stringify(employees, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `employees_export_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDelete = async (id: string) => {
@@ -192,13 +245,31 @@ export default function EmployeesPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Employees</h1>
-        <Link
-          href="/employees/new"
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
-        >
-          <Plus className="h-5 w-5" />
-          Add Employee
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600/20 px-4 py-2 text-emerald-400 border border-emerald-600/50 hover:bg-emerald-600/30 transition-all"
+            title="Export to CSV"
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span className="hidden sm:inline">CSV</span>
+          </button>
+          <button
+            onClick={handleExportJSON}
+            className="flex items-center gap-2 rounded-lg bg-amber-600/20 px-4 py-2 text-amber-400 border border-amber-600/50 hover:bg-amber-600/30 transition-all"
+            title="Export to JSON"
+          >
+            <FileJson className="h-5 w-5" />
+            <span className="hidden sm:inline">JSON</span>
+          </button>
+          <Link
+            href="/employees/new"
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="hidden sm:inline">Add Employee</span>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -214,9 +285,9 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg bg-dark-card border border-dark-border shadow-lg" style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch' }}>
+      <div className="overflow-auto rounded-lg bg-dark-card border border-dark-border shadow-lg h-[calc(100vh-220px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
         <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
-          <thead className="bg-dark-sidebar border-b border-dark-border">
+          <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
