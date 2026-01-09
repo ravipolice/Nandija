@@ -2,6 +2,7 @@ import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getFunctions, Functions } from "firebase/functions";
 
 // Firebase configuration with environment variable support
 const firebaseConfig = {
@@ -17,6 +18,7 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
+let functions: Functions | undefined;
 
 // Initialize Firebase only on client side
 if (typeof window !== "undefined") {
@@ -28,9 +30,7 @@ if (typeof window !== "undefined") {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  functions = getFunctions(app, "asia-south1");
 }
 
-export { app, auth, db, storage };
-
-
-
+export { app, auth, db, storage, functions };

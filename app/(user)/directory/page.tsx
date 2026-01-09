@@ -18,8 +18,8 @@ export default function DirectoryPage() {
                     getOfficers(),
                     getEmployees(),
                 ]);
-                setOfficers(officersData);
-                setEmployees(employeesData);
+                setOfficers(officersData.filter(o => !o.isHidden));
+                setEmployees(employeesData.filter(e => !e.isHidden));
             } catch (error: any) {
                 console.error("Error fetching data:", error);
                 if (error.code === 'permission-denied') {

@@ -1,11 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOfficers, createOfficer, deleteOfficer, Officer, getRanks, Rank, getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
-import { UNITS } from "@/lib/constants";
-
-import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search } from "lucide-react";
+import {
+  getOfficers,
+  createOfficer,
+  deleteOfficer,
+  updateOfficer,
+  Officer,
+  getRanks,
+  Rank,
+  getDistricts,
+  getStations,
+  District,
+  Station,
+  getUnits,
+  Unit
+} from "@/lib/firebase/firestore";
+import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search, Eye, EyeOff, FileSpreadsheet, FileJson } from "lucide-react";
 import Link from "next/link";
+import Papa from "papaparse";
+import { format } from "date-fns";
 
 type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
 type SortDirection = "asc" | "desc";
@@ -29,6 +43,7 @@ export default function OfficersPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -74,15 +89,18 @@ export default function OfficersPage() {
 
   const loadData = async () => {
     try {
-      const [officersData, districtsData, ranksData] = await Promise.all([
+      const [officersData, districtsData, ranksData, unitsData] = await Promise.all([
         getOfficers(),
         getDistricts(),
         getRanks(),
+        getUnits(),
       ]);
-      console.log("Loaded districts:", districtsData);
+      console.log("Loaded data:", { districtsData, unitsData });
       setOfficers(officersData);
       setDistricts(districtsData);
       setRanks(ranksData);
+      setUnits(unitsData);
+
       if (districtsData.length === 0) {
         console.warn("No districts found. Make sure districts exist in Firestore.");
       }
@@ -117,6 +135,18 @@ export default function OfficersPage() {
     } catch (error) {
       console.error("Error deleting officer:", error);
       alert("Failed to delete officer");
+    }
+  };
+
+  const handleToggleVisibility = async (officer: Officer) => {
+    if (!officer.id) return;
+    try {
+      const newStatus = !officer.isHidden;
+      await updateOfficer(officer.id, { isHidden: newStatus });
+      setOfficers(prev => prev.map(o => o.id === officer.id ? { ...o, isHidden: newStatus } : o));
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      alert("Failed to update visibility");
     }
   };
 
@@ -219,6 +249,47 @@ export default function OfficersPage() {
     );
   });
 
+  const handleExportCSV = () => {
+    if (officers.length === 0) return;
+
+    // Prepare data for CSV
+    const csvData = officers.map(off => ({
+      AGID: off.agid || "",
+      Name: off.name || "",
+      Rank: off.rank || "",
+      Email: off.email || "",
+      Mobile: off.mobile || "",
+      Landline: off.landline || "",
+      District: off.district || "",
+      Office: off.office || "",
+      Unit: off.unit || "",
+    }));
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `officers_export_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportJSON = () => {
+    if (officers.length === 0) return;
+
+    const jsonString = JSON.stringify(officers, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `officers_export_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -285,13 +356,31 @@ export default function OfficersPage() {
             Total: {officers.length}
           </span>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700"
-        >
-          <Plus className="h-5 w-5" />
-          Add Officer
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600/20 px-4 py-2 text-emerald-400 border border-emerald-600/50 hover:bg-emerald-600/30 transition-all"
+            title="Export to CSV"
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span className="hidden sm:inline">CSV</span>
+          </button>
+          <button
+            onClick={handleExportJSON}
+            className="flex items-center gap-2 rounded-lg bg-amber-600/20 px-4 py-2 text-amber-400 border border-amber-600/50 hover:bg-amber-600/30 transition-all"
+            title="Export to JSON"
+          >
+            <FileJson className="h-5 w-5" />
+            <span className="hidden sm:inline">JSON</span>
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700"
+          >
+            <Plus className="h-5 w-5" />
+            Add Officer
+          </button>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -438,9 +527,9 @@ export default function OfficersPage() {
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
                 >
                   <option value="">Select Unit (Optional)</option>
-                  {UNITS.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.name}>
+                      {unit.name}
                     </option>
                   ))}
                 </select>
@@ -672,9 +761,10 @@ export default function OfficersPage() {
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
             {filteredOfficers.map((officer) => (
-              <tr key={officer.id} className="hover:bg-dark-sidebar transition-colors">
+              <tr key={officer.id} className={`hover:bg-dark-sidebar transition-colors ${officer.isHidden ? 'opacity-50 grayscale' : ''}`}>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.agid }}>
                   {officer.agid || "N/A"}
+                  {officer.isHidden && <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-1 rounded">Hidden</span>}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100">
                   {officer.rank}
@@ -702,6 +792,13 @@ export default function OfficersPage() {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleToggleVisibility(officer)}
+                      className="text-slate-400 hover:text-slate-200"
+                      title={officer.isHidden ? "Unhide" : "Hide"}
+                    >
+                      {officer.isHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                     <Link
                       href={`/officers/edit?id=${officer.id}`}
                       className="text-primary-400 hover:text-primary-300"
@@ -718,15 +815,16 @@ export default function OfficersPage() {
                 </td>
               </tr>
             ))}
+            {filteredOfficers.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-6 py-4 text-center text-sm text-slate-400">
+                  No officers found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-        {filteredOfficers.length === 0 && (
-          <div className="py-12 text-center text-slate-400">
-            No officers found
-          </div>
-        )}
       </div>
     </div>
   );
 }
-

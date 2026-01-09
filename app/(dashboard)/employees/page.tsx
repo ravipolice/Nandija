@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getEmployees, deleteEmployee, Employee } from "@/lib/firebase/firestore";
-import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown, Download, FileSpreadsheet, FileJson } from "lucide-react";
+import { getEmployees, deleteEmployee, updateEmployee, Employee } from "@/lib/firebase/firestore";
+import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown, FileSpreadsheet, FileJson, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { format } from "date-fns";
@@ -78,7 +78,7 @@ export default function EmployeesPage() {
         ? format(
           (emp.createdAt as any).toDate
             ? (emp.createdAt as any).toDate()
-            : new Date(emp.createdAt),
+            : new Date(emp.createdAt as any),
           'yyyy-MM-dd'
         )
         : ""
@@ -117,6 +117,18 @@ export default function EmployeesPage() {
     } catch (error) {
       console.error("Error deleting employee:", error);
       alert("Failed to delete employee");
+    }
+  };
+
+  const handleToggleVisibility = async (employee: Employee) => {
+    if (!employee.id) return;
+    try {
+      const newStatus = !employee.isHidden;
+      await updateEmployee(employee.id, { isHidden: newStatus });
+      setEmployees(prev => prev.map(e => e.id === employee.id ? { ...e, isHidden: newStatus } : e));
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      alert("Failed to update visibility");
     }
   };
 
@@ -523,7 +535,7 @@ export default function EmployeesPage() {
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
             {filteredEmployees.map((employee) => (
-              <tr key={employee.id} className="hover:bg-dark-sidebar transition-colors">
+              <tr key={employee.id} className={`hover:bg-dark-sidebar transition-colors ${employee.isHidden ? 'opacity-50 grayscale' : ''}`}>
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="flex items-center">
                     {employee.photoUrl || employee.photoUrlFromGoogle ? (
@@ -589,6 +601,7 @@ export default function EmployeesPage() {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.kgid }}>
                   {employee.kgid}
+                  {employee.isHidden && <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-1 rounded">Hidden</span>}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
                   {employee.name}
@@ -629,6 +642,13 @@ export default function EmployeesPage() {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleToggleVisibility(employee)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                      title={employee.isHidden ? "Unhide" : "Hide"}
+                    >
+                      {employee.isHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                     <Link
                       href={`/employees/edit?id=${employee.id}`}
                       className="text-purple-400 hover:text-purple-300 transition-colors"

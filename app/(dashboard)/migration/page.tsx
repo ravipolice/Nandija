@@ -5,13 +5,16 @@ import {
     getDistricts,
     getStations,
     getOfficers,
+    getEmployees,
+    deleteEmployee,
     updateStation,
     deleteOfficer,
     District,
     Station,
     Officer,
+    Employee,
 } from "@/lib/firebase/firestore";
-import { Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Trash2, AlertTriangle, RefreshCw, Database } from "lucide-react";
 
 export default function MigrationPage() {
     const [loading, setLoading] = useState(false);
@@ -19,6 +22,7 @@ export default function MigrationPage() {
     // Data caches
     const [allStations, setAllStations] = useState<Station[]>([]);
     const [allOfficers, setAllOfficers] = useState<Officer[]>([]);
+    const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
     const [districts, setDistricts] = useState<District[]>([]);
     const [invalidDistricts, setInvalidDistricts] = useState<string[]>([]);
 
@@ -34,15 +38,17 @@ export default function MigrationPage() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [dists, stations, officers] = await Promise.all([
+            const [dists, stations, officers, employees] = await Promise.all([
                 getDistricts(),
                 getStations(),
-                getOfficers()
+                getOfficers(),
+                getEmployees()
             ]);
 
             setDistricts(dists);
             setAllStations(stations);
             setAllOfficers(officers);
+            setAllEmployees(employees);
 
             const uniqueDistricts = Array.from(new Set(stations.map(s => s.district).filter(Boolean))).sort();
             setInvalidDistricts(uniqueDistricts);
@@ -116,6 +122,76 @@ export default function MigrationPage() {
         } catch (e) {
             console.error(e);
             alert("Cleanup failed: " + e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAllEmployees = async () => {
+        if (!confirm("⚠️ CRITICAL WARNING ⚠️\n\nYou are about to DELETE THE ENTIRE EMPLOYEE DATABASE.\n\nThis will remove all registered users and they will need to register again.\n\nAre you absolutely sure?")) {
+            return;
+        }
+
+        const confirmation = prompt("To confirm, please type 'DELETE' (all caps) below:");
+        if (confirmation !== "DELETE") {
+            alert("Deletion cancelled. Text did not match.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Fetch all employees
+            const employees = await getEmployees();
+
+            // 2. Delete one by one
+            let count = 0;
+            for (const emp of employees) {
+                if (emp.id) {
+                    await deleteEmployee(emp.id);
+                    count++;
+                }
+            }
+
+            alert(`Database Wiped! Successfully deleted ${count} employee records.`);
+            loadData();
+        } catch (e: any) {
+            console.error("Failed to delete database:", e);
+            alert("Error deleting database: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAllOfficers = async () => {
+        if (!confirm("⚠️ CRITICAL WARNING ⚠️\n\nYou are about to DELETE THE ENTIRE OFFICER DATABASE.\n\nThis will remove all officer contacts. This action cannot be undone.\n\nAre you absolutely sure?")) {
+            return;
+        }
+
+        const confirmation = prompt("To confirm, please type 'DELETE OFFICERS' (all caps) below:");
+        if (confirmation !== "DELETE OFFICERS") {
+            alert("Deletion cancelled. Text did not match.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Fetch all officers
+            const officers = await getOfficers();
+
+            // 2. Delete one by one
+            let count = 0;
+            for (const off of officers) {
+                if (off.id) {
+                    await deleteOfficer(off.id);
+                    count++;
+                }
+            }
+
+            alert(`Database Wiped! Successfully deleted ${count} officer records.`);
+            loadData();
+        } catch (e: any) {
+            console.error("Failed to delete database:", e);
+            alert("Error deleting database: " + e.message);
         } finally {
             setLoading(false);
         }
@@ -209,6 +285,57 @@ export default function MigrationPage() {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Danger Zone: Delete All Employees */}
+            {/* Danger Zone: Delete Databases */}
+            <div className="bg-red-900/10 p-6 rounded-lg border border-red-900/30 mb-6">
+                <h2 className="text-xl font-bold mb-4 text-red-400 flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6" />
+                    Danger Zone
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Delete Employees */}
+                    <div className="bg-red-950/30 p-4 rounded border border-red-900/20">
+                        <h3 className="text-lg font-semibold text-red-200 mb-2 flex items-center gap-2">
+                            <Database className="h-5 w-5" />
+                            Employee Database
+                        </h3>
+                        <p className="text-red-300/80 mb-4 text-sm leading-relaxed h-16">
+                            Permanently delete all <strong>{allEmployees.length} registered employees</strong>.
+                            Users will need to register again.
+                        </p>
+                        <button
+                            onClick={handleDeleteAllEmployees}
+                            disabled={loading || allEmployees.length === 0}
+                            className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {loading ? "Deleting..." : "Delete Employees"}
+                        </button>
+                    </div>
+
+                    {/* Delete Officers */}
+                    <div className="bg-red-950/30 p-4 rounded border border-red-900/20">
+                        <h3 className="text-lg font-semibold text-red-200 mb-2 flex items-center gap-2">
+                            <Database className="h-5 w-5" />
+                            Officer Database
+                        </h3>
+                        <p className="text-red-300/80 mb-4 text-sm leading-relaxed h-16">
+                            Permanently delete all <strong>{allOfficers.length} officer records</strong>.
+                            This data is public contact info.
+                        </p>
+                        <button
+                            onClick={handleDeleteAllOfficers}
+                            disabled={loading || allOfficers.length === 0}
+                            className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {loading ? "Deleting..." : "Delete Officers"}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Station Migration Section */}

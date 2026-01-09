@@ -8,11 +8,12 @@ import {
   getDistricts,
   getStations,
   getRanks,
+  getUnits,
   District,
   Station,
   Rank,
+  Unit,
 } from "@/lib/firebase/firestore";
-import { UNITS } from "@/lib/constants";
 
 export default function EditOfficerPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function EditOfficerPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -95,6 +97,15 @@ export default function EditOfficerPage() {
     }
   };
 
+  const loadUnits = async () => {
+    try {
+      const data = await getUnits();
+      setUnits(data);
+    } catch (error) {
+      console.error("Error loading units:", error);
+    }
+  };
+
   const loadStations = async (district: string) => {
     try {
       const data = await getStations(district);
@@ -124,6 +135,7 @@ export default function EditOfficerPage() {
     const loadData = async () => {
       await loadDistricts();
       await loadRanks();
+      await loadUnits();
       await loadOfficer();
     };
     loadData();
@@ -328,9 +340,9 @@ export default function EditOfficerPage() {
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             >
               <option value="">Select Unit (Optional)</option>
-              {UNITS.map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit}
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name}
                 </option>
               ))}
             </select>
@@ -357,4 +369,3 @@ export default function EditOfficerPage() {
     </div >
   );
 }
-

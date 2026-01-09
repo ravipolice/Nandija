@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, employeeData } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -21,11 +21,32 @@ export default function DashboardLayout({
       if (!user) {
         router.push("/login");
       } else if (!isAdmin) {
-        // If logged in but not admin, redirect to user portal
-        router.push("/directory");
+        // If logged in but not admin
+        if (employeeData) {
+          // Valid employee, send to user portal
+          router.push("/directory");
+        } else {
+          // Unregistered user trying to access dashboard -> kick out
+          // (This might happen if they somehow got past login page without being stopped)
+          // We can't use signOut here easily without import, but let's just redirect to login 
+          // or let UserLayout handle it if they were going to directory?
+          // Actually, if we don't push to directory, they stay on dashboard layout?
+          // Dashboard layout renders children. If they are here, they are trying to access a dashboard route.
+          // If they are not admin, they shouldn't be here.
+
+          // Wait, if they are NOT admin, we redirect them OUT of dashboard.
+          // If we just do nothing, they see the dashboard (but maybe empty?).
+          // We MUST redirect them.
+
+          // If !employeeData, they are unregistered.
+          // If we send them to /login, and they are still "logged in" to Firebase, login page logic runs.
+
+          // Best approach:
+          router.push("/login");
+        }
       }
     }
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isAdmin, employeeData, router]);
 
   if (loading) {
     return (

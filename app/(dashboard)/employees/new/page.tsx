@@ -7,11 +7,13 @@ import {
   getDistricts,
   getStations,
   getRanks,
+  getUnits,
   District,
   Station,
   Rank,
+  Unit,
 } from "@/lib/firebase/firestore";
-import { BLOOD_GROUPS, UNITS } from "@/lib/constants";
+import { BLOOD_GROUPS } from "@/lib/constants";
 
 export default function NewEmployeePage() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function NewEmployeePage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -43,6 +46,7 @@ export default function NewEmployeePage() {
   useEffect(() => {
     loadDistricts();
     loadRanks();
+    loadUnits();
   }, []);
 
   useEffect(() => {
@@ -68,6 +72,15 @@ export default function NewEmployeePage() {
       setRanks(data);
     } catch (error) {
       console.error("Error loading ranks:", error);
+    }
+  };
+
+  const loadUnits = async () => {
+    try {
+      const data = await getUnits();
+      setUnits(data);
+    } catch (error) {
+      console.error("Error loading units:", error);
     }
   };
 
@@ -388,9 +401,9 @@ export default function NewEmployeePage() {
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             >
               <option value="">Select Unit (Optional)</option>
-              {UNITS.map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit}
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name}
                 </option>
               ))}
             </select>

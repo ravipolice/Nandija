@@ -11,15 +11,22 @@ export default function UserLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user, loading } = useAuth();
+    const { user, loading, employeeData } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        if (!loading && !user) {
-            router.push("/login");
+
+        if (!loading) {
+            if (!user) {
+                router.push("/login");
+            } else if (!employeeData) {
+                // User is authenticated in Firebase but not in our database
+                // Force logout and redirect to login
+                signOut().then(() => router.push("/login"));
+            }
         }
-    }, [user, loading, router]);
+    }, [user, loading, employeeData, router]);
 
     const handleSignOut = async () => {
         try {

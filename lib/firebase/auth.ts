@@ -1,9 +1,10 @@
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   User,
   onAuthStateChanged,
+  signInAnonymously as firebaseSignInAnonymously,
 } from "firebase/auth";
 import { auth } from "./config";
 
@@ -34,6 +35,18 @@ export const signOut = async () => {
   }
 };
 
+export const signInAnonymously = async () => {
+  if (typeof window === "undefined" || !auth) {
+    throw new Error("Firebase Auth not initialized");
+  }
+  try {
+    return await firebaseSignInAnonymously(auth);
+  } catch (error) {
+    console.error("Error signing in anonymously:", error);
+    throw error;
+  }
+};
+
 export const getCurrentUser = (): Promise<User | null> => {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !auth) {
@@ -51,7 +64,7 @@ export const onAuthChange = (callback: (user: User | null) => void) => {
   if (typeof window === "undefined" || !auth) {
     // Return a no-op unsubscribe function if auth is not available
     callback(null);
-    return () => {};
+    return () => { };
   }
   return onAuthStateChanged(auth, callback);
 };

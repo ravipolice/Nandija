@@ -41,6 +41,7 @@ export interface Employee {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   unit?: string;
+  isHidden?: boolean;
 }
 
 export interface Officer {
@@ -58,6 +59,7 @@ export interface Officer {
   office?: string;
   unit?: string;
   createdAt?: Timestamp;
+  isHidden?: boolean;
 }
 
 export interface District {
@@ -73,6 +75,13 @@ export interface Station {
   name: string;
   district: string;
   stdCode?: string;
+  isActive?: boolean;
+  createdAt?: Timestamp;
+}
+
+export interface Unit {
+  id?: string;
+  name: string;
   isActive?: boolean;
   createdAt?: Timestamp;
 }
@@ -106,6 +115,9 @@ export interface PendingRegistration {
   pin: string;
   metalNumber?: string;
   bloodGroup?: string;
+  landline?: string;
+  landline2?: string;
+  photoUrl?: string;
   status?: "pending" | "approved" | "rejected";
   createdAt?: Timestamp;
 }
@@ -532,6 +544,34 @@ export const updateStation = async (
 
 export const deleteStation = async (id: string): Promise<void> => {
   return deleteDocument("stations", id);
+};
+
+// Unit functions
+export const getUnits = async (): Promise<Unit[]> => {
+  try {
+    const allUnits = await getDocuments<Unit>("units", []);
+    return allUnits
+      .filter((u) => u.isActive !== false)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } catch (error) {
+    console.error("Error fetching units:", error);
+    return [];
+  }
+};
+
+export const createUnit = async (data: Omit<Unit, "id">): Promise<string> => {
+  return createDoc<Unit>("units", { ...data, isActive: true });
+};
+
+export const updateUnit = async (
+  id: string,
+  data: Partial<Unit>
+): Promise<void> => {
+  return updateDocument<Unit>("units", id, data);
+};
+
+export const deleteUnit = async (id: string): Promise<void> => {
+  return deleteDocument("units", id);
 };
 
 // Rank functions
