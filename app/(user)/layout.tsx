@@ -80,10 +80,18 @@ export default function UserLayout({
             </main>
 
             <footer className="bg-card border-t border-border mt-auto">
-                <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
                     <p className="text-center text-sm text-muted-foreground">
                         © {new Date().getFullYear()} Police Mobile Directory
                     </p>
+                    <div className="flex space-x-6 text-sm font-medium text-muted-foreground">
+                        <a href="/contact" className="hover:text-primary transition-colors">
+                            Contact Us
+                        </a>
+                        <a href="/contact" className="hover:text-primary transition-colors">
+                            Developer Info
+                        </a>
+                    </div>
                 </div>
             </footer>
         </div>
