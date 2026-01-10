@@ -23,7 +23,9 @@ import {
     STATIONS_BY_DISTRICT
 } from "@/lib/constants";
 
-export default function RegisterPage() {
+import { Suspense } from "react";
+
+function RegisterPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
@@ -575,5 +577,13 @@ export default function RegisterPage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <RegisterPageContent />
+        </Suspense>
     );
 }

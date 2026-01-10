@@ -55,6 +55,7 @@ export interface Officer {
   email?: string;
   landline?: string;
   landline2?: string;
+  photoUrl?: string;
   district: string;
   office?: string;
   unit?: string;

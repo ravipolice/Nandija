@@ -4,6 +4,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { signOut } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ThemeSwitcher } from "@/components/common/ThemeSwitcher";
 import { Logo } from "@/components/common/Logo";
 
 export default function UserLayout({
@@ -11,6 +12,7 @@ export default function UserLayout({
 }: {
     children: React.ReactNode;
 }) {
+    // ... hooks ...
     const { user, loading, employeeData } = useAuth();
     const router = useRouter();
 
@@ -39,8 +41,8 @@ export default function UserLayout({
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-lg text-gray-600">Loading...</div>
+            <div className="flex h-screen items-center justify-center bg-background">
+                <div className="text-lg text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -48,22 +50,23 @@ export default function UserLayout({
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col">
             {/* Simple Header */}
-            <header className="bg-white shadow-sm z-10">
+            <header className="bg-card shadow-sm z-10 border-b border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
                                 <Logo size="sm" />
-                                <span className="ml-2 font-bold text-gray-900">PMD Directory</span>
+                                <span className="ml-2 font-bold text-foreground">PMD Directory</span>
                             </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <span className="text-sm text-gray-600 hidden sm:block">Welcome, {user.displayName}</span>
+                            <ThemeSwitcher />
+                            <span className="text-sm text-foreground/80 hidden sm:block">Welcome, {user.displayName}</span>
                             <button
                                 onClick={handleSignOut}
-                                className="text-sm text-red-600 hover:text-red-800"
+                                className="text-sm text-destructive hover:text-destructive/80 font-medium"
                             >
                                 Sign Out
                             </button>
@@ -76,9 +79,9 @@ export default function UserLayout({
                 {children}
             </main>
 
-            <footer className="bg-white border-t border-gray-200 mt-auto">
+            <footer className="bg-card border-t border-border mt-auto">
                 <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <p className="text-center text-sm text-gray-500">
+                    <p className="text-center text-sm text-muted-foreground">
                         © {new Date().getFullYear()} Police Mobile Directory
                     </p>
                 </div>
