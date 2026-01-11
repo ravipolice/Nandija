@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { signInWithGoogle } from "@/lib/firebase/auth";
+import { signInWithGoogle, signInWithGoogleRedirect, getGoogleRedirectResult } from "@/lib/firebase/auth";
+import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { loginWithPin, requestOtp, verifyOtpCode, resetPin } from "@/lib/auth-helpers";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
@@ -50,33 +51,70 @@ export default function LoginPage() {
 
   const router = useRouter();
 
+  const processUserLogin = async (user: User) => {
+    // Check if employee exists
+    if (!db) {
+      throw new Error("Firestore is not initialized");
+    }
+    const employeesRef = collection(db, "employees");
+    const q = query(employeesRef, where("email", "==", user.email), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      // New user -> Show popup
+      setUnregisteredEmail(user.email || "");
+      setShowUnregisteredPopup(true);
+    } else {
+      // Existing user -> Dashboard
+      router.push("/");
+    }
+  };
+
+  useEffect(() => {
+    const checkRedirect = async () => {
+      try {
+        const user = await getGoogleRedirectResult();
+        if (user) {
+          setLoading(true);
+          await processUserLogin(user);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Redirect Login Error:", err);
+        setError(err.message || "Failed to sign in with Google");
+        setLoading(false);
+      }
+    };
+    checkRedirect();
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
       const user = await signInWithGoogle();
       if (!user) throw new Error("Google Sign-In failed");
-
-      // Check if employee exists
-      if (!db) {
-        throw new Error("Firestore is not initialized");
-      }
-      const employeesRef = collection(db, "employees");
-      const q = query(employeesRef, where("email", "==", user.email), limit(1));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        // New user -> Show popup
-        setUnregisteredEmail(user.email || "");
-        setShowUnregisteredPopup(true);
-      } else {
-        // Existing user -> Dashboard
-        router.push("/");
-      }
+      await processUserLogin(user);
     } catch (err: any) {
       console.error("Google Sign In Error:", err);
+      // Fallback to redirect if popup is blocked
+      if (err.code === 'auth/popup-blocked') {
+        console.log("Popup blocked, falling back to redirect...");
+        try {
+          await signInWithGoogleRedirect();
+          return; // Redirecting, so stop here
+        } catch (redirectErr: any) {
+          setError(redirectErr.message || "Failed to sign in with Google (Redirect)");
+          return;
+        }
+      }
       setError(err.message || "Failed to sign in with Google");
     } finally {
+      // Only stop loading if we are NOT redirecting (redirecting unmounts or navigates away)
+      // preventing flash of error/content
+      // Actually, we can just set loading false, if redirect happens page unloads.
+      // But if fallback verification happens, we might want to keep it true?
+      // For now, simple is best.
       setLoading(false);
     }
   };

@@ -1,5 +1,7 @@
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   User,
@@ -19,6 +21,31 @@ export const signInWithGoogle = async () => {
     return result.user;
   } catch (error) {
     console.error("Error signing in:", error);
+    throw error;
+  }
+};
+
+export const signInWithGoogleRedirect = async () => {
+  if (typeof window === "undefined" || !auth) {
+    throw new Error("Firebase Auth not initialized");
+  }
+  try {
+    await signInWithRedirect(auth, provider);
+  } catch (error) {
+    console.error("Error starting redirect sign-in:", error);
+    throw error;
+  }
+};
+
+export const getGoogleRedirectResult = async () => {
+  if (typeof window === "undefined" || !auth) {
+    return null;
+  }
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (error) {
+    console.error("Error getting redirect result:", error);
     throw error;
   }
 };
