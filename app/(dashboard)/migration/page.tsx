@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import {
+
     getDistricts,
     getStations,
     getOfficers,
     getEmployees,
     deleteEmployee,
     updateStation,
+    updateOfficer,
+    updateEmployee,
     deleteOfficer,
     District,
     Station,
@@ -50,7 +53,17 @@ export default function MigrationPage() {
             setAllOfficers(officers);
             setAllEmployees(employees);
 
-            const uniqueDistricts = Array.from(new Set(stations.map(s => s.district).filter(Boolean))).sort();
+            // Collect unique districts from ALL sources (Stations, Officers, Employees)
+            const stationDistricts = stations.map(s => s.district);
+            const officerDistricts = officers.map(o => o.district);
+            const employeeDistricts = employees.map(e => e.district);
+
+            const uniqueDistricts = Array.from(new Set([
+                ...stationDistricts,
+                ...officerDistricts,
+                ...employeeDistricts
+            ].filter(Boolean))).sort();
+
             setInvalidDistricts(uniqueDistricts);
 
             // Auto analyze on load
@@ -199,15 +212,29 @@ export default function MigrationPage() {
 
     const handleMigrate = async (oldName: string, newName: string) => {
         if (!oldName || !newName) return;
-        if (!confirm(`Migrate from '${oldName}' to '${newName}'?`)) return;
+        if (!confirm(`Migrate EVERYTHING (Stations, Officers, Employees) from '${oldName}' to '${newName}'?`)) return;
 
         setLoading(true);
         try {
+            // 1. Migrate Stations
             const stationsToMigrate = allStations.filter(s => s.district === oldName);
             for (const s of stationsToMigrate) {
                 if (s.id) await updateStation(s.id, { ...s, district: newName });
             }
-            alert(`Migrated ${stationsToMigrate.length} stations.`);
+
+            // 2. Migrate Officers
+            const officersToMigrate = allOfficers.filter(o => o.district === oldName);
+            for (const o of officersToMigrate) {
+                if (o.id) await updateOfficer(o.id, { district: newName }); // Partial update is enough
+            }
+
+            // 3. Migrate Employees
+            const employeesToMigrate = allEmployees.filter(e => e.district === oldName);
+            for (const e of employeesToMigrate) {
+                if (e.id) await updateEmployee(e.id, { district: newName }); // Partial update is enough
+            }
+
+            alert(`Migration Complete!\n\nMoved:\n- ${stationsToMigrate.length} stations\n- ${officersToMigrate.length} officers\n- ${employeesToMigrate.length} employees`);
             loadData();
         } catch (e) {
             console.error(e);

@@ -65,7 +65,22 @@ export default function LoginPage() {
       const q = query(employeesRef, where("email", "==", user.email), limit(1));
       const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
+      let isFound = !querySnapshot.empty;
+
+      if (!isFound) {
+        // Check admins collection as fallback
+        const adminsRef = collection(db, "admins");
+        const qAdmin = query(adminsRef, where("email", "==", user.email), limit(1));
+        const adminSnapshot = await getDocs(qAdmin);
+        if (!adminSnapshot.empty) {
+          const adminData = adminSnapshot.docs[0].data();
+          if (adminData.isActive) {
+            isFound = true;
+          }
+        }
+      }
+
+      if (!isFound) {
         // New user -> Show popup
         setUnregisteredEmail(user.email || "");
         setShowUnregisteredPopup(true);

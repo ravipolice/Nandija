@@ -4,16 +4,14 @@ import { useEffect, useState } from "react";
 import { getRanks, createRank, updateRank, deleteRank, Rank } from "@/lib/firebase/firestore";
 import { Plus, Edit, Trash2 } from "lucide-react";
 
-type ColumnKey = "rank_id" | "rank_label" | "staffType" | "equivalent_rank" | "category" | "requiresMetal" | "seniority_order" | "status" | "actions";
+type ColumnKey = "rank_id" | "rank_label" | "staffType" | "category" | "requiresMetal" | "status" | "actions";
 
 const defaultColumnWidths: Record<ColumnKey, number> = {
   rank_id: 140,
   rank_label: 280,
   staffType: 140,
-  equivalent_rank: 150,
   category: 150,
   requiresMetal: 120,
-  seniority_order: 120,
   status: 120,
   actions: 120,
 };
@@ -23,13 +21,11 @@ export default function RanksPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingRankId, setEditingRankId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ 
+  const [formData, setFormData] = useState({
     rank_id: "",
     rank_label: "",
     staffType: "POLICE",
     category: "BOTH",
-    equivalent_rank: "",
-    seniority_order: "",
     aliases: "",
     requiresMetalNumber: false,
     isActive: true,
@@ -72,8 +68,6 @@ export default function RanksPage() {
       rank_label: rank.rank_label,
       staffType: rank.staffType || "POLICE",
       category: rank.category,
-      equivalent_rank: rank.equivalent_rank,
-      seniority_order: rank.seniority_order.toString(),
       aliases: rank.aliases?.join(", ") || "",
       requiresMetalNumber: rank.requiresMetalNumber,
       isActive: rank.isActive,
@@ -96,13 +90,11 @@ export default function RanksPage() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingRankId(null);
-    setFormData({ 
+    setFormData({
       rank_id: "",
       rank_label: "",
       staffType: "POLICE",
       category: "BOTH",
-      equivalent_rank: "",
-      seniority_order: "",
       aliases: "",
       requiresMetalNumber: false,
       isActive: true,
@@ -151,20 +143,15 @@ export default function RanksPage() {
 
       const staffType = formData.staffType as "POLICE" | "MINISTERIAL";
 
-      // Validation: equivalent_rank required only for POLICE
-      if (staffType === "POLICE" && !formData.equivalent_rank.trim()) {
-        alert("Equivalent Rank is required for POLICE staff.");
-        setSubmitting(false);
-        return;
-      }
-
       const rankData: Rank = {
         rank_id: formData.rank_id.trim(),
         rank_label: formData.rank_label.trim(),
         staffType,
         category: formData.category,
-        equivalent_rank: staffType === "POLICE" ? formData.equivalent_rank.trim() : "",
-        seniority_order: parseInt(formData.seniority_order, 10),
+        // Default equivalent_rank to rank_id itself to resolve the "PC Only" issue
+        equivalent_rank: formData.rank_id.trim(),
+        // Default seniority_order to 999 as requested to remove it
+        seniority_order: 999,
         aliases: aliasesArray,
         requiresMetalNumber: staffType === "POLICE" ? formData.requiresMetalNumber : false,
         isActive: formData.isActive,
@@ -244,7 +231,7 @@ export default function RanksPage() {
                   <option value="MINISTERIAL">MINISTERIAL</option>
                 </select>
                 {formData.staffType === "MINISTERIAL" && (
-                  <p className="mt-1 text-xs text-slate-500">Equivalent rank not applicable; metal number disabled.</p>
+                  <p className="mt-1 text-xs text-slate-500">Metal number disabled.</p>
                 )}
               </div>
               <div className="md:col-span-2">
@@ -260,23 +247,8 @@ export default function RanksPage() {
                   placeholder="e.g., Director General & Inspector General of Police"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
-                  Equivalent Rank *
-                </label>
-                <input
-                  type="text"
-                  required={formData.staffType === "POLICE"}
-                  disabled={formData.staffType === "MINISTERIAL"}
-                  value={formData.equivalent_rank}
-                  onChange={(e) => setFormData({ ...formData, equivalent_rank: e.target.value.toUpperCase() })}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:bg-dark-border/40 disabled:text-slate-500"
-                  placeholder="e.g., DG, DSP, PSI"
-                />
-                {formData.staffType === "MINISTERIAL" && (
-                  <p className="mt-1 text-xs text-slate-500">Not required for ministerial staff.</p>
-                )}
-              </div>
+              {/* Equivalent Rank and Seniority Order Removed */}
+
               <div>
                 <label className="block text-sm font-medium text-slate-100-secondary">
                   Category *
@@ -292,20 +264,7 @@ export default function RanksPage() {
                   <option value="COMMISSIONERATE">COMMISSIONERATE</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
-                  Seniority Order *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={formData.seniority_order}
-                  onChange={(e) => setFormData({ ...formData, seniority_order: e.target.value })}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  placeholder="1 = highest"
-                />
-              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-100-secondary">
                   Aliases (comma-separated)
@@ -385,7 +344,7 @@ export default function RanksPage() {
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.rank_id }}
               >
@@ -396,7 +355,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.rank_label }}
               >
@@ -407,7 +366,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.staffType }}
               >
@@ -418,18 +377,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
-                style={{ width: columnWidths.equivalent_rank }}
-              >
-                Equivalent
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "equivalent_rank")}
-                  style={{ cursor: resizingColumn === "equivalent_rank" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.category }}
               >
@@ -440,7 +388,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.requiresMetal }}
               >
@@ -451,18 +399,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
-                style={{ width: columnWidths.seniority_order }}
-              >
-                Order
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "seniority_order")}
-                  style={{ cursor: resizingColumn === "seniority_order" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.status }}
               >
@@ -473,7 +410,7 @@ export default function RanksPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
                 style={{ width: columnWidths.actions }}
               >
@@ -493,9 +430,6 @@ export default function RanksPage() {
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
                   {rank.staffType || "POLICE"}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.equivalent_rank }}>
-                  {rank.equivalent_rank}
-                </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
                   {rank.category}
                 </td>
@@ -507,9 +441,6 @@ export default function RanksPage() {
                   ) : (
                     <span className="text-slate-500">No</span>
                   )}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.seniority_order }}>
-                  {rank.seniority_order}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
                   {rank.isActive ? (
