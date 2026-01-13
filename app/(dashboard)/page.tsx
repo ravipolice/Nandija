@@ -48,7 +48,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-dark">
-        <div className="text-lg text-slate-100-secondary">Loading...</div>
+        <div className="text-lg text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -96,7 +96,7 @@ export default function Dashboard() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Dashboard</h1>
-        <p className="mt-2 text-slate-100-secondary">Welcome back! Here&apos;s your overview.</p>
+        <p className="mt-2 text-slate-400">Welcome back! Here&apos;s your overview.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -107,7 +107,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-100-secondary">
+                <p className="text-sm font-medium text-slate-400">
                   {card.title}
                 </p>
                 <p className="mt-2 text-3xl font-bold text-slate-100">
@@ -136,7 +136,7 @@ export default function Dashboard() {
                     key={district}
                     className="flex items-center justify-between py-2 border-b border-dark-border last:border-0"
                   >
-                    <span className="text-slate-100-secondary">{district}</span>
+                    <span className="text-slate-400">{district}</span>
                     <span className="font-semibold text-slate-100">
                       {count as number}
                     </span>
@@ -156,7 +156,7 @@ export default function Dashboard() {
                       key={rank}
                       className="flex items-center justify-between py-2 border-b border-dark-border/50"
                     >
-                      <span className="text-slate-100-secondary text-sm">{rank}</span>
+                      <span className="text-slate-400 text-sm">{rank}</span>
                       <span className="font-semibold text-slate-100 text-sm">
                         {count as number}
                       </span>
@@ -177,7 +177,7 @@ export default function Dashboard() {
                     key={district}
                     className="flex items-center justify-between py-2 border-b border-dark-border last:border-0"
                   >
-                    <span className="text-slate-100-secondary">{district}</span>
+                    <span className="text-slate-400">{district}</span>
                     <span className="font-semibold text-slate-100">
                       {count as number}
                     </span>
@@ -197,7 +197,7 @@ export default function Dashboard() {
                       key={rank}
                       className="flex items-center justify-between py-2 border-b border-dark-border/50"
                     >
-                      <span className="text-slate-100-secondary text-sm">{rank}</span>
+                      <span className="text-slate-400 text-sm">{rank}</span>
                       <span className="font-semibold text-slate-100 text-sm">
                         {count as number}
                       </span>

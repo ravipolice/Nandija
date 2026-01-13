@@ -132,7 +132,7 @@ export default function DistrictsPage() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-dark">
-        <div className="text-lg text-slate-100-secondary">Loading...</div>
+        <div className="text-lg text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -158,7 +158,7 @@ export default function DistrictsPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Name *
                 </label>
                 <input
@@ -170,7 +170,7 @@ export default function DistrictsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Range
                 </label>
                 <input
@@ -192,7 +192,7 @@ export default function DistrictsPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-lg border border-dark-border px-6 py-2 text-slate-100-secondary transition-colors hover:bg-dark-sidebar hover:text-slate-100"
+                className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
               >
                 Cancel
               </button>
@@ -206,7 +206,7 @@ export default function DistrictsPage() {
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.name }}
               >
                 Name
@@ -217,7 +217,7 @@ export default function DistrictsPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.range }}
               >
                 Range
@@ -228,7 +228,7 @@ export default function DistrictsPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.status }}
               >
                 Status
@@ -239,7 +239,7 @@ export default function DistrictsPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.actions }}
               >
                 Actions
@@ -252,7 +252,7 @@ export default function DistrictsPage() {
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
                   {district.name}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.range }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.range }}>
                   {district.range || "N/A"}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
@@ -283,7 +283,7 @@ export default function DistrictsPage() {
           </tbody>
         </table>
         {districts.length === 0 && (
-          <div className="py-12 text-center text-slate-100-secondary">
+          <div className="py-12 text-center text-slate-400">
             No districts found
           </div>
         )}

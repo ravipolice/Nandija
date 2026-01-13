@@ -156,7 +156,7 @@ export default function UnitsPage() {
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-gradient-dark">
-                <div className="text-lg text-slate-100-secondary">Loading...</div>
+                <div className="text-lg text-slate-400">Loading...</div>
             </div>
         );
     }
@@ -182,7 +182,7 @@ export default function UnitsPage() {
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-medium text-slate-100-secondary">
+                                <label className="block text-sm font-medium text-slate-400">
                                     Name *
                                 </label>
                                 <input
@@ -205,7 +205,7 @@ export default function UnitsPage() {
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="rounded-lg border border-dark-border px-6 py-2 text-slate-100-secondary transition-colors hover:bg-dark-sidebar hover:text-slate-100"
+                                className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
                             >
                                 Cancel
                             </button>
@@ -219,7 +219,7 @@ export default function UnitsPage() {
                     <thead className="bg-dark-sidebar border-b border-dark-border">
                         <tr>
                             <th
-                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                                 style={{ width: columnWidths.name }}
                             >
                                 Name
@@ -230,7 +230,7 @@ export default function UnitsPage() {
                                 />
                             </th>
                             <th
-                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                                 style={{ width: columnWidths.status }}
                             >
                                 Status
@@ -241,7 +241,7 @@ export default function UnitsPage() {
                                 />
                             </th>
                             <th
-                                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                                 style={{ width: columnWidths.actions }}
                             >
                                 Actions
@@ -282,7 +282,7 @@ export default function UnitsPage() {
                     </tbody>
                 </table>
                 {units.length === 0 && (
-                    <div className="py-12 text-center text-slate-100-secondary flex flex-col items-center gap-4">
+                    <div className="py-12 text-center text-slate-400 flex flex-col items-center gap-4">
                         <p>No units found</p>
                         <button
                             onClick={handlePopulateDefaults}

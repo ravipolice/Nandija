@@ -176,7 +176,7 @@ export default function StationsPage() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-dark">
-        <div className="text-lg text-slate-100-secondary">Loading...</div>
+        <div className="text-lg text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -195,7 +195,7 @@ export default function StationsPage() {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-100-secondary">
+        <label className="block text-sm font-medium text-slate-400">
           Filter by District
         </label>
         <select
@@ -220,7 +220,7 @@ export default function StationsPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Name *
                 </label>
                 <input
@@ -232,7 +232,7 @@ export default function StationsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   District *
                 </label>
                 <select
@@ -250,7 +250,7 @@ export default function StationsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   STD Code
                 </label>
                 <input
@@ -272,7 +272,7 @@ export default function StationsPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-lg border border-dark-border px-6 py-2 text-slate-100-secondary transition-colors hover:bg-dark-sidebar hover:text-slate-100"
+                className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
               >
                 Cancel
               </button>
@@ -285,8 +285,8 @@ export default function StationsPage() {
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.name }}
               >
                 Name
@@ -296,8 +296,8 @@ export default function StationsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.district }}
               >
                 District
@@ -307,8 +307,8 @@ export default function StationsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.stdCode }}
               >
                 STD Code
@@ -318,8 +318,8 @@ export default function StationsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+              <th
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.status }}
               >
                 Status
@@ -329,8 +329,8 @@ export default function StationsPage() {
                   className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
                 />
               </th>
-              <th 
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+              <th
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.actions }}
               >
                 Actions
@@ -343,10 +343,10 @@ export default function StationsPage() {
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
                   {station.name}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.district }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.district }}>
                   {station.district}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.stdCode }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.stdCode }}>
                   {station.stdCode || "N/A"}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
@@ -377,7 +377,7 @@ export default function StationsPage() {
           </tbody>
         </table>
         {filteredStations.length === 0 && (
-          <div className="py-12 text-center text-slate-100-secondary">
+          <div className="py-12 text-center text-slate-400">
             No stations found
           </div>
         )}

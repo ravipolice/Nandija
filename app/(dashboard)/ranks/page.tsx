@@ -178,7 +178,7 @@ export default function RanksPage() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-dark">
-        <div className="text-lg text-slate-100-secondary">Loading...</div>
+        <div className="text-lg text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -204,7 +204,7 @@ export default function RanksPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Rank ID * {editingRankId && <span className="text-xs text-slate-500">(Immutable)</span>}
                 </label>
                 <input
@@ -218,7 +218,7 @@ export default function RanksPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Staff Type *
                 </label>
                 <select
@@ -235,7 +235,7 @@ export default function RanksPage() {
                 )}
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Rank Label *
                 </label>
                 <input
@@ -250,7 +250,7 @@ export default function RanksPage() {
               {/* Equivalent Rank and Seniority Order Removed */}
 
               <div>
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Category *
                 </label>
                 <select
@@ -266,7 +266,7 @@ export default function RanksPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Aliases (comma-separated)
                 </label>
                 <input
@@ -289,7 +289,7 @@ export default function RanksPage() {
                     disabled={formData.staffType !== "POLICE"}
                     className="w-5 h-5 rounded border-dark-border bg-dark-sidebar text-purple-600 focus:ring-purple-500 focus:ring-2 disabled:opacity-50"
                   />
-                  <span className="text-sm font-medium text-slate-100-secondary">
+                  <span className="text-sm font-medium text-slate-400">
                     Requires Metal Number
                   </span>
                 </label>
@@ -302,13 +302,13 @@ export default function RanksPage() {
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="w-5 h-5 rounded border-dark-border bg-dark-sidebar text-purple-600 focus:ring-purple-500 focus:ring-2"
                   />
-                  <span className="text-sm font-medium text-slate-100-secondary">
+                  <span className="text-sm font-medium text-slate-400">
                     Is Active
                   </span>
                 </label>
               </div>
               <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-slate-100-secondary">
+                <label className="block text-sm font-medium text-slate-400">
                   Remarks
                 </label>
                 <textarea
@@ -331,7 +331,7 @@ export default function RanksPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-lg border border-dark-border px-6 py-2 text-slate-100-secondary transition-colors hover:bg-dark-sidebar hover:text-slate-100"
+                className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
               >
                 Cancel
               </button>
@@ -345,7 +345,7 @@ export default function RanksPage() {
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.rank_id }}
               >
                 Rank ID
@@ -356,7 +356,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.rank_label }}
               >
                 Rank Label
@@ -367,7 +367,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.staffType }}
               >
                 Staff
@@ -378,7 +378,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.category }}
               >
                 Category
@@ -389,7 +389,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.requiresMetal }}
               >
                 Metal #
@@ -400,7 +400,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.status }}
               >
                 Status
@@ -411,7 +411,7 @@ export default function RanksPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-100-secondary relative"
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
                 style={{ width: columnWidths.actions }}
               >
                 Actions
@@ -421,19 +421,19 @@ export default function RanksPage() {
           <tbody className="divide-y divide-dark-border bg-dark-card">
             {ranks.map((rank) => (
               <tr key={rank.rank_id} className="hover:bg-dark-sidebar transition-colors">
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
                   {rank.rank_id}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_label }}>
                   {rank.rank_label}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
                   {rank.staffType || "POLICE"}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
                   {rank.category}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100-secondary overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
                   {rank.requiresMetalNumber ? (
                     <span className="inline-flex rounded-full bg-amber-500/20 px-2 text-xs font-semibold text-amber-400">
                       Yes
@@ -476,7 +476,7 @@ export default function RanksPage() {
           </tbody>
         </table>
         {ranks.length === 0 && (
-          <div className="py-12 text-center text-slate-100-secondary">
+          <div className="py-12 text-center text-slate-400">
             No ranks found
           </div>
         )}
