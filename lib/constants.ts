@@ -34,6 +34,17 @@ export const DISTRICTS = [
 ].sort();
 
 
+export const HIGH_RANKING_OFFICERS = [
+  "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
+];
+
+export const KSRP_BATTALIONS = [
+  "1st Bn – Bengaluru", "2nd Bn – Belagavi", "3rd Bn – Bengaluru", "4th Bn – Bengaluru",
+  "5th Bn – Mysuru", "6th Bn – Kalaburagi", "7th Bn – Mangaluru", "8th Bn – Shivamogga",
+  "9th Bn – Bengaluru", "10th Bn – Shiggavi", "11th Bn – Hassan", "12th Bn – Tumakuru"
+].sort();
+
+
 export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
   "Bagalkot": [
     "Amengad PS", "Badami PS", "Bagalkot CEN Crime PS", "Bagalkot Rural PS",
