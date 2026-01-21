@@ -11,6 +11,8 @@ import {
     District,
     getUnits,
     Unit,
+    getStations,
+    Station,
 } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { hashPin } from "@/lib/auth-helpers";
@@ -20,7 +22,8 @@ import {
     RANKS_LIST,
     RANKS_REQUIRING_METAL_NUMBER,
     DISTRICTS,
-    STATIONS_BY_DISTRICT
+    KSRP_BATTALIONS,
+    HIGH_RANKING_OFFICERS,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -35,6 +38,7 @@ function RegisterPageContent() {
     // Data options
     const [districts, setDistricts] = useState<District[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
+    const [stations, setStations] = useState<Station[]>([]);
 
     // Loading states for data
     const [loadingData, setLoadingData] = useState(true);
@@ -64,9 +68,6 @@ function RegisterPageContent() {
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Derived state for stations
-    const stationsForDistrict = formData.district ? (STATIONS_BY_DISTRICT[formData.district] || []) : [];
 
     // Check if metal number is required for the selected rank
     const isMetalNumberRequired = RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
@@ -101,6 +102,25 @@ function RegisterPageContent() {
         fetchInitialData();
     }, []);
 
+    // Fetch stations when district changes
+    useEffect(() => {
+        async function fetchStations() {
+            if (formData.district) {
+                try {
+                    const stationsData = await getStations(formData.district);
+                    setStations(stationsData);
+                } catch (error) {
+                    console.error("Error fetching stations:", error);
+                    setStations([]);
+                }
+            } else {
+                setStations([]);
+            }
+        }
+
+        fetchStations();
+    }, [formData.district]);
+
     // Prefill Email
     useEffect(() => {
         const emailParam = searchParams?.get("email");
@@ -125,6 +145,13 @@ function RegisterPageContent() {
         if (name === "district") {
             setFormData(prev => ({ ...prev, [name]: value, station: "" }));
             return;
+        }
+
+        if (name === "unit") {
+            if (value === "SCRB") {
+                setFormData(prev => ({ ...prev, [name]: value, district: "Bengaluru City", station: "" }));
+                return;
+            }
         }
 
         // Numeric filtering for numbers
@@ -161,8 +188,15 @@ function RegisterPageContent() {
             if (!formData.email) throw new Error("Email is required");
             if (!formData.mobile1 || formData.mobile1.length !== 10) throw new Error("Valid Mobile 1 is required");
             if (!formData.rank) throw new Error("Rank is required");
-            if (!formData.district) throw new Error("District is required");
-            if (!formData.station) throw new Error("Station is required");
+
+            const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+            const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+            const isKSRP = formData.unit === "KSRP";
+
+            if (!isSpecialUnit && !isHighRanking) {
+                if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
+                if (!isKSRP && !formData.station) throw new Error("Station is required");
+            }
             if (!formData.pin) throw new Error("PIN is required");
             if (formData.pin.length !== 6) throw new Error("PIN must be 6 digits");
             if (formData.pin !== formData.confirmPin) throw new Error("PINs do not match");
@@ -200,8 +234,8 @@ function RegisterPageContent() {
                 landline2: formData.landline2 || undefined,
                 rank: formData.rank,
                 metalNumber: formData.metalNumber || undefined,
-                district: formData.district,
-                station: formData.station,
+                district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
+                station: (isSpecialUnit || isHighRanking || isKSRP) ? "" : formData.station,
                 unit: formData.unit || undefined,
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
@@ -436,7 +470,7 @@ function RegisterPageContent() {
 
                     {/* POSTING - Unit, District, Station */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div>
+                        <div className={["ISD", "CCB", "CID"].includes(formData.unit) ? "sm:col-span-3" : ""}>
                             <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit (Optional)</label>
                             <select
                                 name="unit"
@@ -452,40 +486,48 @@ function RegisterPageContent() {
                             </select>
                         </div>
 
-                        <div>
-                            <label htmlFor="district" className="block text-sm font-medium text-gray-700">District *</label>
-                            <select
-                                name="district"
-                                id="district"
-                                required
-                                value={formData.district}
-                                onChange={handleChange}
-                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
-                            >
-                                <option value="" className="text-gray-500">Select District</option>
-                                {districts.map((d) => (
-                                    <option key={d.id} value={d.name} className="text-gray-900">{d.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && (
+                            <>
+                                <div>
+                                    <label htmlFor="district" className="block text-sm font-medium text-gray-700">
+                                        {formData.unit === "KSRP" ? "Battalion *" : "District *"}
+                                    </label>
+                                    <select
+                                        name="district"
+                                        id="district"
+                                        required
+                                        value={formData.district}
+                                        onChange={handleChange}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
+                                    >
+                                        <option value="" className="text-gray-500">{formData.unit === "KSRP" ? "Select Battalion" : "Select District"}</option>
+                                        {(formData.unit === "KSRP" ? KSRP_BATTALIONS.map(b => ({ id: b, name: b })) : districts).map((d) => (
+                                            <option key={d.id} value={d.name} className="text-gray-900">{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <div>
-                            <label htmlFor="station" className="block text-sm font-medium text-gray-700">Station *</label>
-                            <select
-                                name="station"
-                                id="station"
-                                required
-                                value={formData.station}
-                                onChange={handleChange}
-                                disabled={!formData.district}
-                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
-                            >
-                                <option value="" className="text-gray-500">{formData.district ? "Select Station" : "Select District First"}</option>
-                                {stationsForDistrict.map((s) => (
-                                    <option key={s} value={s} className="text-gray-900">{s}</option>
-                                ))}
-                            </select>
-                        </div>
+                                {formData.unit !== "KSRP" && (
+                                    <div>
+                                        <label htmlFor="station" className="block text-sm font-medium text-gray-700">Station *</label>
+                                        <select
+                                            name="station"
+                                            id="station"
+                                            required
+                                            value={formData.station}
+                                            onChange={handleChange}
+                                            disabled={!formData.district}
+                                            className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
+                                        >
+                                            <option value="" className="text-gray-500">{formData.district ? "Select Station" : "Select District First"}</option>
+                                            {stations.map((s) => (
+                                                <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
 
                     {/* SECURITY & BLOOD - Blood, PIN, Confirm PIN */}
