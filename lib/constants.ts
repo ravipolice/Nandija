@@ -16,8 +16,13 @@ export const RANKS_LIST = [
   "APC", "CPC", "WPC", "PCW", "PC", "AHC", "CHC", "WHC", "HCW", "HC",
   "ASI", "ARSI", "WASI", "ASIW", "RSI", "PSI", "WPSI", "PSIW",
   "RPI", "CPI", "PI", "PIW", "WPI", "DYSP", "SDA", "FDA", "SS",
-  "GHA", "AO", "Typist", "Steno", "PA"
+  "GHA", "AO", "Typist", "Steno", "PA",
+  "SP", "DIG", "IGP", "ADGP", "DGP"
 ].sort();
+
+export const HIGH_RANKING_OFFICERS = [
+  "DYSP", "SP", "DIG", "IGP", "ADGP", "DGP"
+];
 
 export const RANKS_REQUIRING_METAL_NUMBER = [
   "APC", "CPC", "WPC", "PC", "AHC", "CHC", "WHC", "HC"
