@@ -331,6 +331,18 @@ service cloud.firestore {
 
 
     /* ============================================================
+       🔹 UNIT SECTIONS (Dynamic Sections for Units)
+    ============================================================ */
+    match /unit_sections/{unitId} {
+      // All users (including public registration) can read sections
+      allow read: if true;
+      
+      // Only admins can update sections
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    /* ============================================================
        🔹 RANKS (Master Data) - rankMaster collection
     ============================================================ */
     match /rankMaster/{rank_id} {

@@ -9,7 +9,7 @@ export const DEFAULT_UNITS = [
   "Dog Squad", "DSB", "ERSS", "ESCOM", "Excise", "Fire", "Forest", "FPB", "FRRO",
   "FSL", "Guest House", "Health", "Home Guard", "INT", "ISD", "KLA", "L&O",
   "Ministrial", "Minisrial", "Others", "Prison", "PTS", "Railway", "RTO",
-  "S INT", "Social Media", "Toll", "Traffic", "VVIP", "Wireless"
+  "S INT", "Social Media", "State INT", "Toll", "Traffic", "VVIP", "Wireless"
 ];
 
 export const RANKS_LIST = [
@@ -23,25 +23,36 @@ export const RANKS_REQUIRING_METAL_NUMBER = [
   "APC", "CPC", "WPC", "PC", "AHC", "CHC", "WHC", "HC"
 ].sort();
 
-export const DISTRICTS = [
-  "Bagalkot", "Ballari", "Belagavi City", "Belagavi Dist", "Bengaluru City", "Bengaluru Dist", "Bidar",
-  "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
-  "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan", "Haveri",
-  "Hubballi Dharwad City", "K.G.F", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
-  "Mangaluru City", "Mysuru City", "Mysuru Dist",
-  "Raichur", "Ramanagara", "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada",
-  "Vijayanagara", "Vijayapur", "Yadgir"
-].sort();
-
-
-export const HIGH_RANKING_OFFICERS = [
-  "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
-];
-
 export const KSRP_BATTALIONS = [
   "1st Bn – Bengaluru", "2nd Bn – Belagavi", "3rd Bn – Bengaluru", "4th Bn – Bengaluru",
   "5th Bn – Mysuru", "6th Bn – Kalaburagi", "7th Bn – Mangaluru", "8th Bn – Shivamogga",
   "9th Bn – Bengaluru", "10th Bn – Shiggavi", "11th Bn – Hassan", "12th Bn – Tumakuru"
+].sort();
+
+export const DISTRICTS = [
+  "Bagalkot", "Ballari", "Belagavi City", "Belagavi Dist", "Bengaluru City", "Bengaluru Dist", "Bidar",
+  "Central Range", "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
+  "Dakshina Kannada", "Davanagere", "Dharwad", "Eastern Range", "Gadag", "Hassan", "Haveri", "HQ",
+  "Hubballi Dharwad City", "IRB -Bn 1 Munirabad", "IRB -Bn 2 Vijayapura", "IRB -Bn 3 Avathi", "IRB -Bn 4 KGF",
+  "K.G.F", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
+  "Mangaluru City", "Mysuru City", "Mysuru Dist", "Northeastern Range", "Northern Range",
+  "Raichur", "Ramanagara", "Shivamogga", "Southern Range", "Tumakuru", "Udupi", "Uttara Kannada",
+  "Vijayanagara", "Vijayapur", "Western Range", "Yadgir",
+  ...KSRP_BATTALIONS
+].sort();
+
+export const STATE_INT_SECTIONS = [
+  "District HQ",
+  "Current Affairs",
+  "Social Affairs",
+  "C/Room",
+  "Computer",
+  "Administration (Store, EST, ACCTS, Admin)",
+  "SITA",
+  "BDDS",
+  "VIP Sec",
+  "Airport Surveiilance",
+  "IAD"
 ].sort();
 
 

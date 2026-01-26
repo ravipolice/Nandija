@@ -84,6 +84,11 @@ export interface Unit {
   id?: string;
   name: string;
   isActive?: boolean;
+  // New fields for Hybrid Unit-District Mapping
+  mappingType?: "all" | "state" | "single" | "subset" | "none" | "commissionerate";
+  scopes?: string[]; // Multi-scope selection
+  mappedDistricts?: string[];
+  isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
   createdAt?: Timestamp;
 }
 
@@ -121,6 +126,7 @@ export interface PendingRegistration {
   photoUrl?: string;
   status?: "pending" | "approved" | "rejected";
   createdAt?: Timestamp;
+  viewedByAdmin?: boolean;
 }
 
 export interface NotificationQueue {
@@ -575,6 +581,89 @@ export const deleteUnit = async (id: string): Promise<void> => {
   return deleteDocument("units", id);
 };
 
+// Unit Section functions
+export interface UnitSections {
+  id?: string; // unit name
+  sections: string[];
+  updatedAt?: Timestamp;
+}
+
+export const getUnitSections = async (unitName: string): Promise<string[]> => {
+  try {
+    const docSnap = await getDocument<UnitSections>("unit_sections", unitName);
+    return docSnap?.sections || [];
+  } catch (error) {
+    console.error("Error fetching unit sections:", error);
+    return [];
+  }
+};
+
+export const updateUnitSections = async (unitName: string, sections: string[]): Promise<void> => {
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized");
+  }
+  const docRef = doc(db, "unit_sections", unitName);
+  await setDoc(docRef, {
+    sections,
+    updatedAt: Timestamp.now(),
+  }, { merge: true });
+};
+
+// Unit Scope functions
+export interface UnitScope {
+  id?: string;
+  label: string;
+  value: string; // The mappingType string stored in Unit
+  behavior: "single" | "subset" | "all" | "none"; // How it behaves logically
+  isSystem?: boolean; // If true, cannot be deleted
+  createdAt?: Timestamp;
+}
+
+export const getUnitScopes = async (): Promise<UnitScope[]> => {
+  try {
+    const scopes = await getDocuments<UnitScope>("unit_scopes", [orderBy("label")]);
+    return scopes;
+  } catch (error) {
+    console.error("Error fetching unit scopes:", error);
+    return [];
+  }
+};
+
+export const createUnitScope = async (data: Omit<UnitScope, "id">): Promise<string> => {
+  return createDoc<UnitScope>("unit_scopes", { ...data, isSystem: false }); // Always custom
+};
+
+export const updateUnitScope = async (id: string, data: Partial<UnitScope>): Promise<void> => {
+  return updateDocument<UnitScope>("unit_scopes", id, data);
+};
+
+export const deleteUnitScope = async (id: string): Promise<void> => {
+  return deleteDocument("unit_scopes", id);
+};
+
+// Initialize default scopes if not present
+export const initializeDefaultScopes = async () => {
+  const defaults: UnitScope[] = [
+    { label: "All Districts", value: "all", behavior: "all", isSystem: true },
+    { label: "State Level", value: "state", behavior: "none", isSystem: true }, // State behaves like None (no mapped district) usually, or specific? Android treats "state" as explicit check in fallback, but in mapping it falls to default unless mapped. Wait, Android sets "none" -> "No District Required". "state" -> fallback or specific logic.
+    // In Android: mappingType "none" -> "No District Required". "all" -> All. "subset"/"single" -> list.
+    // So "State Level" usually means NO district selection. So behavior="none".
+    { label: "District Specific", value: "single", behavior: "single", isSystem: true },
+    { label: "Multi-District / Battalion", value: "subset", behavior: "subset", isSystem: true },
+    { label: "Commissionerate", value: "commissionerate", behavior: "subset", isSystem: true }, // We added this recently
+    { label: "No District Required", value: "none", behavior: "none", isSystem: true },
+  ];
+
+  const existing = await getUnitScopes();
+  if (existing.length === 0) {
+    console.log("Initializing default unit scopes...");
+    for (const scope of defaults) {
+      await createDoc("unit_scopes", { ...scope, createdAt: Timestamp.now() });
+    }
+  }
+};
+
+
 // Rank functions
 export const getRanks = async (): Promise<Rank[]> => {
   try {
@@ -714,6 +803,19 @@ export const approveRegistration = async (
 
 export const rejectRegistration = async (registrationId: string): Promise<void> => {
   await deleteDocument("pending_registrations", registrationId);
+};
+
+export const markPendingRegistrationAsViewed = async (registrationId: string): Promise<void> => {
+  // Check if we are in a window context before trying to update (though updateDocument handles it)
+  if (typeof window !== "undefined") {
+    try {
+      await updateDocument("pending_registrations", registrationId, {
+        viewedByAdmin: true
+      });
+    } catch (e) {
+      console.warn("Failed to mark registration as viewed", e);
+    }
+  }
 };
 
 // Notifications

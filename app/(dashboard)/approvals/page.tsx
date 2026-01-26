@@ -5,6 +5,7 @@ import {
   getPendingRegistrations,
   approveRegistration,
   rejectRegistration,
+  markPendingRegistrationAsViewed,
   PendingRegistration,
 } from "@/lib/firebase/firestore";
 import { Check, X, RefreshCw } from "lucide-react";
@@ -22,6 +23,13 @@ export default function ApprovalsPage() {
     try {
       const data = await getPendingRegistrations();
       setRegistrations(data);
+
+      // Mark unviewed as viewed
+      const unviewed = data.filter(r => !r.viewedByAdmin && r.id);
+      if (unviewed.length > 0) {
+        Promise.all(unviewed.map(r => markPendingRegistrationAsViewed(r.id!)))
+          .catch(err => console.error("Error marking as viewed", err));
+      }
     } catch (error) {
       console.error("Error loading registrations:", error);
     } finally {

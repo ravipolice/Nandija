@@ -13,6 +13,7 @@ import {
     Unit,
     getStations,
     Station,
+    getUnitSections,
 } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { hashPin } from "@/lib/auth-helpers";
@@ -24,6 +25,7 @@ import {
     DISTRICTS,
     KSRP_BATTALIONS,
     HIGH_RANKING_OFFICERS,
+    STATE_INT_SECTIONS,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -39,6 +41,7 @@ function RegisterPageContent() {
     const [districts, setDistricts] = useState<District[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
+    const [unitSections, setUnitSections] = useState<string[]>([]);
 
     // Loading states for data
     const [loadingData, setLoadingData] = useState(true);
@@ -121,6 +124,24 @@ function RegisterPageContent() {
         fetchStations();
     }, [formData.district]);
 
+    // Fetch Unit Sections
+    useEffect(() => {
+        async function fetchUnitSectionsData() {
+            if (formData.unit) {
+                try {
+                    const sections = await getUnitSections(formData.unit);
+                    setUnitSections(sections);
+                } catch (error) {
+                    console.error("Error fetching unit sections:", error);
+                    setUnitSections([]);
+                }
+            } else {
+                setUnitSections([]);
+            }
+        }
+        fetchUnitSectionsData();
+    }, [formData.unit]);
+
     // Prefill Email
     useEffect(() => {
         const emailParam = searchParams?.get("email");
@@ -193,9 +214,13 @@ function RegisterPageContent() {
             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
             const isKSRP = formData.unit === "KSRP";
 
-            if (!isSpecialUnit && !isHighRanking) {
+            // Find selected unit to check if it's District Level
+            const selectedUnit = units.find(u => u.name === formData.unit);
+            const isDistrictLevelUnit = selectedUnit?.isDistrictLevel || false;
+
+            if (!isSpecialUnit && !isHighRanking && !isDistrictLevelUnit) {
                 if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
-                if (!isKSRP && !formData.station) throw new Error("Station is required");
+                if (!isKSRP && !formData.station) throw new Error((unitSections.length > 0 || formData.unit === "State INT") ? "Section is required" : "Station is required");
             }
             if (!formData.pin) throw new Error("PIN is required");
             if (formData.pin.length !== 6) throw new Error("PIN must be 6 digits");
@@ -486,7 +511,7 @@ function RegisterPageContent() {
                             </select>
                         </div>
 
-                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && (
+                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
                             <>
                                 <div>
                                     <label htmlFor="district" className="block text-sm font-medium text-gray-700">
@@ -509,20 +534,30 @@ function RegisterPageContent() {
 
                                 {formData.unit !== "KSRP" && (
                                     <div>
-                                        <label htmlFor="station" className="block text-sm font-medium text-gray-700">Station *</label>
+                                        <label htmlFor="station" className="block text-sm font-medium text-gray-700">
+                                            {formData.unit === "KSRP" ? "Battalion *" : formData.unit === "State INT" ? "Section *" : "Station *"}
+                                        </label>
                                         <select
                                             name="station"
                                             id="station"
                                             required
                                             value={formData.station}
                                             onChange={handleChange}
-                                            disabled={!formData.district}
+                                            disabled={!formData.district && unitSections.length === 0 && formData.unit !== "State INT"}
                                             className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
                                         >
-                                            <option value="" className="text-gray-500">{formData.district ? "Select Station" : "Select District First"}</option>
-                                            {stations.map((s) => (
-                                                <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
-                                            ))}
+                                            <option value="" className="text-gray-500">
+                                                {(unitSections.length > 0 || formData.unit === "State INT") ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
+                                            </option>
+                                            {(unitSections.length > 0 || formData.unit === "State INT") ? (
+                                                (unitSections.length > 0 ? unitSections : STATE_INT_SECTIONS).map((section) => (
+                                                    <option key={section} value={section} className="text-gray-900">{section}</option>
+                                                ))
+                                            ) : (
+                                                stations.map((s) => (
+                                                    <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
+                                                ))
+                                            )}
                                         </select>
                                     </div>
                                 )}

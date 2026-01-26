@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDistricts, createDistrict, updateDistrict, deleteDistrict, District } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import {
+  getDistricts, createDistrict, updateDistrict, deleteDistrict, District,
+  getDocuments, updateDocument, deleteDocument
+} from "@/lib/firebase/firestore";
+import { Plus, Edit, Trash2, RefreshCw, Eraser } from "lucide-react";
+import { DISTRICTS } from "@/lib/constants";
+import { where } from "firebase/firestore";
 
 type ColumnKey = "name" | "range" | "status" | "actions";
 
@@ -20,6 +25,8 @@ export default function DistrictsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", range: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("districtColumnWidths");
@@ -46,6 +53,104 @@ export default function DistrictsPage() {
       alert("Failed to load districts. Please check the console for details.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePopulateDefaults = async () => {
+    if (!confirm(`This will add up to ${DISTRICTS.length} default districts from the system constants (including DCRE Ranges & IRB). Continue?`)) return;
+    setMigrating(true);
+    try {
+      const existingNames = new Set(districts.map(d => d.name.toLowerCase()));
+      let addedCount = 0;
+      for (const districtName of DISTRICTS) {
+        if (!existingNames.has(districtName.toLowerCase())) {
+          await createDistrict({ name: districtName, isActive: true });
+          addedCount++;
+        }
+      }
+      alert(`Successfully added ${addedCount} new districts.`);
+      await loadDistricts();
+    } catch (error: any) {
+      console.error("Error populating default districts:", error);
+      alert(`Failed to populate default districts: ${error.message}`);
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const handleCleanupNames = async () => {
+    if (!confirm("⚠️ DANGER: This will RENAME districts by removing suffixes (e.g., 'Raichur -BR' -> 'Raichur') and update ALL linked Stations, Employees, and Units. This cannot be undone. Are you sure?")) return;
+
+    setCleaning(true);
+    try {
+      const suffixRegex = /\s*-[A-Z]{2,4}$/; // Matches " -BR", "-CR", "-NER" etc
+      let processed = 0;
+
+      const allDistricts = await getDistricts();
+
+      // Pre-calculate existing names map
+      const nameToId = new Map<string, string>();
+      allDistricts.forEach(d => nameToId.set(d.name.toLowerCase(), d.id!));
+
+      for (const dist of allDistricts) {
+        if (dist.name.match(suffixRegex)) {
+          const oldName = dist.name;
+          const newName = dist.name.replace(suffixRegex, "").trim();
+
+          if (oldName === newName) continue;
+
+          console.log(`Processing: ${oldName} -> ${newName}`);
+
+          // 1. Move Stations
+          // Use generic getDocuments with where clause
+          const stations = await getDocuments<any>("stations", [where("district", "==", oldName)]);
+          for (const st of stations) {
+            await updateDocument("stations", st.id, { district: newName });
+          }
+          console.log(`Moved ${stations.length} stations from ${oldName} to ${newName}`);
+
+          // 2. Move Employees
+          const employees = await getDocuments<any>("employees", [where("district", "==", oldName)]);
+          for (const emp of employees) {
+            await updateDocument("employees", emp.id, { district: newName });
+          }
+          console.log(`Moved ${employees.length} employees from ${oldName} to ${newName}`);
+
+          // 3. Update Units (Mapped Districts)
+          const units = await getDocuments<any>("units", []);
+          for (const unit of units) {
+            if (unit.mappedDistricts && unit.mappedDistricts.includes(oldName)) {
+              const newMapped = unit.mappedDistricts.map((d: string) => d === oldName ? newName : d);
+              // Unique filter in case newName is already in list
+              const uniqueMapped = Array.from(new Set(newMapped));
+              await updateDocument("units", unit.id, { mappedDistricts: uniqueMapped });
+            }
+          }
+
+          // 4. Handle District Doc itself
+          const targetId = nameToId.get(newName.toLowerCase());
+          if (targetId && targetId !== dist.id) {
+            // Target exists, Merge: Delete source district
+            console.log(`Target ${newName} exists. Deleting source ${oldName}.`);
+            await deleteDistrict(dist.id!);
+          } else {
+            // Target doesn't exist (or we are just renaming in place), Rename source
+            console.log(`Renaming district doc ${oldName} to ${newName}.`);
+            await updateDistrict(dist.id!, { name: newName });
+            // Update our local map in case future iterations need it (though unlikely to chain)
+            nameToId.set(newName.toLowerCase(), dist.id!);
+          }
+
+          processed++;
+        }
+      }
+      alert(`Cleanup complete. Processed ${processed} districts.`);
+      await loadDistricts();
+    } catch (e: any) {
+      console.error("Cleanup error:", e);
+      alert(`Error during cleanup: ${e.message}`);
+    } finally {
+      setCleaning(false);
     }
   };
 
@@ -141,13 +246,31 @@ export default function DistrictsPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Districts</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
-        >
-          <Plus className="h-5 w-5" />
-          Add District
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handlePopulateDefaults}
+            disabled={migrating}
+            className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-white transition-all hover:bg-slate-600 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${migrating ? "animate-spin" : ""}`} />
+            {migrating ? "Populating..." : "Sync Defaults"}
+          </button>
+          <button
+            onClick={handleCleanupNames}
+            disabled={cleaning}
+            className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-white transition-all hover:bg-orange-500 disabled:opacity-50"
+          >
+            <Eraser className={`h-4 w-4 ${cleaning ? "animate-pulse" : ""}`} />
+            {cleaning ? "Cleaning..." : "Normalize Names"}
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
+          >
+            <Plus className="h-5 w-5" />
+            Add District
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -291,4 +414,3 @@ export default function DistrictsPage() {
     </div>
   );
 }
-
