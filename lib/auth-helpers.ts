@@ -128,135 +128,170 @@ export interface LoginResult {
  * 2. Verifies PIN
  * 3. Signs in anonymously to Firebase
  */
+// ... (start of loginWithPin)
 export async function loginWithPin(email: string, pin: string): Promise<LoginResult> {
     try {
         if (!db || !auth) {
             throw new Error("Firebase not initialized");
         }
 
+        const normalizedEmail = email.trim().toLowerCase();
+
         // 1. Query Employee
         const employeesRef = collection(db, "employees");
-        const q = query(employeesRef, where("email", "==", email), limit(1));
-        const querySnapshot = await getDocs(q);
+        const q = query(employeesRef, where("email", "==", normalizedEmail), limit(1));
+        // ...
 
-        if (querySnapshot.empty) {
-            return { success: false, error: "Invalid email or PIN" };
-        }
+        // ... (start of requestOtp)
+        export async function requestOtp(email: string): Promise<{ success: boolean; message: string }> {
+            try {
+                if (!functions) throw new Error("Firebase Functions not initialized");
+                const normalizedEmail = email.trim().toLowerCase();
+                const requestOtpFn = httpsCallable(functions, 'requestOtp');
+                const result = await requestOtpFn({ email: normalizedEmail });
+                // ...
 
-        const employeeDoc = querySnapshot.docs[0];
-        const employeeData = employeeDoc.data() as Employee;
-        const storedHash = employeeData.pin || "";
+                // ... (start of verifyOtpCode)
+                export async function verifyOtpCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
+                    try {
+                        if (!functions) throw new Error("Firebase Functions not initialized");
+                        const normalizedEmail = email.trim().toLowerCase();
+                        const verifyOtpFn = httpsCallable(functions, 'verifyOtpEmail');
+                        const result = await verifyOtpFn({ email: normalizedEmail, code });
+                        // ...
 
-        if (!storedHash) {
-            return { success: false, error: "PIN not set for this user." };
-        }
+                        // ... (start of resetPin)
+                        export async function resetPin(email: string, newPin: string): Promise<{ success: boolean; message?: string }> {
+                            try {
+                                if (!db) throw new Error("Firestore not initialized");
 
-        // 2. Verify PIN
-        const isValid = await verifyPin(pin, storedHash);
-        if (!isValid) {
-            return { success: false, error: "Invalid email or PIN" };
-        }
+                                const normalizedEmail = email.trim().toLowerCase();
+                                const hashedPin = await hashPin(newPin);
 
-        // 3. Anonymous Sign In
-        // We need this to satisfy security rules that likely require an auth object
-        const authResult = await signInAnonymously(auth);
-        const firebaseUid = authResult.user.uid;
+                                // Find user doc by email
+                                const employeesRef = collection(db, "employees");
+                                const q = query(employeesRef, where("email", "==", normalizedEmail), limit(1));
+                                // ...
+                                const querySnapshot = await getDocs(q);
 
-        // Optional: Update firebaseUid in Firestore if it's different/missing, 
-        // effectively linking this anonymous session to the employee record if needed.
-        // The Android app does this:
-        if (employeeData.firebaseUid !== firebaseUid) {
-            await updateDoc(doc(db, "employees", employeeDoc.id), {
-                firebaseUid: firebaseUid
-            });
-        }
+                                if (querySnapshot.empty) {
+                                    return { success: false, error: "Invalid email or PIN" };
+                                }
 
-        // Return success with employee data (merged with ID)
-        return {
-            success: true,
-            employee: { id: employeeDoc.id, ...employeeData, firebaseUid }
-        };
+                                const employeeDoc = querySnapshot.docs[0];
+                                const employeeData = employeeDoc.data() as Employee;
+                                const storedHash = employeeData.pin || "";
 
-    } catch (error: any) {
-        console.error("Login error:", error);
-        return { success: false, error: error.message || "Login failed" };
-    }
-}
+                                if (!storedHash) {
+                                    return { success: false, error: "PIN not set for this user." };
+                                }
 
-/**
- * Request OTP via Cloud Function
- */
-export async function requestOtp(email: string): Promise<{ success: boolean; message: string }> {
-    try {
-        if (!functions) throw new Error("Firebase Functions not initialized");
-        const requestOtpFn = httpsCallable(functions, 'requestOtp');
-        const result = await requestOtpFn({ email });
-        const data = result.data as any;
+                                // 2. Verify PIN
+                                const isValid = await verifyPin(pin, storedHash);
+                                if (!isValid) {
+                                    return { success: false, error: "Invalid email or PIN" };
+                                }
 
-        if (data.success) {
-            return { success: true, message: data.message || "OTP sent successfully" };
-        } else {
-            return { success: false, message: data.message || "Failed to send OTP" };
-        }
-    } catch (error: any) {
-        console.error("requestOtp error:", error);
-        return { success: false, message: error.message || "Error sending OTP" };
-    }
-}
+                                // 3. Anonymous Sign In
+                                // We need this to satisfy security rules that likely require an auth object
+                                const authResult = await signInAnonymously(auth);
+                                const firebaseUid = authResult.user.uid;
 
-/**
- * Verify OTP Code via Cloud Function
- */
-export async function verifyOtpCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
-    try {
-        if (!functions) throw new Error("Firebase Functions not initialized");
-        const verifyOtpFn = httpsCallable(functions, 'verifyOtpEmail');
-        const result = await verifyOtpFn({ email, code });
-        const data = result.data as any;
+                                // Optional: Update firebaseUid in Firestore if it's different/missing, 
+                                // effectively linking this anonymous session to the employee record if needed.
+                                // The Android app does this:
+                                if (employeeData.firebaseUid !== firebaseUid) {
+                                    await updateDoc(doc(db, "employees", employeeDoc.id), {
+                                        firebaseUid: firebaseUid
+                                    });
+                                }
 
-        if (data.success && data.employee) {
-            // If verification successful, ensure anonymous auth for subsequent Firestore updates
-            if (auth) {
-                await signInAnonymously(auth);
-            }
-            return { success: true };
-        } else {
-            return { success: false, message: data.message || "Invalid OTP" };
-        }
-    } catch (error: any) {
-        console.error("verifyOtpCode error:", error);
-        return { success: false, message: error.message || "Error verifying OTP" };
-    }
-}
+                                // Return success with employee data (merged with ID)
+                                return {
+                                    success: true,
+                                    employee: { id: employeeDoc.id, ...employeeData, firebaseUid }
+                                };
 
-/**
- * Reset PIN for a user
- * 1. Hashes new PIN
- * 2. Updates Firestore document
- */
-export async function resetPin(email: string, newPin: string): Promise<{ success: boolean; message?: string }> {
-    try {
-        if (!db) throw new Error("Firestore not initialized");
+                            } catch (error: any) {
+                                console.error("Login error:", error);
+                                return { success: false, error: error.message || "Login failed" };
+                            }
+                        }
 
-        const hashedPin = await hashPin(newPin);
+                        /**
+                         * Request OTP via Cloud Function
+                         */
+                        export async function requestOtp(email: string): Promise<{ success: boolean; message: string }> {
+                            try {
+                                if (!functions) throw new Error("Firebase Functions not initialized");
+                                const requestOtpFn = httpsCallable(functions, 'requestOtp');
+                                const result = await requestOtpFn({ email });
+                                const data = result.data as any;
 
-        // Find user doc by email
-        const employeesRef = collection(db, "employees");
-        const q = query(employeesRef, where("email", "==", email), limit(1));
-        const querySnapshot = await getDocs(q);
+                                if (data.success) {
+                                    return { success: true, message: data.message || "OTP sent successfully" };
+                                } else {
+                                    return { success: false, message: data.message || "Failed to send OTP" };
+                                }
+                            } catch (error: any) {
+                                console.error("requestOtp error:", error);
+                                return { success: false, message: error.message || "Error sending OTP" };
+                            }
+                        }
 
-        if (querySnapshot.empty) {
-            return { success: false, message: "User not found" };
-        }
+                        /**
+                         * Verify OTP Code via Cloud Function
+                         */
+                        export async function verifyOtpCode(email: string, code: string): Promise<{ success: boolean; message?: string }> {
+                            try {
+                                if (!functions) throw new Error("Firebase Functions not initialized");
+                                const verifyOtpFn = httpsCallable(functions, 'verifyOtpEmail');
+                                const result = await verifyOtpFn({ email, code });
+                                const data = result.data as any;
 
-        const userDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, "employees", userDoc.id), {
-            pin: hashedPin
-        });
+                                if (data.success && data.employee) {
+                                    // If verification successful, ensure anonymous auth for subsequent Firestore updates
+                                    if (auth) {
+                                        await signInAnonymously(auth);
+                                    }
+                                    return { success: true };
+                                } else {
+                                    return { success: false, message: data.message || "Invalid OTP" };
+                                }
+                            } catch (error: any) {
+                                console.error("verifyOtpCode error:", error);
+                                return { success: false, message: error.message || "Error verifying OTP" };
+                            }
+                        }
 
-        return { success: true, message: "PIN reset successfully" };
-    } catch (error: any) {
-        console.error("resetPin error:", error);
-        return { success: false, message: error.message || "Failed to reset PIN" };
-    }
-}
+                        /**
+                         * Reset PIN for a user
+                         * 1. Hashes new PIN
+                         * 2. Updates Firestore document
+                         */
+                        export async function resetPin(email: string, newPin: string): Promise<{ success: boolean; message?: string }> {
+                            try {
+                                if (!db) throw new Error("Firestore not initialized");
+
+                                const hashedPin = await hashPin(newPin);
+
+                                // Find user doc by email
+                                const employeesRef = collection(db, "employees");
+                                const q = query(employeesRef, where("email", "==", email), limit(1));
+                                const querySnapshot = await getDocs(q);
+
+                                if (querySnapshot.empty) {
+                                    return { success: false, message: "User not found" };
+                                }
+
+                                const userDoc = querySnapshot.docs[0];
+                                await updateDoc(doc(db, "employees", userDoc.id), {
+                                    pin: hashedPin
+                                });
+
+                                return { success: true, message: "PIN reset successfully" };
+                            } catch (error: any) {
+                                console.error("resetPin error:", error);
+                                return { success: false, message: error.message || "Failed to reset PIN" };
+                            }
+                        }

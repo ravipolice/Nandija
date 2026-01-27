@@ -258,6 +258,7 @@ export default function EditEmployeePage() {
     try {
       await updateEmployee(employeeId, {
         ...formData,
+        email: formData.email.trim().toLowerCase(),
         mobile2: formData.mobile2,
         landline: formData.landline,
         landline2: formData.landline2,
@@ -481,31 +482,32 @@ export default function EditEmployeePage() {
             </select>
           </div>
 
-          {/* Row 7: Station and Blood Group (both in same row) */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="relative" style={{ zIndex: 10 }}>
-              <label className="block text-sm font-medium text-slate-400">
-                Station *
-              </label>
-              <select
-                required
-                key={`station-${stations.length}-${formData.station}`}
-                value={formData.station}
-                onChange={(e) => setFormData({ ...formData, station: e.target.value })}
-                disabled={!selectedDistrict}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
-                style={{ zIndex: 1000, position: 'relative' }}
-              >
-                <option value="">
-                  {selectedDistrict ? "Select Station" : "Select District First"}
-                </option>
-                {stations.map((s) => (
-                  <option key={s.id || s.name} value={s.name}>
-                    {s.name}
+            {!units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+              <div className="relative" style={{ zIndex: 10 }}>
+                <label className="block text-sm font-medium text-slate-400">
+                  Station *
+                </label>
+                <select
+                  required
+                  key={`station-${stations.length}-${formData.station}`}
+                  value={formData.station}
+                  onChange={(e) => setFormData({ ...formData, station: e.target.value })}
+                  disabled={!selectedDistrict}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+                  style={{ zIndex: 1000, position: 'relative' }}
+                >
+                  <option value="">
+                    {selectedDistrict ? "Select Station" : "Select District First"}
                   </option>
-                ))}
-              </select>
-            </div>
+                  {stations.map((s) => (
+                    <option key={s.id || s.name} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Row 9b: Unit */}
             <div>

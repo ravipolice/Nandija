@@ -218,9 +218,11 @@ function RegisterPageContent() {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const isDistrictLevelUnit = selectedUnit?.isDistrictLevel || false;
 
-            if (!isSpecialUnit && !isHighRanking && !isDistrictLevelUnit) {
+            if (!isSpecialUnit && !isHighRanking) {
                 if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
-                if (!isKSRP && !formData.station) throw new Error((unitSections.length > 0 || formData.unit === "State INT") ? "Section is required" : "Station is required");
+                if (!isKSRP && !isDistrictLevelUnit && !formData.station) {
+                    throw new Error((unitSections.length > 0 || formData.unit === "State INT") ? "Section is required" : "Station is required");
+                }
             }
             if (!formData.pin) throw new Error("PIN is required");
             if (formData.pin.length !== 6) throw new Error("PIN must be 6 digits");
@@ -252,7 +254,7 @@ function RegisterPageContent() {
             await createPendingRegistration({
                 kgid: formData.kgid,
                 name: formData.name,
-                email: formData.email,
+                email: formData.email.trim().toLowerCase(),
                 mobile1: formData.mobile1,
                 mobile2: formData.mobile2 || undefined,
                 landline: formData.landline || undefined,
@@ -511,7 +513,7 @@ function RegisterPageContent() {
                             </select>
                         </div>
 
-                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && (
                             <>
                                 <div>
                                     <label htmlFor="district" className="block text-sm font-medium text-gray-700">
@@ -532,7 +534,7 @@ function RegisterPageContent() {
                                     </select>
                                 </div>
 
-                                {formData.unit !== "KSRP" && (
+                                {formData.unit !== "KSRP" && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
                                     <div>
                                         <label htmlFor="station" className="block text-sm font-medium text-gray-700">
                                             {formData.unit === "KSRP" ? "Battalion *" : formData.unit === "State INT" ? "Section *" : "Station *"}
