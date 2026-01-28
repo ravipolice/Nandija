@@ -7,9 +7,9 @@ export const DEFAULT_UNITS = [
   "Admin", "ASC Team", "BDDS", "C Room", "CAR", "CCB", "CCRB", "CDR", "CEN", "CID",
   "Coast Guard", "Computer", "Court", "CSB", "CSP", "DAR", "DCIB", "DCRB", "DCRE",
   "Dog Squad", "DSB", "ERSS", "ESCOM", "Excise", "Fire", "Forest", "FPB", "FRRO",
-  "FSL", "Guest House", "Health", "Home Guard", "INT", "ISD", "KLA", "L&O",
+  "FSL", "Guest House", "Health", "Home Guard", "INT", "ISD", "KSRP", "Lokayukta", "L&O",
   "Ministrial", "Minisrial", "Others", "Prison", "PTS", "Railway", "RTO",
-  "S INT", "Social Media", "State INT", "Toll", "Traffic", "VVIP", "Wireless"
+  "S INT", "SCRB", "Social Media", "State INT", "Toll", "Traffic", "VVIP", "Wireless"
 ];
 
 export const RANKS_LIST = [
@@ -17,11 +17,11 @@ export const RANKS_LIST = [
   "ASI", "ARSI", "WASI", "ASIW", "RSI", "PSI", "WPSI", "PSIW",
   "RPI", "CPI", "PI", "PIW", "WPI", "DYSP", "SDA", "FDA", "SS",
   "GHA", "AO", "Typist", "Steno", "PA",
-  "SP", "DIG", "IGP", "ADGP", "DGP"
+  "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
 ].sort();
 
 export const HIGH_RANKING_OFFICERS = [
-  "DYSP", "SP", "DIG", "IGP", "ADGP", "DGP"
+  "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
 ];
 
 export const RANKS_REQUIRING_METAL_NUMBER = [

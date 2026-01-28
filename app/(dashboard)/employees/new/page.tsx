@@ -12,8 +12,13 @@ import {
   Station,
   Rank,
   Unit,
+  getUnitSections,
 } from "@/lib/firebase/firestore";
-import { BLOOD_GROUPS } from "@/lib/constants";
+import {
+  BLOOD_GROUPS,
+  HIGH_RANKING_OFFICERS,
+  KSRP_BATTALIONS
+} from "@/lib/constants";
 
 export default function NewEmployeePage() {
   const router = useRouter();
@@ -22,6 +27,7 @@ export default function NewEmployeePage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [unitSections, setUnitSections] = useState<string[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -56,6 +62,23 @@ export default function NewEmployeePage() {
       setStations([]);
     }
   }, [selectedDistrict]);
+
+  useEffect(() => {
+    async function fetchUnitSectionsData() {
+      if (formData.unit) {
+        try {
+          const sections = await getUnitSections(formData.unit);
+          setUnitSections(sections);
+        } catch (error) {
+          console.error("Error fetching unit sections:", error);
+          setUnitSections([]);
+        }
+      } else {
+        setUnitSections([]);
+      }
+    }
+    fetchUnitSectionsData();
+  }, [formData.unit]);
 
   const loadDistricts = async () => {
     try {
@@ -107,6 +130,24 @@ export default function NewEmployeePage() {
     return rank?.requiresMetalNumber || false;
   };
 
+  const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+  const isKSRP = formData.unit === "KSRP";
+  const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+
+  const handleUnitChange = (unitName: string) => {
+    if (unitName === "SCRB") {
+      setFormData({
+        ...formData,
+        unit: unitName,
+        district: "Bengaluru City",
+        station: "",
+      });
+      setSelectedDistrict("Bengaluru City");
+    } else {
+      setFormData({ ...formData, unit: unitName });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -136,6 +177,8 @@ export default function NewEmployeePage() {
         landline: formData.landline,
         landline2: formData.landline2,
         unit: formData.unit,
+        district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
+        station: (isSpecialUnit || isHighRanking || isKSRP) ? "" : formData.station,
       });
       router.push("/employees");
     } catch (error) {
@@ -338,125 +381,126 @@ export default function NewEmployeePage() {
           </div>
 
           {/* Row 6: District */}
+          {!isHighRanking && !isSpecialUnit && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                {isKSRP ? "Battalion *" : "District *"}
+              </label>
+              <select
+                required
+                value={selectedDistrict}
+                onChange={(e) => {
+                  setSelectedDistrict(e.target.value);
+                  setFormData({
+                    ...formData,
+                    district: e.target.value,
+                    station: "",
+                  });
+                }}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              >
+                <option value="">{isKSRP ? "Select Battalion" : "Select District"}</option>
+                {(isKSRP ? KSRP_BATTALIONS.map(b => ({ id: b, name: b })) : districts).map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Row 7: Station */}
+          {!isHighRanking && !isSpecialUnit && !isKSRP && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                {unitSections.length > 0 ? "Section *" : "Station *"}
+              </label>
+              <select
+                required
+                value={formData.station}
+                onChange={(e) =>
+                  setFormData({ ...formData, station: e.target.value })
+                }
+                disabled={!selectedDistrict && unitSections.length === 0}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+              >
+                <option value="">
+                  {unitSections.length > 0 ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                </option>
+                {unitSections.length > 0 ? (
+                  unitSections.map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))
+                ) : (
+                  stations.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Row 8: Unit */}
           <div>
             <label className="block text-sm font-medium text-slate-400">
-              District *
+              Unit (Optional)
             </label>
             <select
-              required
-              value={selectedDistrict}
-              onChange={(e) => {
-                setSelectedDistrict(e.target.value);
-                setFormData({
-                  ...formData,
-                  district: e.target.value,
-                  station: "",
-                });
-              }}
+              value={formData.unit}
+              onChange={(e) => handleUnitChange(e.target.value)}
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             >
-              <option value="">Select District</option>
-              {districts.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
+              <option value="">Select Unit (Optional)</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name}
                 </option>
               ))}
             </select>
           </div>
 
-        </select>
-    </div>
+          {/* Row 9: Blood Group */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Blood Group
+            </label>
+            <select
+              value={formData.bloodGroup}
+              onChange={(e) =>
+                setFormData({ ...formData, bloodGroup: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Blood Group</option>
+              {BLOOD_GROUPS.map((bg) => (
+                <option key={bg} value={bg}>
+                  {bg}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Row 7: Station */ }
-  {
-    !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
-      <div>
-        <label className="block text-sm font-medium text-slate-400">
-          Station *
-        </label>
-        <select
-          required
-          value={formData.station}
-          onChange={(e) =>
-            setFormData({ ...formData, station: e.target.value })
-          }
-          disabled={!selectedDistrict}
-          className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
-        >
-          <option value="">
-            {selectedDistrict ? "Select Station" : "Select District First"}
-          </option>
-          {stations.map((s) => (
-            <option key={s.id} value={s.name}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    )
-  }
+          {/* Row 10: Photo URL */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Photo URL
+            </label>
+            <input
+              type="url"
+              value={formData.photoUrl}
+              onChange={(e) =>
+                setFormData({ ...formData, photoUrl: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+              placeholder="https://..."
+            />
+          </div>
+        </div>
 
-  {/* Row 8: Unit */ }
-  <div>
-    <label className="block text-sm font-medium text-slate-400">
-      Unit (Optional)
-    </label>
-    <select
-      value={formData.unit}
-      onChange={(e) =>
-        setFormData({ ...formData, unit: e.target.value })
-      }
-      className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-    >
-      <option value="">Select Unit (Optional)</option>
-      {units.map((unit) => (
-        <option key={unit.id} value={unit.name}>
-          {unit.name}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  {/* Row 9: Blood Group */ }
-  <div>
-    <label className="block text-sm font-medium text-slate-400">
-      Blood Group
-    </label>
-    <select
-      value={formData.bloodGroup}
-      onChange={(e) =>
-        setFormData({ ...formData, bloodGroup: e.target.value })
-      }
-      className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-    >
-      <option value="">Select Blood Group</option>
-      {BLOOD_GROUPS.map((bg) => (
-        <option key={bg} value={bg}>
-          {bg}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  {/* Row 10: Photo URL */ }
-  <div>
-    <label className="block text-sm font-medium text-slate-400">
-      Photo URL
-    </label>
-    <input
-      type="url"
-      value={formData.photoUrl}
-      onChange={(e) =>
-        setFormData({ ...formData, photoUrl: e.target.value })
-      }
-      className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-      placeholder="https://..."
-    />
-  </div>
-        </div >
-
-    {/* Checkboxes */ }
-    < div className = "mt-6 flex gap-6" >
+        {/* Checkboxes */}
+        < div className="mt-6 flex gap-6" >
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -493,22 +537,22 @@ export default function NewEmployeePage() {
           </div>
         </div >
 
-    <div className="mt-6 flex gap-4">
-      <button
-        type="submit"
-        disabled={loading}
-        className="rounded-lg bg-primary-600 px-6 py-2 text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
-      >
-        {loading ? "Saving..." : "Create Employee"}
-      </button>
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
-      >
-        Cancel
-      </button>
-    </div>
+        <div className="mt-6 flex gap-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-primary-600 px-6 py-2 text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Create Employee"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-lg border border-dark-border px-6 py-2 text-slate-400 transition-colors hover:bg-dark-sidebar hover:text-slate-100"
+          >
+            Cancel
+          </button>
+        </div>
       </form >
     </div >
   );

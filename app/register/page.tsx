@@ -25,7 +25,6 @@ import {
     DISTRICTS,
     KSRP_BATTALIONS,
     HIGH_RANKING_OFFICERS,
-    STATE_INT_SECTIONS,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -142,11 +141,17 @@ function RegisterPageContent() {
         fetchUnitSectionsData();
     }, [formData.unit]);
 
-    // Prefill Email
+    // Prefill Email & Name
     useEffect(() => {
         const emailParam = searchParams?.get("email");
-        if (emailParam) {
-            setFormData(prev => ({ ...prev, email: emailParam }));
+        const nameParam = searchParams?.get("name");
+
+        if (emailParam || nameParam) {
+            setFormData(prev => ({
+                ...prev,
+                email: emailParam || prev.email,
+                name: nameParam || prev.name
+            }));
         }
     }, [searchParams]);
 
@@ -221,7 +226,7 @@ function RegisterPageContent() {
             if (!isSpecialUnit && !isHighRanking) {
                 if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
                 if (!isKSRP && !isDistrictLevelUnit && !formData.station) {
-                    throw new Error((unitSections.length > 0 || formData.unit === "State INT") ? "Section is required" : "Station is required");
+                    throw new Error(unitSections.length > 0 ? "Section is required" : "Station is required");
                 }
             }
             if (!formData.pin) throw new Error("PIN is required");
@@ -537,7 +542,7 @@ function RegisterPageContent() {
                                 {formData.unit !== "KSRP" && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
                                     <div>
                                         <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-                                            {formData.unit === "KSRP" ? "Battalion *" : formData.unit === "State INT" ? "Section *" : "Station *"}
+                                            {unitSections.length > 0 ? "Section *" : "Station *"}
                                         </label>
                                         <select
                                             name="station"
@@ -545,14 +550,14 @@ function RegisterPageContent() {
                                             required
                                             value={formData.station}
                                             onChange={handleChange}
-                                            disabled={!formData.district && unitSections.length === 0 && formData.unit !== "State INT"}
+                                            disabled={!formData.district && unitSections.length === 0}
                                             className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
                                         >
                                             <option value="" className="text-gray-500">
-                                                {(unitSections.length > 0 || formData.unit === "State INT") ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
+                                                {unitSections.length > 0 ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
                                             </option>
-                                            {(unitSections.length > 0 || formData.unit === "State INT") ? (
-                                                (unitSections.length > 0 ? unitSections : STATE_INT_SECTIONS).map((section) => (
+                                            {unitSections.length > 0 ? (
+                                                unitSections.map((section) => (
                                                     <option key={section} value={section} className="text-gray-900">{section}</option>
                                                 ))
                                             ) : (

@@ -14,6 +14,7 @@ import {
   Rank,
   Unit,
 } from "@/lib/firebase/firestore";
+import { BLOOD_GROUPS } from "@/lib/constants";
 
 export default function EditOfficerPage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function EditOfficerPage() {
     district: "",
     office: "",
     unit: "",
+    bloodGroup: "",
   });
 
   const loadOfficer = async () => {
@@ -64,6 +66,7 @@ export default function EditOfficerPage() {
         district: officer.district || "",
         office: officer.office || "",
         unit: officer.unit || "",
+        bloodGroup: officer.bloodGroup || "",
       });
 
       // Set selected district to load stations
@@ -181,6 +184,7 @@ export default function EditOfficerPage() {
         district: formData.district,
         office: formData.office.trim(),
         unit: formData.unit.trim(),
+        bloodGroup: formData.bloodGroup,
       });
       router.push("/officers");
     } catch (error) {
@@ -247,6 +251,24 @@ export default function EditOfficerPage() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Blood Group
+            </label>
+            <select
+              value={formData.bloodGroup}
+              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Blood Group</option>
+              {BLOOD_GROUPS.map((bg) => (
+                <option key={bg} value={bg}>
+                  {bg}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

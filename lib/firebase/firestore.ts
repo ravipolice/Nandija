@@ -59,6 +59,7 @@ export interface Officer {
   district: string;
   office?: string;
   unit?: string;
+  bloodGroup?: string;
   createdAt?: Timestamp;
   isHidden?: boolean;
 }

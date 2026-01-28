@@ -13,8 +13,13 @@ import {
   Station,
   Rank,
   Unit,
+  getUnitSections,
 } from "@/lib/firebase/firestore";
-import { BLOOD_GROUPS } from "@/lib/constants";
+import {
+  BLOOD_GROUPS,
+  HIGH_RANKING_OFFICERS,
+  KSRP_BATTALIONS
+} from "@/lib/constants";
 
 export default function EditEmployeePage() {
   const router = useRouter();
@@ -27,6 +32,7 @@ export default function EditEmployeePage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [unitSections, setUnitSections] = useState<string[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -86,6 +92,23 @@ export default function EditEmployeePage() {
       setStations([]);
     }
   }, [selectedDistrict, loading]);
+
+  useEffect(() => {
+    async function fetchUnitSectionsData() {
+      if (formData.unit) {
+        try {
+          const sections = await getUnitSections(formData.unit);
+          setUnitSections(sections);
+        } catch (error) {
+          console.error("Error fetching unit sections:", error);
+          setUnitSections([]);
+        }
+      } else {
+        setUnitSections([]);
+      }
+    }
+    fetchUnitSectionsData();
+  }, [formData.unit]);
 
   // Ensure station value is preserved when stations are loaded
   useEffect(() => {
@@ -220,6 +243,24 @@ export default function EditEmployeePage() {
     return rank?.requiresMetalNumber || false;
   };
 
+  const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+  const isKSRP = formData.unit === "KSRP";
+  const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+
+  const handleUnitChange = (unitName: string) => {
+    if (unitName === "SCRB") {
+      setFormData({
+        ...formData,
+        unit: unitName,
+        district: "Bengaluru City",
+        station: "",
+      });
+      setSelectedDistrict("Bengaluru City");
+    } else {
+      setFormData({ ...formData, unit: unitName });
+    }
+  };
+
   const loadStations = async (district: string) => {
     try {
       const data = await getStations(district);
@@ -263,6 +304,8 @@ export default function EditEmployeePage() {
         landline: formData.landline,
         landline2: formData.landline2,
         unit: formData.unit,
+        district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
+        station: (isSpecialUnit || isHighRanking || isKSRP) ? "" : formData.station,
       });
       router.push("/employees");
     } catch (error) {
@@ -459,52 +502,60 @@ export default function EditEmployeePage() {
           </div>
 
           {/* Row 6: District */}
-          <div className="relative" style={{ zIndex: 10 }}>
-            <label className="block text-sm font-medium text-slate-400">
-              District *
-            </label>
-            <select
-              required
-              value={selectedDistrict}
-              onChange={(e) => {
-                setSelectedDistrict(e.target.value);
-                setFormData({ ...formData, district: e.target.value, station: "" });
-              }}
-              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              style={{ zIndex: 1000, position: 'relative' }}
-            >
-              <option value="">Select District</option>
-              {districts.map((d) => (
-                <option key={d.id} value={d.name} style={{ backgroundColor: 'white', color: 'black' }}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isHighRanking && !isSpecialUnit && (
+            <div className="relative" style={{ zIndex: 10 }}>
+              <label className="block text-sm font-medium text-slate-400">
+                {isKSRP ? "Battalion *" : "District *"}
+              </label>
+              <select
+                required
+                value={selectedDistrict}
+                onChange={(e) => {
+                  setSelectedDistrict(e.target.value);
+                  setFormData({ ...formData, district: e.target.value, station: "" });
+                }}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                style={{ zIndex: 1000, position: 'relative' }}
+              >
+                <option value="">{isKSRP ? "Select Battalion" : "Select District"}</option>
+                {(isKSRP ? KSRP_BATTALIONS.map(b => ({ id: b, name: b })) : districts).map((d) => (
+                  <option key={d.id} value={d.name} style={{ backgroundColor: 'white', color: 'black' }}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {!units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+            {!isHighRanking && !isSpecialUnit && !isKSRP && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
               <div className="relative" style={{ zIndex: 10 }}>
                 <label className="block text-sm font-medium text-slate-400">
-                  Station *
+                  {unitSections.length > 0 ? "Section *" : "Station *"}
                 </label>
                 <select
                   required
                   key={`station-${stations.length}-${formData.station}`}
                   value={formData.station}
                   onChange={(e) => setFormData({ ...formData, station: e.target.value })}
-                  disabled={!selectedDistrict}
+                  disabled={!selectedDistrict && unitSections.length === 0}
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
                   style={{ zIndex: 1000, position: 'relative' }}
                 >
                   <option value="">
-                    {selectedDistrict ? "Select Station" : "Select District First"}
+                    {unitSections.length > 0 ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
                   </option>
-                  {stations.map((s) => (
-                    <option key={s.id || s.name} value={s.name}>
-                      {s.name}
-                    </option>
-                  ))}
+                  {unitSections.length > 0 ? (
+                    unitSections.map((section) => (
+                      <option key={section} value={section} style={{ backgroundColor: 'white', color: 'black' }}>{section}</option>
+                    ))
+                  ) : (
+                    stations.map((s) => (
+                      <option key={s.id || s.name} value={s.name} style={{ backgroundColor: 'white', color: 'black' }}>
+                        {s.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             )}
@@ -516,7 +567,7 @@ export default function EditEmployeePage() {
               </label>
               <select
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                onChange={(e) => handleUnitChange(e.target.value)}
                 className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
               >
                 <option value="">Select Unit (Optional)</option>
