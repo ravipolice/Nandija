@@ -219,7 +219,7 @@ export default function UnitsPage() {
     }
 
     // Modal UI
-    const Modal = () => (
+    const renderModal = () => (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="w-full max-w-2xl rounded-xl bg-dark-card border border-dark-border shadow-2xl flex flex-col max-h-[90vh]">
                 {/* Header */}
@@ -467,7 +467,7 @@ export default function UnitsPage() {
                 </button>
             </div>
 
-            {showForm && <Modal />}
+            {showForm && renderModal()}
 
             <div className="overflow-x-auto rounded-lg bg-dark-card border border-dark-border shadow-lg" style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch' }}>
                 <table className="w-full" style={{ tableLayout: 'fixed' }}>
