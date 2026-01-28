@@ -39,10 +39,10 @@ export const DISTRICTS = [
   "Central Range", "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
   "Dakshina Kannada", "Davanagere", "Dharwad", "Eastern Range", "Gadag", "Hassan", "Haveri", "HQ",
   "Hubballi Dharwad City", "IRB -Bn 1 Munirabad", "IRB -Bn 2 Vijayapura", "IRB -Bn 3 Avathi", "IRB -Bn 4 KGF",
-  "K.G.F", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
+  "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
   "Mangaluru City", "Mysuru City", "Mysuru Dist", "Northeastern Range", "Northern Range",
   "Raichur", "Ramanagara", "Shivamogga", "Southern Range", "Tumakuru", "Udupi", "Uttara Kannada",
-  "Vijayanagara", "Vijayapur", "Western Range", "Yadgir",
+  "Vijayanagara", "Western Range", "Yadgir",
   ...KSRP_BATTALIONS
 ].sort();
 
@@ -283,14 +283,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "FPB Hubballi Dharwad City", "MCU Hubballi Dharwad City", "DCRB Hubballi Dharwad City", "DSB Hubballi Dharwad City", "SMMC Hubballi Dharwad City",
     "State INT Hubballi Dharwad City", "DCRE Hubballi Dharwad City", "Lokayukta Hubballi Dharwad City", "ESCOM Hubballi Dharwad City"
   ],
-  "K.G.F": [
-    "Andersonpet PS", "Bangarpet PS", "BEML Nagar PS", "Bethamangala PS", "Budikote PS",
-    "Champion Reefs PS", "Kamasamudram PS", "KGF CEN Crime PS", "Kyasamballi PS",
-    "Marikuppam PS", "Oorgaum PS", "Robertsonpet PS",
-    "Control Room K.G.F", "DPO K.G.F", "Computer Sec K.G.F", "DAR K.G.F",
-    "FPB K.G.F", "MCU K.G.F", "DCRB K.G.F", "DSB K.G.F", "SMMC K.G.F",
-    "State INT K.G.F", "DCRE K.G.F", "Lokayukta K.G.F", "ESCOM K.G.F"
-  ],
+
   "Kalaburagi": [
     "Afzalpur PS", "Alland PS", "Chincholi PS", "Chittapura PS", "Devalagangapur PS", "Jewargi PS",
     "Kalaburagi CEN Crime PS", "Kalaburagi Women PS", "Kalagi PS", "Kamalapur PS", "Kunchavaram PS",
@@ -460,7 +453,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "FPB Vijayanagara", "MCU Vijayanagara", "DCRB Vijayanagara", "DSB Vijayanagara", "SMMC Vijayanagara",
     "State INT Vijayanagara", "DCRE Vijayanagara", "Lokayukta Vijayanagara", "ESCOM Vijayanagara"
   ],
-  "Vijayapur": [
+  "Vijayapura": [
     "Adarsh Nagar PS", "Alamatti PS", "Almel PS", "APMC PS", "Babaleshwar PS",
     "Basavan Bagewadi PS", "Chadachan PS", "Devara Hipparagi PS", "Gandhi Chowk PS",
     "Golgumbaz PS", "Hortti PS", "Indi PS", "Indi Rural PS", "Jalanagar PS", "Kalkeri PS",
