@@ -84,6 +84,7 @@ export function Sidebar() {
         <Logo size="md" className="mb-4" />
         <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">PMD Admin</h1>
         <p className="mt-1 text-xs text-dark-text-secondary">Admin Panel</p>
+        <div className="mt-2 text-[10px] text-slate-500 opacity-60">
           v2.3-UnitSections
         </div>
       </div>
