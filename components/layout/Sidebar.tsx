@@ -17,7 +17,6 @@ import {
   LogOut,
   Shield,
   Award,
-  Layers,
 } from "lucide-react";
 import { signOut } from "@/lib/firebase/auth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -33,7 +32,6 @@ const navigation = [
   { name: "Ranks", href: "/ranks", icon: Award },
   { name: "Districts", href: "/districts", icon: MapPin },
   { name: "Stations", href: "/stations", icon: Building2 },
-  { name: "Sections", href: "/sections", icon: Layers },
   { name: "Units", href: "/units", icon: Building2 }, // Using Building2 as placeholder, logically fits alongside Stations
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Documents", href: "/documents", icon: FileText },

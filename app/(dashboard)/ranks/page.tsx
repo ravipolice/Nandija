@@ -340,146 +340,148 @@ export default function RanksPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-dark-card border border-dark-border shadow-lg" style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch' }}>
-        <table className="w-full" style={{ tableLayout: 'fixed' }}>
-          <thead className="bg-dark-sidebar border-b border-dark-border">
-            <tr>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.rank_id }}
-              >
-                Rank ID
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "rank_id")}
-                  style={{ cursor: resizingColumn === "rank_id" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.rank_label }}
-              >
-                Rank Label
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "rank_label")}
-                  style={{ cursor: resizingColumn === "rank_label" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.staffType }}
-              >
-                Staff
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "staffType")}
-                  style={{ cursor: resizingColumn === "staffType" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.category }}
-              >
-                Category
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "category")}
-                  style={{ cursor: resizingColumn === "category" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.requiresMetal }}
-              >
-                Metal #
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "requiresMetal")}
-                  style={{ cursor: resizingColumn === "requiresMetal" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.status }}
-              >
-                Status
-                <div
-                  onMouseDown={(e) => handleMouseDown(e, "status")}
-                  style={{ cursor: resizingColumn === "status" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
-              </th>
-              <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.actions }}
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dark-border bg-dark-card">
-            {ranks.map((rank) => (
-              <tr key={rank.rank_id} className="hover:bg-dark-sidebar transition-colors">
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
-                  {rank.rank_id}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_label }}>
-                  {rank.rank_label}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
-                  {rank.staffType || "POLICE"}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
-                  {rank.category}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
-                  {rank.requiresMetalNumber ? (
-                    <span className="inline-flex rounded-full bg-amber-500/20 px-2 text-xs font-semibold text-amber-400">
-                      Yes
-                    </span>
-                  ) : (
-                    <span className="text-slate-500">No</span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
-                  {rank.isActive ? (
-                    <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
-                      Active
-                    </span>
-                  ) : (
-                    <span className="inline-flex rounded-full bg-red-500/20 px-2 text-xs font-semibold text-red-400">
-                      Inactive
-                    </span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(rank)}
-                      className="text-purple-400 hover:text-purple-300 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(rank.rank_id, rank.rank_label)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </td>
+      <div className="overflow-hidden rounded-lg bg-dark-card border border-dark-border shadow-lg flex flex-col h-[calc(100vh-140px)]">
+        <div className="flex-1 overflow-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full min-w-[1200px]" style={{ tableLayout: 'fixed' }}>
+            <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
+              <tr>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.rank_id }}
+                >
+                  Rank ID
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "rank_id")}
+                    style={{ cursor: resizingColumn === "rank_id" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.rank_label }}
+                >
+                  Rank Label
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "rank_label")}
+                    style={{ cursor: resizingColumn === "rank_label" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.staffType }}
+                >
+                  Staff
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "staffType")}
+                    style={{ cursor: resizingColumn === "staffType" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.category }}
+                >
+                  Category
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "category")}
+                    style={{ cursor: resizingColumn === "category" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.requiresMetal }}
+                >
+                  Metal #
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "requiresMetal")}
+                    style={{ cursor: resizingColumn === "requiresMetal" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.status }}
+                >
+                  Status
+                  <div
+                    onMouseDown={(e) => handleMouseDown(e, "status")}
+                    style={{ cursor: resizingColumn === "status" ? "col-resize" : "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
+                  />
+                </th>
+                <th
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  style={{ width: columnWidths.actions }}
+                >
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {ranks.length === 0 && (
-          <div className="py-12 text-center text-slate-400">
-            No ranks found
-          </div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-dark-border bg-dark-card">
+              {ranks.map((rank) => (
+                <tr key={rank.rank_id} className="hover:bg-dark-sidebar transition-colors">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
+                    {rank.rank_id}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_label }}>
+                    {rank.rank_label}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
+                    {rank.staffType || "POLICE"}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
+                    {rank.category}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
+                    {rank.requiresMetalNumber ? (
+                      <span className="inline-flex rounded-full bg-amber-500/20 px-2 text-xs font-semibold text-amber-400">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">No</span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
+                    {rank.isActive ? (
+                      <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-red-500/20 px-2 text-xs font-semibold text-red-400">
+                        Inactive
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(rank)}
+                        className="text-purple-400 hover:text-purple-300 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(rank.rank_id, rank.rank_label)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {ranks.length === 0 && (
+            <div className="py-12 text-center text-slate-400">
+              No ranks found
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

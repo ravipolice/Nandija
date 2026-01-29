@@ -14,6 +14,8 @@ import {
     getStations,
     Station,
     getUnitSections,
+    getRanks,
+    Rank,
 } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { hashPin } from "@/lib/auth-helpers";
@@ -43,6 +45,7 @@ function RegisterPageContent() {
     const [districts, setDistricts] = useState<District[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
+    const [ranks, setRanks] = useState<Rank[]>([]);
     const [unitSections, setUnitSections] = useState<string[]>([]);
 
     // Loading states for data
@@ -75,19 +78,39 @@ function RegisterPageContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Check if metal number is required for the selected rank
-    const isMetalNumberRequired = RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
+    // Determine if metal number is required based on dynamic rank data if available, else fallback to constant
+    const selectedRankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
+    const isMetalNumberRequired = selectedRankObj ? selectedRankObj.requiresMetalNumber : RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
+
     const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
     const isKSRP = formData.unit === "KSRP";
+
+    // Filter Ranks based on Unit
+    const selectedUnitObj = units.find(u => u.name === formData.unit);
+    const applicableRanks = selectedUnitObj?.applicableRanks || [];
+
+    // If we have dynamic ranks, use them. If not (loading?), might empty or fallback? 
+    // We initialized ranks as empty array.
+    const filteredRanks = ranks.filter(rank => {
+        if (applicableRanks.length > 0) {
+            return applicableRanks.includes(rank.rank_id);
+        }
+        return true;
+    });
+
+    // Check ministerial using dynamic data if possible, else constant
+    // const isMinisterial = selectedRankObj ? selectedRankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
     useEffect(() => {
         async function fetchInitialData() {
             try {
                 console.log("Fetching data from Firestore...");
-                const [districtsData, unitsData] = await Promise.all([
+                const [districtsData, unitsData, ranksData] = await Promise.all([
                     getDistricts(),
-                    getUnits()
+                    getUnits(),
+                    getRanks()
                 ]);
-                console.log("Fetched data:", { districtsData, unitsData });
+                console.log("Fetched data:", { districtsData, unitsData, ranksData });
 
                 if (districtsData && districtsData.length > 0) {
                     setDistricts(districtsData);
@@ -98,6 +121,10 @@ function RegisterPageContent() {
 
                 if (unitsData && unitsData.length > 0) {
                     setUnits(unitsData);
+                }
+
+                if (ranksData && ranksData.length > 0) {
+                    setRanks(ranksData);
                 }
             } catch (err) {
                 console.error("Failed to load form data, falling back to constants", err);
@@ -165,7 +192,9 @@ function RegisterPageContent() {
 
         if (name === "rank") {
             // Check if new rank requires metal number
-            const requiresMetal = RANKS_REQUIRING_METAL_NUMBER.includes(value);
+            const newRankObj = ranks.find(r => r.rank_id === value || r.equivalent_rank === value);
+            const requiresMetal = newRankObj ? newRankObj.requiresMetalNumber : RANKS_REQUIRING_METAL_NUMBER.includes(value);
+
             // Clear metal number if not required
             if (!requiresMetal) {
                 setFormData(prev => ({ ...prev, [name]: value, metalNumber: "" }));
@@ -224,7 +253,8 @@ function RegisterPageContent() {
             const mappingType = selectedUnit?.mappingType || "all";
             const isDistrictLevelUnit = selectedUnit?.isDistrictLevel || false;
             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
-            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+            const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
+            const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
             const hideDistrict = mappingType === "state" || mappingType === "none";
             const hideStation = isDistrictLevelUnit || hideDistrict || isKSRP || isMinisterial;
 
@@ -481,11 +511,19 @@ function RegisterPageContent() {
                                 className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
                             >
                                 <option value="" className="text-gray-500">Select Rank</option>
-                                {RANKS_LIST.map((rank) => (
-                                    <option key={rank} value={rank} className="text-gray-900">
-                                        {rank}
-                                    </option>
-                                ))}
+                                {ranks.length > 0 ? (
+                                    filteredRanks.map((rank) => (
+                                        <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id} className="text-gray-900">
+                                            {rank.rank_id} - {rank.rank_label}
+                                        </option>
+                                    ))
+                                ) : (
+                                    RANKS_LIST.map((rank) => (
+                                        <option key={rank} value={rank} className="text-gray-900">
+                                            {rank}
+                                        </option>
+                                    ))
+                                )}
                             </select>
                         </div>
 
@@ -530,7 +568,8 @@ function RegisterPageContent() {
                             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
                             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
                             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
-                            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+                            const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
+                            const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
                             if (isHighRanking || hideDistrict) return null;
 

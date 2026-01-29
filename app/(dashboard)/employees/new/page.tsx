@@ -138,6 +138,19 @@ export default function NewEmployeePage() {
   const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
   const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
+  // Rank filtering logic based on Unit
+  const selectedUnitObj = units.find(u => u.name === formData.unit);
+  const applicableRanks = selectedUnitObj?.applicableRanks || [];
+
+  const filteredRanks = ranks.filter(rank => {
+    // If unit has strict ranks configured, filter by them
+    if (applicableRanks.length > 0) {
+      return applicableRanks.includes(rank.rank_id);
+    }
+    // Otherwise show all (or could implement legacy filtering here if needed)
+    return true;
+  });
+
   // Station filtering logic
   const filteredStations = stations.filter((s) => {
     const stationName = s.name.toUpperCase();
@@ -364,9 +377,9 @@ export default function NewEmployeePage() {
                 className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
               >
                 <option value="">Select Rank</option>
-                {ranks.map((rank) => (
+                {filteredRanks.map((rank) => (
                   <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
-                    {rank.rank_id}
+                    {rank.rank_id} - {rank.rank_label}
                   </option>
                 ))}
               </select>
@@ -445,7 +458,9 @@ export default function NewEmployeePage() {
               availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
             }
 
-            if (unitSections.length > 0) {
+            const isHqLevel = selectedUnit?.isHqLevel || false;
+
+            if (unitSections.length > 0 || isHqLevel) {
               availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
             }
 
@@ -502,9 +517,9 @@ export default function NewEmployeePage() {
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
                 >
                   <option value="">
-                    {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                    {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
                   </option>
-                  {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                  {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? (
                     unitSections.map((section) => (
                       <option key={section} value={section}>{section}</option>
                     ))

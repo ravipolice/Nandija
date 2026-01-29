@@ -92,7 +92,9 @@ export interface Unit {
   mappedDistricts?: string[]; // Legacy field
   mappedAreaType?: "BATTALION" | "DISTRICT" | "CITY" | "RANGE" | "HQ";
   mappedAreaIds?: string[];
+  applicableRanks?: string[]; // List of rank_ids allowed for this unit
   isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
+  isHqLevel?: boolean; // New: If true, unit exists at HQ level
   createdAt?: Timestamp;
 }
 

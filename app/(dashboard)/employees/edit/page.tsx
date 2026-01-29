@@ -566,7 +566,9 @@ export default function EditEmployeePage() {
               availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
             }
 
-            if (unitSections.length > 0) {
+            const isHqLevel = selectedUnit?.isHqLevel || false;
+
+            if (unitSections.length > 0 || isHqLevel) {
               availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
             }
 
@@ -621,9 +623,9 @@ export default function EditEmployeePage() {
                     style={{ zIndex: 1000, position: 'relative' }}
                   >
                     <option value="">
-                      {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                      {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
                     </option>
-                    {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                    {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? (
                       unitSections.map((section) => (
                         <option key={section} value={section} style={{ backgroundColor: 'white', color: 'black' }}>{section}</option>
                       ))
