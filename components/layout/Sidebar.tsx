@@ -84,8 +84,7 @@ export function Sidebar() {
         <Logo size="md" className="mb-4" />
         <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">PMD Admin</h1>
         <p className="mt-1 text-xs text-dark-text-secondary">Admin Panel</p>
-        <div className="mt-2 text-[10px] text-slate-500 opacity-60">
-          v2.2-PagesAPI
+          v2.3-UnitSections
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
@@ -134,7 +133,7 @@ export function Sidebar() {
           Sign Out
         </button>
       </div>
-    </div>
+    </div >
   );
 }
 
