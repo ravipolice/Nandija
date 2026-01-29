@@ -759,16 +759,42 @@ export const getRankByName = async (rankName: string): Promise<Rank | null> => {
 // Pending Registrations
 export const getPendingRegistrations = async (): Promise<PendingRegistration[]> => {
   try {
-    return await getDocuments<PendingRegistration>("pending_registrations", [
+    const rawRegistrations = await getDocuments<PendingRegistration>("pending_registrations", [
       orderBy("createdAt", "desc"),
     ]);
+
+    // Keep only the most recent registration for each KGID
+    const uniqueRegistrations = new Map<string, PendingRegistration>();
+    rawRegistrations.forEach(reg => {
+      const kgid = reg.kgid?.trim();
+      if (kgid && !uniqueRegistrations.has(kgid)) {
+        uniqueRegistrations.set(kgid, reg);
+      }
+    });
+
+    return Array.from(uniqueRegistrations.values());
   } catch (error: any) {
-    // Handle common Firestore errors gracefully
     if (error?.code === "failed-precondition") {
-      // Missing index - try without orderBy
       console.warn("Firestore index missing for pending_registrations, fetching without orderBy");
       try {
-        return await getDocuments<PendingRegistration>("pending_registrations", []);
+        const rawRegistrations = await getDocuments<PendingRegistration>("pending_registrations", []);
+
+        // Manual sort by createdAt desc
+        rawRegistrations.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis() || 0;
+          const bTime = b.createdAt?.toMillis() || 0;
+          return bTime - aTime;
+        });
+
+        const uniqueRegistrations = new Map<string, PendingRegistration>();
+        rawRegistrations.forEach(reg => {
+          const kgid = reg.kgid?.trim();
+          if (kgid && !uniqueRegistrations.has(kgid)) {
+            uniqueRegistrations.set(kgid, reg);
+          }
+        });
+
+        return Array.from(uniqueRegistrations.values());
       } catch (fallbackError) {
         console.error("Error fetching pending registrations (fallback):", fallbackError);
         return [];
@@ -783,9 +809,16 @@ export const approveRegistration = async (
   registrationId: string,
   registration: PendingRegistration
 ): Promise<void> => {
-  // Create employee from registration
-  await createDoc<Employee>("employees", {
-    kgid: registration.kgid,
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized");
+  }
+
+  // Normalize KGID
+  const kgid = registration.kgid.trim();
+
+  // Create or update employee from registration (using upsert logic)
+  await createEmployee({
+    kgid: kgid,
     name: registration.name,
     email: registration.email,
     mobile1: registration.mobile1,
@@ -796,10 +829,22 @@ export const approveRegistration = async (
     pin: registration.pin,
     isApproved: true,
     isAdmin: false,
+    unit: registration.unit,
+    bloodGroup: registration.bloodGroup,
+    landline: registration.landline,
+    landline2: registration.landline2,
+    photoUrl: registration.photoUrl,
   });
 
-  // Delete pending registration
-  await deleteDocument("pending_registrations", registrationId);
+  // CRITICAL: Delete ALL pending registrations for this KGID to clear duplicates
+  const q = query(
+    collection(db, "pending_registrations"),
+    where("kgid", "==", kgid)
+  );
+
+  const snapshot = await getDocs(q);
+  const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deletePromises);
 };
 
 export const rejectRegistration = async (registrationId: string): Promise<void> => {
@@ -1355,19 +1400,18 @@ export const createPendingRegistration = async (data: Omit<PendingRegistration, 
     throw new Error("Firestore not initialized (server-side or not available)");
   }
 
+  // Normalize KGID for consistency
+  const normalizedKgid = data.kgid.trim();
+
   // Check if already exists
-  const existing = await getPendingRegistrationByKgid(data.kgid);
+  const existing = await getPendingRegistrationByKgid(normalizedKgid);
   if (existing) {
     throw new Error("A pending registration with this KGID already exists.");
   }
 
-  // Client-side duplicate check removed to prevent permission errors
-  // Firestore rules should enforce uniqueness or handled by admin approval flow
-  // const employeeQuery = query(collection(db, "employees"), where("kgid", "==", data.kgid));
-  // ...
-
   return createDoc<PendingRegistration>("pending_registrations", {
     ...data,
+    kgid: normalizedKgid, // Use normalized KGID
     status: "pending",
     createdAt: Timestamp.now(),
   });
