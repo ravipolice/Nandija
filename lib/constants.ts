@@ -28,6 +28,16 @@ export const RANKS_REQUIRING_METAL_NUMBER = [
   "APC", "CPC", "WPC", "PC", "AHC", "CHC", "WHC", "HC"
 ].sort();
 
+// Ranks that do NOT need a station (Ministerial / Office Staff)
+export const MINISTERIAL_RANKS = [
+  "SDA", "FDA", "SS", "Steno", "PA", "GHA", "AO", "AAO", "Typist"
+].sort();
+
+// Ranks that work in Police Stations (PS)
+export const POLICE_STATION_RANKS = [
+  "CPC", "WPC", "CHC", "WHC", "ASI", "PSI", "WASI", "WPSI", "CPI", "PI", "WPI"
+].sort();
+
 export const KSRP_BATTALIONS = [
   "1st Bn – Bengaluru", "2nd Bn – Belagavi", "3rd Bn – Bengaluru", "4th Bn – Bengaluru",
   "5th Bn – Mysuru", "6th Bn – Kalaburagi", "7th Bn – Mangaluru", "8th Bn – Shivamogga",

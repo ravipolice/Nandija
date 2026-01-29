@@ -17,7 +17,9 @@ import {
 import {
   BLOOD_GROUPS,
   HIGH_RANKING_OFFICERS,
-  KSRP_BATTALIONS
+  KSRP_BATTALIONS,
+  MINISTERIAL_RANKS,
+  POLICE_STATION_RANKS
 } from "@/lib/constants";
 
 export default function NewEmployeePage() {
@@ -133,6 +135,26 @@ export default function NewEmployeePage() {
   const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
   const isKSRP = formData.unit === "KSRP";
   const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+  const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+
+  // Station filtering logic
+  const filteredStations = stations.filter((s) => {
+    const stationName = s.name.toUpperCase();
+
+    // 1. Rank-based filtering (Police Station Ranks see only PS)
+    if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
+      if (!stationName.includes("PS")) return false;
+    }
+
+    // 2. Unit-based filtering
+    if (formData.unit === "DCRB") {
+      if (!stationName.includes("DCRB")) return false;
+    } else if (formData.unit === "ESCOM") {
+      if (!stationName.includes("ESCOM")) return false;
+    }
+
+    return true;
+  });
 
   const handleUnitChange = (unitName: string) => {
     if (unitName === "SCRB") {
@@ -178,7 +200,7 @@ export default function NewEmployeePage() {
         landline2: formData.landline2,
         unit: formData.unit,
         district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-        station: (isSpecialUnit || isHighRanking || isKSRP) ? "" : formData.station,
+        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : formData.station,
       });
       router.push("/employees");
     } catch (error) {
@@ -410,7 +432,7 @@ export default function NewEmployeePage() {
           )}
 
           {/* Row 7: Station */}
-          {!isHighRanking && !isSpecialUnit && !isKSRP && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+          {!isHighRanking && !isSpecialUnit && !isKSRP && !isMinisterial && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
             <div>
               <label className="block text-sm font-medium text-slate-400">
                 {unitSections.length > 0 ? "Section *" : "Station *"}
@@ -432,7 +454,7 @@ export default function NewEmployeePage() {
                     <option key={section} value={section}>{section}</option>
                   ))
                 ) : (
-                  stations.map((s) => (
+                  filteredStations.map((s) => (
                     <option key={s.id} value={s.name}>
                       {s.name}
                     </option>

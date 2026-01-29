@@ -25,6 +25,8 @@ import {
     DISTRICTS,
     KSRP_BATTALIONS,
     HIGH_RANKING_OFFICERS,
+    MINISTERIAL_RANKS,
+    POLICE_STATION_RANKS,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -73,6 +75,10 @@ function RegisterPageContent() {
 
     // Check if metal number is required for the selected rank
     const isMetalNumberRequired = RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
+    const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+    const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+    const isKSRP = formData.unit === "KSRP";
+    const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
     useEffect(() => {
         async function fetchInitialData() {
@@ -218,6 +224,7 @@ function RegisterPageContent() {
             const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
             const isKSRP = formData.unit === "KSRP";
+            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
             // Find selected unit to check if it's District Level
             const selectedUnit = units.find(u => u.name === formData.unit);
@@ -225,7 +232,7 @@ function RegisterPageContent() {
 
             if (!isSpecialUnit && !isHighRanking) {
                 if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
-                if (!isKSRP && !isDistrictLevelUnit && !formData.station) {
+                if (!isKSRP && !isDistrictLevelUnit && !isMinisterial && !formData.station) {
                     throw new Error(unitSections.length > 0 ? "Section is required" : "Station is required");
                 }
             }
@@ -267,7 +274,7 @@ function RegisterPageContent() {
                 rank: formData.rank,
                 metalNumber: formData.metalNumber || undefined,
                 district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-                station: (isSpecialUnit || isHighRanking || isKSRP) ? "" : formData.station,
+                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : formData.station,
                 unit: formData.unit || undefined,
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
@@ -502,7 +509,7 @@ function RegisterPageContent() {
 
                     {/* POSTING - Unit, District, Station */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div className={["ISD", "CCB", "CID"].includes(formData.unit) ? "sm:col-span-3" : ""}>
+                        <div className={isSpecialUnit ? "sm:col-span-3" : ""}>
                             <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit (Optional)</label>
                             <select
                                 name="unit"
@@ -518,7 +525,7 @@ function RegisterPageContent() {
                             </select>
                         </div>
 
-                        {!["ISD", "CCB", "CID"].includes(formData.unit) && !HIGH_RANKING_OFFICERS.includes(formData.rank) && (
+                        {!isSpecialUnit && !isHighRanking && (
                             <>
                                 <div>
                                     <label htmlFor="district" className="block text-sm font-medium text-gray-700">
@@ -539,7 +546,7 @@ function RegisterPageContent() {
                                     </select>
                                 </div>
 
-                                {formData.unit !== "KSRP" && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+                                {formData.unit !== "KSRP" && !units.find(u => u.name === formData.unit)?.isDistrictLevel && !isMinisterial && (
                                     <div>
                                         <label htmlFor="station" className="block text-sm font-medium text-gray-700">
                                             {unitSections.length > 0 ? "Section *" : "Station *"}
@@ -561,7 +568,18 @@ function RegisterPageContent() {
                                                     <option key={section} value={section} className="text-gray-900">{section}</option>
                                                 ))
                                             ) : (
-                                                stations.map((s) => (
+                                                stations.filter((s) => {
+                                                    const stationName = s.name.toUpperCase();
+                                                    if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
+                                                        if (!stationName.includes("PS")) return false;
+                                                    }
+                                                    if (formData.unit === "DCRB") {
+                                                        if (!stationName.includes("DCRB")) return false;
+                                                    } else if (formData.unit === "ESCOM") {
+                                                        if (!stationName.includes("ESCOM")) return false;
+                                                    }
+                                                    return true;
+                                                }).map((s) => (
                                                     <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
                                                 ))
                                             )}
