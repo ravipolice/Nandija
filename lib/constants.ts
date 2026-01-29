@@ -3,6 +3,8 @@ export const BLOOD_GROUPS = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "??"
 ].sort();
 
+export const UNIT_HQ_VALUE = "__UNIT_HQ__";
+
 export const DEFAULT_UNITS = [
   "Admin", "ASC Team", "BDDS", "C Room", "CAR", "CCB", "CCRB", "CDR", "CEN", "CID",
   "Coast Guard", "Computer", "Court", "CSB", "CSP", "DAR", "DCIB", "DCRB", "DCRE",
@@ -44,16 +46,21 @@ export const KSRP_BATTALIONS = [
   "9th Bn – Bengaluru", "10th Bn – Shiggavi", "11th Bn – Hassan", "12th Bn – Tumakuru"
 ].sort();
 
+export const IRB_BATTALIONS = [
+  "IRB -Bn 1 Munirabad", "IRB -Bn 2 Vijayapura", "IRB -Bn 3 Avathi", "IRB -Bn 4 KGF"
+].sort();
+
+export const ALL_BATTALIONS = [...KSRP_BATTALIONS, ...IRB_BATTALIONS].sort();
+
 export const DISTRICTS = [
   "Bagalkot", "Ballari", "Belagavi City", "Belagavi Dist", "Bengaluru City", "Bengaluru Dist", "Bidar",
   "Central Range", "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
   "Dakshina Kannada", "Davanagere", "Dharwad", "Eastern Range", "Gadag", "Hassan", "Haveri", "HQ",
-  "Hubballi Dharwad City", "IRB -Bn 1 Munirabad", "IRB -Bn 2 Vijayapura", "IRB -Bn 3 Avathi", "IRB -Bn 4 KGF",
-  "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
+  "Hubballi Dharwad City", "K.G.F", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
   "Mangaluru City", "Mysuru City", "Mysuru Dist", "Northeastern Range", "Northern Range",
   "Raichur", "Ramanagara", "Shivamogga", "Southern Range", "Tumakuru", "Udupi", "Uttara Kannada",
-  "Vijayanagara", "Western Range", "Yadgir",
-  ...KSRP_BATTALIONS
+  "Vijayanagara", "Vijayapura", "Western Range", "Yadgir",
+  ...ALL_BATTALIONS
 ].sort();
 
 export const STATE_INT_SECTIONS = [
@@ -293,7 +300,14 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "FPB Hubballi Dharwad City", "MCU Hubballi Dharwad City", "DCRB Hubballi Dharwad City", "DSB Hubballi Dharwad City", "SMMC Hubballi Dharwad City",
     "State INT Hubballi Dharwad City", "DCRE Hubballi Dharwad City", "Lokayukta Hubballi Dharwad City", "ESCOM Hubballi Dharwad City"
   ],
-
+  "K.G.F": [
+    "Andersonpet PS", "Bangarpet PS", "BEML Nagar PS", "Bethamangala PS", "Budikote PS",
+    "Champion Reefs PS", "Kamasamudram PS", "KGF CEN Crime PS", "Kyasamballi PS",
+    "Marikuppam PS", "Oorgaum PS", "Robertsonpet PS",
+    "Control Room K.G.F", "DPO K.G.F", "Computer Sec K.G.F", "DAR K.G.F",
+    "FPB K.G.F", "MCU K.G.F", "DCRB K.G.F", "DSB K.G.F", "SMMC K.G.F",
+    "State INT K.G.F", "DCRE K.G.F", "Lokayukta K.G.F", "ESCOM K.G.F"
+  ],
   "Kalaburagi": [
     "Afzalpur PS", "Alland PS", "Chincholi PS", "Chittapura PS", "Devalagangapur PS", "Jewargi PS",
     "Kalaburagi CEN Crime PS", "Kalaburagi Women PS", "Kalagi PS", "Kamalapur PS", "Kunchavaram PS",

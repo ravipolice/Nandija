@@ -20,7 +20,8 @@ import {
   HIGH_RANKING_OFFICERS,
   KSRP_BATTALIONS,
   MINISTERIAL_RANKS,
-  POLICE_STATION_RANKS
+  POLICE_STATION_RANKS,
+  UNIT_HQ_VALUE
 } from "@/lib/constants";
 
 export default function EditEmployeePage() {
@@ -523,83 +524,120 @@ export default function EditEmployeePage() {
               )}
           </div>
 
-          {/* Row 6: District */}
-          {!isHighRanking && !isSpecialUnit && (
-            <div className="relative" style={{ zIndex: 10 }}>
-              <label className="block text-sm font-medium text-slate-400">
-                {isKSRP ? "Battalion *" : "District *"}
-              </label>
-              <select
-                required
-                value={selectedDistrict}
-                onChange={(e) => {
-                  setSelectedDistrict(e.target.value);
-                  setFormData({ ...formData, district: e.target.value, station: "" });
-                }}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                style={{ zIndex: 1000, position: 'relative' }}
-              >
-                <option value="">{isKSRP ? "Select Battalion" : "Select District"}</option>
-                {(isKSRP ? KSRP_BATTALIONS.map(b => ({ id: b, name: b })) : districts).map((d) => (
-                  <option key={d.id} value={d.name} style={{ backgroundColor: 'white', color: 'black' }}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Row 5b: Unit */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Unit (Optional)
+            </label>
+            <select
+              value={formData.unit}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Unit (Optional)</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {!isHighRanking && !isSpecialUnit && !isKSRP && !isMinisterial && !units.find(u => u.name === formData.unit)?.isDistrictLevel && (
+          {/* Row 6: District */}
+          {(() => {
+            const selectedUnit = units.find(u => u.name === formData.unit);
+            const mappingType = selectedUnit?.mappingType || "all";
+            const hideDistrict = mappingType === "state" || mappingType === "none";
+            const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
+
+            if (isHighRanking || hideDistrict) return null;
+
+            let availableDistricts = districts;
+            if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
+              const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
+              if (mappedIds.length > 0) {
+                if (isBattalion) {
+                  availableDistricts = mappedIds.map(name => ({ id: name, name }));
+                } else {
+                  availableDistricts = districts.filter(d => mappedIds.includes(d.name));
+                }
+              }
+            } else if (isKSRP) {
+              availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
+            }
+
+            if (unitSections.length > 0) {
+              availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+            }
+
+            return (
               <div className="relative" style={{ zIndex: 10 }}>
                 <label className="block text-sm font-medium text-slate-400">
-                  {unitSections.length > 0 ? "Section *" : "Station *"}
+                  {formData.district === UNIT_HQ_VALUE ? "Unit HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
                 </label>
                 <select
                   required
-                  key={`station-${stations.length}-${formData.station}`}
-                  value={formData.station}
-                  onChange={(e) => setFormData({ ...formData, station: e.target.value })}
-                  disabled={!selectedDistrict && unitSections.length === 0}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+                  value={selectedDistrict}
+                  onChange={(e) => {
+                    setSelectedDistrict(e.target.value);
+                    setFormData({ ...formData, district: e.target.value, station: "" });
+                  }}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
                   style={{ zIndex: 1000, position: 'relative' }}
                 >
-                  <option value="">
-                    {unitSections.length > 0 ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
-                  </option>
-                  {unitSections.length > 0 ? (
-                    unitSections.map((section) => (
-                      <option key={section} value={section} style={{ backgroundColor: 'white', color: 'black' }}>{section}</option>
-                    ))
-                  ) : (
-                    filteredStations.map((s) => (
-                      <option key={s.id || s.name} value={s.name} style={{ backgroundColor: 'white', color: 'black' }}>
-                        {s.name}
-                      </option>
-                    ))
-                  )}
+                  <option value="">{isBattalion || isKSRP ? "Select Battalion" : "Select Area / District"}</option>
+                  {availableDistricts.map((d) => (
+                    <option key={d.id} value={d.value || d.name} style={{ backgroundColor: 'white', color: 'black' }}>
+                      {d.name}
+                    </option>
+                  ))}
                 </select>
               </div>
-            )}
+            );
+          })()}
 
-            {/* Row 9b: Unit */}
-            <div>
-              <label className="block text-sm font-medium text-slate-400">
-                Unit (Optional)
-              </label>
-              <select
-                value={formData.unit}
-                onChange={(e) => handleUnitChange(e.target.value)}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              >
-                <option value="">Select Unit (Optional)</option>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.name}>
-                    {unit.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Station Row */}
+            {(() => {
+              const selectedUnit = units.find(u => u.name === formData.unit);
+              const mappingType = selectedUnit?.mappingType || "all";
+              const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
+              const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && unitSections.length === 0) || mappingType === "state" || mappingType === "none";
+
+              if (hideStation) return null;
+
+              return (
+                <div className="relative" style={{ zIndex: 10 }}>
+                  <label className="block text-sm font-medium text-slate-400">
+                    {unitSections.length > 0 ? "Section *" : "Station *"}
+                  </label>
+                  <select
+                    required
+                    key={`station-${stations.length}-${formData.station}`}
+                    value={formData.station}
+                    onChange={(e) => setFormData({ ...formData, station: e.target.value })}
+                    disabled={!selectedDistrict && unitSections.length === 0}
+                    className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+                    style={{ zIndex: 1000, position: 'relative' }}
+                  >
+                    <option value="">
+                      {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                    </option>
+                    {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                      unitSections.map((section) => (
+                        <option key={section} value={section} style={{ backgroundColor: 'white', color: 'black' }}>{section}</option>
+                      ))
+                    ) : (
+                      filteredStations.map((s) => (
+                        <option key={s.id || s.name} value={s.name} style={{ backgroundColor: 'white', color: 'black' }}>
+                          {s.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              );
+            })()}
 
             <div>
               <label className="block text-sm font-medium text-slate-400">

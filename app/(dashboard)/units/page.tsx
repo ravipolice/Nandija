@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2, RefreshCw, X, Save, AlertTriangle, Info, Check } from "lucide-react";
-import { DEFAULT_UNITS, KSRP_BATTALIONS } from "@/lib/constants";
+import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getUnitSections, updateUnitSections } from "@/lib/firebase/firestore";
+import { Plus, Edit, Trash2, Save, X, Info, Check, RefreshCw } from 'lucide-react';
+import { DEFAULT_UNITS, ALL_BATTALIONS } from "@/lib/constants";
 
 type ColumnKey = "name" | "status" | "scope" | "actions";
 
@@ -30,7 +30,15 @@ export default function UnitsPage() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState<Partial<Unit>>({ name: "", isActive: true, mappingType: "all", scopes: ["all"], mappedDistricts: [], isDistrictLevel: false });
+    const [formData, setFormData] = useState<Partial<Unit>>({
+        name: "",
+        isActive: true,
+        mappingType: "all",
+        mappedAreaType: "DISTRICT",
+        mappedAreaIds: [],
+        isDistrictLevel: false
+    });
+    const [sectionsText, setSectionsText] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [migrating, setMigrating] = useState(false);
     const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
@@ -69,17 +77,28 @@ export default function UnitsPage() {
         }
     };
 
-    const handleEdit = (unit: Unit) => {
+    const handleEdit = async (unit: Unit) => {
         setEditingId(unit.id || null);
         setFormData({
             name: unit.name,
             isActive: unit.isActive !== false,
             mappingType: unit.mappingType || "all",
             // Migrate legacy single scope to array
-            scopes: unit.scopes || (unit.mappingType ? [unit.mappingType] : ["all"]),
-            mappedDistricts: unit.mappedDistricts || [],
+            // Migrate legacy fields if needed
+            mappedAreaType: unit.mappedAreaType || (unit.mappingType === "commissionerate" ? "CITY" : (unit.name?.toUpperCase().includes("KSRP") ? "BATTALION" : "DISTRICT")),
+            mappedAreaIds: unit.mappedAreaIds || unit.mappedDistricts || [],
             isDistrictLevel: unit.isDistrictLevel || false,
         });
+
+        // Fetch sections
+        try {
+            const sections = await getUnitSections(unit.name);
+            setSectionsText(sections.join(", "));
+        } catch (error) {
+            console.error("Error fetching sections:", error);
+            setSectionsText("");
+        }
+
         setShowForm(true);
     };
 
@@ -98,7 +117,8 @@ export default function UnitsPage() {
         if (confirm("Discard changes?")) {
             setShowForm(false);
             setEditingId(null);
-            setFormData({ name: "", isActive: true, mappingType: "all", mappedDistricts: [] });
+            setFormData({ name: "", isActive: true, mappingType: "all", mappedAreaType: "DISTRICT", mappedAreaIds: [], isDistrictLevel: false });
+            setSectionsText("");
         }
     };
 
@@ -153,20 +173,34 @@ export default function UnitsPage() {
     };
 
     const handleScopeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newScope = e.target.value as Unit["mappingType"];
+        const newMappingType = e.target.value as Unit["mappingType"];
+        let defaultAreaType: Unit["mappedAreaType"] = "DISTRICT";
+
+        if (newMappingType === "commissionerate") defaultAreaType = "CITY";
+        if (newMappingType === "subset" && formData.name?.toUpperCase().includes("KSRP")) defaultAreaType = "BATTALION";
+        if (newMappingType === "state") defaultAreaType = "HQ";
+
         setFormData({
             ...formData,
-            mappingType: newScope,
-            mappedDistricts: [] // Auto-clear mapped districts on scope change
+            mappingType: newMappingType,
+            mappedAreaType: defaultAreaType,
+            mappedAreaIds: [] // Auto-clear on scope change
         });
     };
 
-    const toggleMappedDistrict = (districtName: string) => {
-        const current = formData.mappedDistricts || [];
-        if (current.includes(districtName)) {
-            setFormData({ ...formData, mappedDistricts: current.filter(d => d !== districtName) });
+    const toggleMappedArea = (areaId: string) => {
+        const current = formData.mappedAreaIds || [];
+
+        // In "single" mode, it's a radio behavior (only one allowed)
+        if (formData.mappingType === "single") {
+            setFormData({ ...formData, mappedAreaIds: [areaId] });
+            return;
+        }
+
+        if (current.includes(areaId)) {
+            setFormData({ ...formData, mappedAreaIds: current.filter(id => id !== areaId) });
         } else {
-            setFormData({ ...formData, mappedDistricts: [...current, districtName] });
+            setFormData({ ...formData, mappedAreaIds: [...current, areaId] });
         }
     };
 
@@ -174,12 +208,12 @@ export default function UnitsPage() {
         e.preventDefault();
 
         // Strict Validation Rules
-        if (formData.mappingType === "single" && (!formData.mappedDistricts || formData.mappedDistricts.length === 0)) {
+        if (formData.mappingType === "single" && (!formData.mappedAreaIds || formData.mappedAreaIds.length === 0)) {
             alert("❌ Validation Error: Scope is 'District Specific' but no district is selected.");
             return;
         }
-        if ((formData.mappingType === "subset" || formData.mappingType === "commissionerate") && (!formData.mappedDistricts || formData.mappedDistricts.length === 0)) {
-            alert("❌ Validation Error: Scope is 'Multi-District' but no districts are selected.");
+        if ((formData.mappingType === "subset" || formData.mappingType === "commissionerate") && (!formData.mappedAreaIds || formData.mappedAreaIds.length === 0)) {
+            alert("❌ Validation Error: No districts/battalions are selected.");
             return;
         }
 
@@ -189,7 +223,9 @@ export default function UnitsPage() {
                 name: formData.name?.trim() || "",
                 isActive: formData.isActive,
                 mappingType: formData.mappingType,
-                mappedDistricts: formData.mappedDistricts,
+                mappedAreaType: formData.mappedAreaType,
+                mappedAreaIds: formData.mappedAreaIds,
+                mappedDistricts: formData.mappedAreaIds, // Keep legacy field in sync for now
                 isDistrictLevel: formData.isDistrictLevel
             };
 
@@ -198,9 +234,20 @@ export default function UnitsPage() {
             } else {
                 await createUnit(payload);
             }
+
+            // Save sections if name is present
+            const unitName = formData.name?.trim();
+            if (unitName) {
+                const sections = sectionsText.split(",")
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                await updateUnitSections(unitName, sections);
+            }
+
             setShowForm(false); // Close without confirm for success
             setEditingId(null);
-            setFormData({ name: "", isActive: true, mappingType: "all", mappedDistricts: [] });
+            setFormData({ name: "", isActive: true, mappingType: "all", mappedAreaType: "DISTRICT", mappedAreaIds: [], isDistrictLevel: false });
+            setSectionsText("");
             await loadUnits();
         } catch (error) {
             console.error("Error saving unit:", error);
@@ -286,12 +333,9 @@ export default function UnitsPage() {
 
                     {/* Section 3: Scope */}
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                                3. Unit Scope
-                                {formData.mappingType !== "all" && <span className="bg-purple-500/20 text-purple-300 text-[10px] px-2 py-0.5 rounded-full">Core Field</span>}
-                            </h3>
-                        </div>
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                            3. Unit Scope
+                        </h3>
 
                         <div className="bg-dark-sidebar/30 p-4 rounded-lg border border-dark-border">
                             <label className="block text-sm font-medium text-slate-300 mb-2">Select Scope</label>
@@ -308,86 +352,102 @@ export default function UnitsPage() {
                                 <Info className="w-3 h-3" />
                                 {formData.mappingType === "all" && "Unit applies to all districts equally."}
                                 {formData.mappingType === "state" && "Unit exists only at State HQ level."}
-                                {formData.mappingType === "single" && "Unit exists in exactly ONE district (e.g. Traffic -> Bangalore)."}
-                                {formData.mappingType === "subset" && "Unit exists in SPECIFIC districts/battalions only."}
-                                {formData.mappingType === "commissionerate" && "Unit applies to selected Commissionerate districts."}
-                                {formData.mappingType === "none" && "Unit does not require any district tag."}
+                                {formData.mappingType === "single" && "Unit exists in exactly ONE district."}
+                                {formData.mappingType === "subset" && "Unit exists in specific districts or battalions."}
+                                {formData.mappingType === "commissionerate" && "Unit applies to Commissionerate cities."}
+                                {formData.mappingType === "none" && "No district required."}
                             </p>
                         </div>
 
-                        {(formData.mappingType === "single" || formData.mappingType === "subset" || formData.mappingType === "commissionerate") && (
-                            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Mapped Districts / Battalions <span className="text-red-400">*</span></label>
-                                {(() => {
-                                    // Filter districts based on scope type
-                                    let filteredDistricts: any[] = districts;
+                        {/* State Level / None Info */}
+                        {(formData.mappingType === "state" || formData.mappingType === "none") && (
+                            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-sm italic text-center">
+                                This unit operates only at HQ level
+                            </div>
+                        )}
 
-                                    // Special handling for known units
-                                    if (formData.name?.toUpperCase().includes("KSRP")) {
-                                        filteredDistricts = KSRP_BATTALIONS.map((bn, index) => ({ id: `ksrp-${index}`, name: bn }));
-                                    } else if (formData.name?.toUpperCase().includes("IRB")) {
-                                        // Show only IRB battalions
-                                        filteredDistricts = districts.filter(d => d.name.toUpperCase().includes("IRB"));
-                                    } else if (formData.mappingType === "commissionerate") {
-                                        filteredDistricts = districts.filter(d => d.name.toUpperCase().endsWith(" CITY"));
+                        {/* Mapping Section */}
+                        {(formData.mappingType === "single" || formData.mappingType === "subset" || formData.mappingType === "commissionerate") && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                {/* Mapped Area Type Toggle (Only for Multi-District) */}
+                                {formData.mappingType === "subset" && (
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-tighter">Mapped Area Type</label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.mappedAreaType === "BATTALION" ? "border-purple-500" : "border-slate-600"}`}>
+                                                    {formData.mappedAreaType === "BATTALION" && <div className="w-2 h-2 rounded-full bg-purple-500" />}
+                                                </div>
+                                                <input type="radio" className="hidden" name="areaType" checked={formData.mappedAreaType === "BATTALION"} onChange={() => setFormData({ ...formData, mappedAreaType: "BATTALION", mappedAreaIds: [] })} />
+                                                <span className={formData.mappedAreaType === "BATTALION" ? "text-purple-400 font-medium" : "text-slate-400"}>Battalion</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.mappedAreaType === "DISTRICT" ? "border-purple-500" : "border-slate-600"}`}>
+                                                    {formData.mappedAreaType === "DISTRICT" && <div className="w-2 h-2 rounded-full bg-purple-500" />}
+                                                </div>
+                                                <input type="radio" className="hidden" name="areaType" checked={formData.mappedAreaType === "DISTRICT"} onChange={() => setFormData({ ...formData, mappedAreaType: "DISTRICT", mappedAreaIds: [] })} />
+                                                <span className={formData.mappedAreaType === "DISTRICT" ? "text-purple-400 font-medium" : "text-slate-400"}>District</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <label className="block text-sm font-medium text-slate-300">
+                                    {formData.mappedAreaType === "BATTALION" ? "Select Battalions" : "Select Districts"} <span className="text-red-400">*</span>
+                                </label>
+
+                                {(() => {
+                                    let filtered: any[] = districts;
+                                    if (formData.mappingType === "commissionerate") {
+                                        filtered = districts.filter(d => d.name.toUpperCase().endsWith(" CITY"));
+                                    } else if (formData.mappedAreaType === "BATTALION") {
+                                        filtered = ALL_BATTALIONS.map((bn, idx) => ({ id: `bn-${idx}`, name: bn }));
+                                    } else {
+                                        // Regular districts - exclude battalions if mixed in data
+                                        filtered = districts.filter(d => !ALL_BATTALIONS.includes(d.name));
                                     }
 
-                                    const allVisibleSelected = filteredDistricts.length > 0 && filteredDistricts.every(d => formData.mappedDistricts?.includes(d.name));
+                                    const allSelected = filtered.length > 0 && filtered.every(d => formData.mappedAreaIds?.includes(d.name));
 
-                                    const handleSelectAllToggle = () => {
-                                        const visibleNames = filteredDistricts.map(d => d.name);
-                                        let newMapped: string[] = [];
-
-                                        if (allVisibleSelected) {
-                                            // Deselect all visible
-                                            newMapped = (formData.mappedDistricts || []).filter(name => !visibleNames.includes(name));
-                                        } else {
-                                            // Select all visible
-                                            const current = formData.mappedDistricts || [];
-                                            const toAdd = visibleNames.filter(name => !current.includes(name));
-                                            newMapped = [...current, ...toAdd];
-                                        }
-                                        setFormData({ ...formData, mappedDistricts: newMapped });
+                                    const toggleSelectAll = () => {
+                                        const names = filtered.map(d => d.name);
+                                        setFormData({ ...formData, mappedAreaIds: allSelected ? [] : [...new Set([...(formData.mappedAreaIds || []), ...names])] });
                                     };
 
                                     return (
                                         <>
-                                            {filteredDistricts.length > 0 && (
-                                                <div className="flex justify-between items-center px-1 mb-2">
-                                                    <span className="text-xs text-slate-500">{filteredDistricts.length} available</span>
+                                            {filtered.length > 0 && (formData.mappingType !== "single") && (
+                                                <div className="flex justify-between items-center px-1 mb-1">
+                                                    <span className="text-[10px] text-slate-500">{filtered.length} available</span>
                                                     <button
                                                         type="button"
-                                                        onClick={handleSelectAllToggle}
-                                                        className="text-xs font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                                                        onClick={toggleSelectAll}
+                                                        className="text-[10px] font-medium text-purple-400 hover:text-purple-300"
                                                     >
-                                                        {allVisibleSelected ? "Deselect All" : "Select All"}
+                                                        {allSelected ? "Deselect All" : "Select All"}
                                                     </button>
                                                 </div>
                                             )}
-                                            <div className="max-h-60 overflow-y-auto rounded-lg border border-purple-500/50 bg-dark-card p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {filteredDistricts.length > 0 ? filteredDistricts.map((d: any) => (
-                                                    <label key={d.id} className="flex items-center gap-2 p-2 rounded hover:bg-dark-sidebar cursor-pointer group transition-colors">
-                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${formData.mappedDistricts?.includes(d.name) ? "bg-purple-600 border-purple-600" : "border-slate-500 group-hover:border-slate-300"}`}>
-                                                            {formData.mappedDistricts?.includes(d.name) && <Check className="w-3 h-3 text-white" />}
+                                            <div className="max-h-52 overflow-y-auto rounded-lg border border-dark-border bg-dark-sidebar/20 p-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 shadow-inner">
+                                                {filtered.length > 0 ? filtered.map((d: any) => (
+                                                    <label key={d.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 cursor-pointer group transition-colors">
+                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${formData.mappedAreaIds?.includes(d.name) ? "bg-purple-600 border-purple-600 text-white" : "border-slate-600 group-hover:border-slate-400"}`}>
+                                                            {formData.mappedAreaIds?.includes(d.name) && <Check className="w-3 h-3" />}
                                                         </div>
-                                                        <span className={formData.mappedDistricts?.includes(d.name) ? "text-purple-300" : "text-slate-300"}>{d.name}</span>
+                                                        <span className={`text-xs ${formData.mappedAreaIds?.includes(d.name) ? "text-purple-300" : "text-slate-400"}`}>{d.name}</span>
                                                         <input
-                                                            type="checkbox"
+                                                            type={formData.mappingType === "single" ? "radio" : "checkbox"}
                                                             className="hidden"
-                                                            checked={formData.mappedDistricts?.includes(d.name)}
-                                                            onChange={() => toggleMappedDistrict(d.name)}
+                                                            checked={formData.mappedAreaIds?.includes(d.name)}
+                                                            onChange={() => toggleMappedArea(d.name)}
                                                         />
                                                     </label>
-                                                )) : <div className="col-span-2 text-center text-slate-500 py-4">
-                                                    {formData.name?.toUpperCase().includes("IRB")
-                                                        ? "No IRB battalions found. Please go to Districts page and 'Sync Defaults'."
-                                                        : "No matching districts found"}
-                                                </div>}
+                                                )) : <div className="col-span-2 text-center text-slate-500 py-6 text-xs">No matching areas found</div>}
                                             </div>
+                                            <p className="text-[10px] text-right text-slate-500 italic">Total selected: {formData.mappedAreaIds?.length || 0}</p>
                                         </>
                                     );
                                 })()}
-                                <p className="text-xs text-right text-slate-400 mt-1">Selected: {formData.mappedDistricts?.length || 0}</p>
                             </div>
                         )}
 
@@ -457,7 +517,7 @@ export default function UnitsPage() {
                 <button
                     onClick={() => {
                         setEditingId(null);
-                        setFormData({ name: "", isActive: true, mappingType: "all", mappedDistricts: [] });
+                        setFormData({ name: "", isActive: true, mappingType: "all", mappedAreaType: "DISTRICT", mappedAreaIds: [] });
                         setShowForm(true);
                     }}
                     className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
@@ -511,7 +571,17 @@ export default function UnitsPage() {
                                     </span>
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
-                                    {MAPPING_TYPES.find(t => t.value === (unit.mappingType || "all"))?.label || "All Districts"}
+                                    <div className="flex flex-col">
+                                        <span>{MAPPING_TYPES.find(t => t.value === (unit.mappingType || "all"))?.label || "All Districts"}</span>
+                                        {unit.mappedAreaIds && unit.mappedAreaIds.length > 0 && (
+                                            <span className="text-[10px] text-purple-400 font-medium">
+                                                {unit.mappedAreaType || "DISTRICT"}: {unit.mappedAreaIds.length} selected
+                                            </span>
+                                        )}
+                                        {unit.isDistrictLevel && (
+                                            <span className="text-[10px] text-blue-400 italic">District Level HQ</span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                     <div className="flex items-center justify-end gap-2">

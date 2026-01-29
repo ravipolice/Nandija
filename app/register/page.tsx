@@ -27,6 +27,7 @@ import {
     HIGH_RANKING_OFFICERS,
     MINISTERIAL_RANKS,
     POLICE_STATION_RANKS,
+    UNIT_HQ_VALUE,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -76,9 +77,7 @@ function RegisterPageContent() {
     // Check if metal number is required for the selected rank
     const isMetalNumberRequired = RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
     const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
-    const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
     const isKSRP = formData.unit === "KSRP";
-    const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
     useEffect(() => {
         async function fetchInitialData() {
@@ -221,18 +220,17 @@ function RegisterPageContent() {
             if (!formData.mobile1 || formData.mobile1.length !== 10) throw new Error("Valid Mobile 1 is required");
             if (!formData.rank) throw new Error("Rank is required");
 
-            const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
-            const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
-            const isKSRP = formData.unit === "KSRP";
-            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-
-            // Find selected unit to check if it's District Level
             const selectedUnit = units.find(u => u.name === formData.unit);
+            const mappingType = selectedUnit?.mappingType || "all";
             const isDistrictLevelUnit = selectedUnit?.isDistrictLevel || false;
+            const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+            const hideDistrict = mappingType === "state" || mappingType === "none";
+            const hideStation = isDistrictLevelUnit || hideDistrict || isKSRP || isMinisterial;
 
-            if (!isSpecialUnit && !isHighRanking) {
-                if (!formData.district) throw new Error(isKSRP ? "Battalion is required" : "District is required");
-                if (!isKSRP && !isDistrictLevelUnit && !isMinisterial && !formData.station) {
+            if (!isHighRanking && !hideDistrict) {
+                if (!formData.district) throw new Error(selectedUnit?.mappedAreaType === "BATTALION" || isKSRP ? "Battalion is required" : "District is required");
+                if (!hideStation && !formData.station) {
                     throw new Error(unitSections.length > 0 ? "Section is required" : "Station is required");
                 }
             }
@@ -509,7 +507,7 @@ function RegisterPageContent() {
 
                     {/* POSTING - Unit, District, Station */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div className={isSpecialUnit ? "sm:col-span-3" : ""}>
+                        <div className="sm:col-span-3">
                             <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit (Optional)</label>
                             <select
                                 name="unit"
@@ -525,69 +523,99 @@ function RegisterPageContent() {
                             </select>
                         </div>
 
-                        {!isSpecialUnit && !isHighRanking && (
-                            <>
-                                <div>
-                                    <label htmlFor="district" className="block text-sm font-medium text-gray-700">
-                                        {formData.unit === "KSRP" ? "Battalion *" : "District *"}
-                                    </label>
-                                    <select
-                                        name="district"
-                                        id="district"
-                                        required
-                                        value={formData.district}
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
-                                    >
-                                        <option value="" className="text-gray-500">{formData.unit === "KSRP" ? "Select Battalion" : "Select District"}</option>
-                                        {(formData.unit === "KSRP" ? KSRP_BATTALIONS.map(b => ({ id: b, name: b })) : districts).map((d) => (
-                                            <option key={d.id} value={d.name} className="text-gray-900">{d.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                        {(() => {
+                            const selectedUnit = units.find(u => u.name === formData.unit);
+                            const mappingType = selectedUnit?.mappingType || "all";
+                            const hideDistrict = mappingType === "state" || mappingType === "none";
+                            const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
+                            const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
+                            const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
+                            const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
 
-                                {formData.unit !== "KSRP" && !units.find(u => u.name === formData.unit)?.isDistrictLevel && !isMinisterial && (
-                                    <div>
-                                        <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-                                            {unitSections.length > 0 ? "Section *" : "Station *"}
+                            if (isHighRanking || hideDistrict) return null;
+
+                            let availableDistricts = districts;
+                            if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
+                                const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
+                                if (mappedIds.length > 0) {
+                                    if (isBattalion) {
+                                        availableDistricts = mappedIds.map(name => ({ id: name, name }));
+                                    } else {
+                                        availableDistricts = districts.filter(d => mappedIds.includes(d.name));
+                                    }
+                                }
+                            } else if (isKSRP) {
+                                availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
+                            }
+
+                            if (unitSections.length > 0) {
+                                availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE }, ...availableDistricts];
+                            }
+
+                            return (
+                                <>
+                                    <div className={mappingType === "single" ? "sm:col-span-2" : ""}>
+                                        <label htmlFor="district" className="block text-sm font-medium text-gray-700">
+                                            {formData.district === UNIT_HQ_VALUE ? "Unit HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
                                         </label>
                                         <select
-                                            name="station"
-                                            id="station"
+                                            name="district"
+                                            id="district"
                                             required
-                                            value={formData.station}
+                                            value={formData.district}
                                             onChange={handleChange}
-                                            disabled={!formData.district && unitSections.length === 0}
-                                            className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
+                                            className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
                                         >
-                                            <option value="" className="text-gray-500">
-                                                {unitSections.length > 0 ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
-                                            </option>
-                                            {unitSections.length > 0 ? (
-                                                unitSections.map((section) => (
-                                                    <option key={section} value={section} className="text-gray-900">{section}</option>
-                                                ))
-                                            ) : (
-                                                stations.filter((s) => {
-                                                    const stationName = s.name.toUpperCase();
-                                                    if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
-                                                        if (!stationName.includes("PS")) return false;
-                                                    }
-                                                    if (formData.unit === "DCRB") {
-                                                        if (!stationName.includes("DCRB")) return false;
-                                                    } else if (formData.unit === "ESCOM") {
-                                                        if (!stationName.includes("ESCOM")) return false;
-                                                    }
-                                                    return true;
-                                                }).map((s) => (
-                                                    <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
-                                                ))
-                                            )}
+                                            <option value="" className="text-gray-500">{isBattalion || isKSRP ? "Select Battalion" : "Select Area / District"}</option>
+                                            {availableDistricts.map((d) => (
+                                                <option key={d.id} value={d.value || d.name} className="text-gray-900">{d.name}</option>
+                                            ))}
                                         </select>
                                     </div>
-                                )}
-                            </>
-                        )}
+
+                                    {!(isKSRP || isMinisterial || (isDistrictLevel && unitSections.length === 0)) && (
+                                        <div>
+                                            <label htmlFor="station" className="block text-sm font-medium text-gray-700">
+                                                {unitSections.length > 0 ? "Section *" : "Station *"}
+                                            </label>
+                                            <select
+                                                name="station"
+                                                id="station"
+                                                required
+                                                value={formData.station}
+                                                onChange={handleChange}
+                                                disabled={!formData.district && unitSections.length === 0}
+                                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
+                                            >
+                                                <option value="" className="text-gray-500">
+                                                    {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
+                                                </option>
+                                                {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                                                    unitSections.map((section) => (
+                                                        <option key={section} value={section} className="text-gray-900">{section}</option>
+                                                    ))
+                                                ) : (
+                                                    stations.filter((s) => {
+                                                        const stationName = s.name.toUpperCase();
+                                                        if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
+                                                            if (!stationName.includes("PS")) return false;
+                                                        }
+                                                        if (formData.unit === "DCRB") {
+                                                            if (!stationName.includes("DCRB")) return false;
+                                                        } else if (formData.unit === "ESCOM") {
+                                                            if (!stationName.includes("ESCOM")) return false;
+                                                        }
+                                                        return true;
+                                                    }).map((s) => (
+                                                        <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
 
                     {/* SECURITY & BLOOD - Blood, PIN, Confirm PIN */}

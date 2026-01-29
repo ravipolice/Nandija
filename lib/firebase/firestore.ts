@@ -67,6 +67,7 @@ export interface Officer {
 export interface District {
   id?: string;
   name: string;
+  value?: string; // For reserved values like __UNIT_HQ__
   range?: string;
   isActive?: boolean;
   createdAt?: Timestamp;
@@ -88,7 +89,9 @@ export interface Unit {
   // New fields for Hybrid Unit-District Mapping
   mappingType?: "all" | "state" | "single" | "subset" | "none" | "commissionerate";
   scopes?: string[]; // Multi-scope selection
-  mappedDistricts?: string[];
+  mappedDistricts?: string[]; // Legacy field
+  mappedAreaType?: "BATTALION" | "DISTRICT" | "CITY" | "RANGE" | "HQ";
+  mappedAreaIds?: string[];
   isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
   createdAt?: Timestamp;
 }
