@@ -329,7 +329,7 @@ export default function UnitsPage() {
                                         // Show only IRB battalions
                                         filteredDistricts = districts.filter(d => d.name.toUpperCase().includes("IRB"));
                                     } else if (formData.mappingType === "commissionerate") {
-                                        filteredDistricts = districts.filter(d => d.name.toUpperCase().endsWith("-COP"));
+                                        filteredDistricts = districts.filter(d => d.name.toUpperCase().endsWith(" CITY"));
                                     }
 
                                     const allVisibleSelected = filteredDistricts.length > 0 && filteredDistricts.every(d => formData.mappedDistricts?.includes(d.name));
