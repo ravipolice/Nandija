@@ -60,9 +60,16 @@ export default function LoginPage() {
     const q = query(employeesRef, where("email", "==", user.email), limit(1));
     const querySnapshot = await getDocs(q);
 
-    let isFound = !querySnapshot.empty;
+    let isFound = false;
+    let isAdmin = false;
 
-    if (!isFound) {
+    if (!querySnapshot.empty) {
+      isFound = true;
+      const employeeData = querySnapshot.docs[0].data();
+      if (employeeData.isAdmin) isAdmin = true;
+    }
+
+    if (!isAdmin) {
       // Check admins collection as fallback
       const adminsRef = collection(db, "admins");
       const qAdmin = query(adminsRef, where("email", "==", user.email), limit(1));
@@ -71,6 +78,7 @@ export default function LoginPage() {
         const adminData = adminSnapshot.docs[0].data();
         if (adminData.isActive) {
           isFound = true;
+          isAdmin = true;
         }
       }
     }
@@ -80,8 +88,12 @@ export default function LoginPage() {
       setUnregisteredEmail(user.email || "");
       setShowUnregisteredPopup(true);
     } else {
-      // Existing user -> Dashboard
-      router.push("/");
+      // Redirect based on role
+      if (isAdmin) {
+        router.push("/");
+      } else {
+        router.push("/directory");
+      }
     }
   };
 
