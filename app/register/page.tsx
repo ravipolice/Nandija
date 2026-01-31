@@ -25,7 +25,6 @@ import {
     RANKS_LIST,
     RANKS_REQUIRING_METAL_NUMBER,
     DISTRICTS,
-    KSRP_BATTALIONS,
     HIGH_RANKING_OFFICERS,
     MINISTERIAL_RANKS,
     POLICE_STATION_RANKS,
@@ -207,12 +206,7 @@ function RegisterPageContent() {
             return;
         }
 
-        if (name === "unit") {
-            if (value === "SCRB") {
-                setFormData(prev => ({ ...prev, [name]: value, district: "Bengaluru City", station: "" }));
-                return;
-            }
-        }
+
 
         // Numeric filtering for numbers
         if (["mobile1", "mobile2", "kgid", "metalNumber", "pin", "confirmPin"].includes(name)) {
@@ -564,32 +558,50 @@ function RegisterPageContent() {
                         {(() => {
                             const selectedUnit = units.find(u => u.name === formData.unit);
                             const mappingType = selectedUnit?.mappingType || "all";
-                            const hideDistrict = mappingType === "state" || mappingType === "none";
+                            const hideDistrict = mappingType === "none";
                             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
                             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
                             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
                             const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
                             const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+                            const isStateScope = selectedUnit?.scopes?.includes("state") || false;
 
                             if (isHighRanking || hideDistrict) return null;
 
-                            let availableDistricts = districts;
+                            let availableDistricts = [...districts];
+                            const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
+
                             if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
-                                const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
                                 if (mappedIds.length > 0) {
                                     if (isBattalion) {
-                                        availableDistricts = mappedIds.map(name => ({ id: name, name }));
+                                        availableDistricts = mappedIds.map(name => ({ id: name, name } as District));
                                     } else {
                                         availableDistricts = districts.filter(d => mappedIds.includes(d.name));
                                     }
                                 }
-                            } else if (isKSRP) {
-                                availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
                             }
 
-                            if (unitSections.length > 0) {
-                                availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE }, ...availableDistricts];
+                            // A. If it's a State-level unit (HQ scope), ensure "Unit HQ" is included
+                            const isHqLevel = selectedUnit?.isHqLevel || false;
+                            const showUnitHq = isStateScope || (unitSections.length > 0) || isHqLevel;
+
+                            if (showUnitHq) {
+                                const alreadyHasHq = availableDistricts.some(d =>
+                                    (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+                                );
+                                if (!alreadyHasHq) {
+                                    availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+                                }
                             }
+
+                            // Sort Mapped Districts with HQ First
+                            availableDistricts = availableDistricts.sort((a, b) => {
+                                const isHqA = (a.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+                                const isHqB = (b.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+                                if (isHqA && !isHqB) return -1;
+                                if (!isHqA && isHqB) return 1;
+                                return (a.name || "").localeCompare(b.name || "");
+                            });
 
                             return (
                                 <>

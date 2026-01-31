@@ -17,7 +17,6 @@ import {
 import {
   BLOOD_GROUPS,
   HIGH_RANKING_OFFICERS,
-  KSRP_BATTALIONS,
   MINISTERIAL_RANKS,
   POLICE_STATION_RANKS,
   UNIT_HQ_VALUE
@@ -336,7 +335,26 @@ export default function NewEmployeePage() {
             />
           </div>
 
-          {/* Row 5: KGID, Rank, Metal Number */}
+          {/* Row 5: Unit (Moved up) */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Unit (Optional)
+            </label>
+            <select
+              value={formData.unit}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Unit (Optional)</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.name}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Row 6: KGID, Rank, Metal Number */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 col-span-1 md:col-span-2 lg:col-span-3">
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-400">
@@ -416,37 +434,22 @@ export default function NewEmployeePage() {
             )}
           </div>
 
-          {/* Row 5: Unit */}
-          <div>
-            <label className="block text-sm font-medium text-slate-400">
-              Unit (Optional)
-            </label>
-            <select
-              value={formData.unit}
-              onChange={(e) => handleUnitChange(e.target.value)}
-              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-            >
-              <option value="">Select Unit (Optional)</option>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.name}>
-                  {unit.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Unit was here */}
 
           {/* Row 6: District */}
           {(() => {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const mappingType = selectedUnit?.mappingType || "all";
-            const hideDistrict = mappingType === "state" || mappingType === "none";
+            const hideDistrict = mappingType === "none";
             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
+            const isStateScope = selectedUnit?.scopes?.includes("state") || false;
 
             if (isHighRanking || hideDistrict) return null;
 
-            let availableDistricts = districts;
+            let availableDistricts = [...districts];
+            const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
+
             if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
-              const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
               if (mappedIds.length > 0) {
                 if (isBattalion) {
                   availableDistricts = mappedIds.map(name => ({ id: name, name }));
@@ -454,15 +457,29 @@ export default function NewEmployeePage() {
                   availableDistricts = districts.filter(d => mappedIds.includes(d.name));
                 }
               }
-            } else if (isKSRP) {
-              availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
             }
 
+            // A. If it's a State-level unit (HQ scope), ensure "Unit HQ" is included
             const isHqLevel = selectedUnit?.isHqLevel || false;
+            const showUnitHq = isStateScope || (unitSections.length > 0) || isHqLevel;
 
-            if (unitSections.length > 0 || isHqLevel) {
-              availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+            if (showUnitHq) {
+              const alreadyHasHq = availableDistricts.some(d =>
+                (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+              );
+              if (!alreadyHasHq) {
+                availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+              }
             }
+
+            // Sort Mapped Districts with HQ First
+            availableDistricts = availableDistricts.sort((a, b) => {
+              const isHqA = (a.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+              const isHqB = (b.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+              if (isHqA && !isHqB) return -1;
+              if (!isHqA && isHqB) return 1;
+              return (a.name || "").localeCompare(b.name || "");
+            });
 
             return (
               <div>

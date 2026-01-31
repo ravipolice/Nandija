@@ -486,7 +486,18 @@ export const getDistricts = async (): Promise<District[]> => {
       .filter((d) => d.isActive !== false) // Include districts where isActive is true or undefined
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
-    return activeDistricts.length > 0 ? activeDistricts : allDistricts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    // Helper to sort: HQ/Unit HQ first, then alphabetical
+    const sortDistricts = (list: District[]) => {
+      const hqItems = list.filter(d =>
+        (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+      );
+      const otherItems = list.filter(d =>
+        !((d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i))
+      ).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      return [...hqItems, ...otherItems];
+    };
+
+    return activeDistricts.length > 0 ? sortDistricts(activeDistricts) : sortDistricts(allDistricts);
   } catch (error) {
     console.error("Error fetching districts:", error);
     // Return empty array on error to prevent crashes
@@ -772,7 +783,10 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
     const uniqueRegistrations = new Map<string, PendingRegistration>();
     rawRegistrations.forEach(reg => {
       const kgid = reg.kgid?.trim();
-      if (kgid && !uniqueRegistrations.has(kgid)) {
+      // Only include if status is pending or undefined (legacy)
+      const isPending = !reg.status || reg.status === "pending";
+
+      if (kgid && isPending && !uniqueRegistrations.has(kgid)) {
         uniqueRegistrations.set(kgid, reg);
       }
     });
@@ -794,7 +808,10 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
         const uniqueRegistrations = new Map<string, PendingRegistration>();
         rawRegistrations.forEach(reg => {
           const kgid = reg.kgid?.trim();
-          if (kgid && !uniqueRegistrations.has(kgid)) {
+          // Only include if status is pending or undefined (legacy)
+          const isPending = !reg.status || reg.status === "pending";
+
+          if (kgid && isPending && !uniqueRegistrations.has(kgid)) {
             uniqueRegistrations.set(kgid, reg);
           }
         });
@@ -811,7 +828,7 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
 };
 
 export const approveRegistration = async (
-  registrationId: string,
+  _registrationId: string,
   registration: PendingRegistration
 ): Promise<void> => {
   if (typeof window === "undefined" || !db) {
