@@ -95,6 +95,7 @@ export interface Unit {
   applicableRanks?: string[]; // List of rank_ids allowed for this unit
   isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
   isHqLevel?: boolean; // New: If true, unit exists at HQ level
+  stationKeyword?: string; // New: For dynamic filtering (e.g. "DCRB", "ESCOM")
   createdAt?: Timestamp;
 }
 
@@ -489,10 +490,10 @@ export const getDistricts = async (): Promise<District[]> => {
     // Helper to sort: HQ/Unit HQ first, then alphabetical
     const sortDistricts = (list: District[]) => {
       const hqItems = list.filter(d =>
-        (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+        (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i)
       );
       const otherItems = list.filter(d =>
-        !((d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i))
+        !((d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i))
       ).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
       return [...hqItems, ...otherItems];
     };

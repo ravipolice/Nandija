@@ -29,6 +29,7 @@ import {
     MINISTERIAL_RANKS,
     POLICE_STATION_RANKS,
     UNIT_HQ_VALUE,
+    STATE_INT_SECTIONS,
 } from "@/lib/constants";
 
 import { Suspense } from "react";
@@ -68,6 +69,8 @@ function RegisterPageContent() {
         confirmPin: "", // UI only
         bloodGroup: "",
     });
+
+    const [manualSection, setManualSection] = useState("");
 
     const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -153,6 +156,13 @@ function RegisterPageContent() {
 
         fetchStations();
     }, [formData.district]);
+
+    // Reset manual section if station selection changes away from "Others"
+    useEffect(() => {
+        if (formData.station !== "Others") {
+            setManualSection("");
+        }
+    }, [formData.station]);
 
     // Fetch Unit Sections
     useEffect(() => {
@@ -257,6 +267,9 @@ function RegisterPageContent() {
                 if (!hideStation && !formData.station) {
                     throw new Error(unitSections.length > 0 ? "Section is required" : "Station is required");
                 }
+                if (formData.station === "Others" && !manualSection) {
+                    throw new Error("Please specify your section name");
+                }
             }
             if (!formData.pin) throw new Error("PIN is required");
             if (formData.pin.length !== 6) throw new Error("PIN must be 6 digits");
@@ -296,7 +309,7 @@ function RegisterPageContent() {
                 rank: formData.rank,
                 metalNumber: formData.metalNumber || undefined,
                 district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : formData.station,
+                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : (formData.station === "Others" ? manualSection : formData.station),
                 unit: formData.unit || undefined,
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
@@ -564,14 +577,18 @@ function RegisterPageContent() {
                             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
                             const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
                             const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-                            const isStateScope = selectedUnit?.scopes?.includes("state") || false;
+                            const isStateScope = selectedUnit?.scopes?.includes("state") || selectedUnit?.scopes?.includes("hq") || false;
 
                             if (isHighRanking || hideDistrict) return null;
 
                             let availableDistricts = [...districts];
                             const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
 
-                            if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
+                            // HOTFIX: Hardcoded mapping for SCRB
+                            if (formData.unit === "SCRB") {
+                                availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District];
+                            }
+                            else if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
                                 if (mappedIds.length > 0) {
                                     if (isBattalion) {
                                         availableDistricts = mappedIds.map(name => ({ id: name, name } as District));
@@ -581,23 +598,24 @@ function RegisterPageContent() {
                                 }
                             }
 
-                            // A. If it's a State-level unit (HQ scope), ensure "Unit HQ" is included
+                            // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
                             const isHqLevel = selectedUnit?.isHqLevel || false;
-                            const showUnitHq = isStateScope || (unitSections.length > 0) || isHqLevel;
+                            const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE;
+                            const showUnitHq = isStateScope || (hasSections) || isHqLevel;
 
                             if (showUnitHq) {
                                 const alreadyHasHq = availableDistricts.some(d =>
-                                    (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+                                    (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i)
                                 );
                                 if (!alreadyHasHq) {
-                                    availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+                                    availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
                                 }
                             }
 
                             // Sort Mapped Districts with HQ First
                             availableDistricts = availableDistricts.sort((a, b) => {
-                                const isHqA = (a.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
-                                const isHqB = (b.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+                                const isHqA = (a.name || "").match(/^(HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(HQ|UNIT_HQ)$/i);
+                                const isHqB = (b.name || "").match(/^(HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(HQ|UNIT_HQ)$/i);
                                 if (isHqA && !isHqB) return -1;
                                 if (!isHqA && isHqB) return 1;
                                 return (a.name || "").localeCompare(b.name || "");
@@ -607,7 +625,7 @@ function RegisterPageContent() {
                                 <>
                                     <div className={mappingType === "single" ? "sm:col-span-2" : ""}>
                                         <label htmlFor="district" className="block text-sm font-medium text-gray-700">
-                                            {formData.district === UNIT_HQ_VALUE ? "Unit HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
+                                            {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
                                         </label>
                                         <select
                                             name="district"
@@ -624,7 +642,7 @@ function RegisterPageContent() {
                                         </select>
                                     </div>
 
-                                    {!(isKSRP || isMinisterial || (isDistrictLevel && unitSections.length === 0)) && (
+                                    {!(isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) && (
                                         <div>
                                             <label htmlFor="station" className="block text-sm font-medium text-gray-700">
                                                 {unitSections.length > 0 ? "Section *" : "Station *"}
@@ -635,14 +653,17 @@ function RegisterPageContent() {
                                                 required
                                                 value={formData.station}
                                                 onChange={handleChange}
-                                                disabled={!formData.district && unitSections.length === 0}
+                                                disabled={!formData.district && !hasSections}
                                                 className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
                                             >
                                                 <option value="" className="text-gray-500">
                                                     {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
                                                 </option>
-                                                {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
-                                                    unitSections.map((section) => (
+                                                {(hasSections && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                                                    [
+                                                        ...(unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : [])),
+                                                        "Others"
+                                                    ].map((section) => (
                                                         <option key={section} value={section} className="text-gray-900">{section}</option>
                                                     ))
                                                 ) : (
@@ -662,6 +683,22 @@ function RegisterPageContent() {
                                                     ))
                                                 )}
                                             </select>
+                                        </div>
+                                    )}
+
+                                    {formData.station === "Others" && (
+                                        <div className="sm:col-span-3">
+                                            <label htmlFor="manualSection" className="block text-sm font-medium text-gray-700">Specify Section Name *</label>
+                                            <input
+                                                type="text"
+                                                name="manualSection"
+                                                id="manualSection"
+                                                required
+                                                value={manualSection}
+                                                onChange={(e) => setManualSection(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900 font-bold"
+                                                placeholder="Enter your section name"
+                                            />
                                         </div>
                                     )}
                                 </>

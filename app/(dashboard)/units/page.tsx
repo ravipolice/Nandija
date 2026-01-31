@@ -115,7 +115,8 @@ export default function UnitsPage() {
             mappedAreaIds: unit.mappedAreaIds || unit.mappedDistricts || [],
             isDistrictLevel: unit.isDistrictLevel || false,
             isHqLevel: unit.isHqLevel || false,
-            applicableRanks: unit.applicableRanks || []
+            applicableRanks: unit.applicableRanks || [],
+            stationKeyword: unit.stationKeyword || ((unit.name === "DCRB" || unit.name === "ESCOM") ? unit.name : "")
         });
 
         // Fetch sections
@@ -261,7 +262,7 @@ export default function UnitsPage() {
         // Strict Validation Rules
         const scopes = formData.scopes || [];
 
-        const requiresArea = scopes.includes("district") || scopes.includes("battalion") || scopes.includes("commissionerate");
+        const requiresArea = scopes.includes("district") || scopes.includes("battalion") || scopes.includes("commissionerate") || scopes.includes("district_stations");
         if (requiresArea && (!formData.mappedAreaIds || formData.mappedAreaIds.length === 0)) {
             alert("❌ Validation Error: Selected scope(s) require selecting specific areas (Districts/Battalions/Cities).");
             return;
@@ -271,21 +272,31 @@ export default function UnitsPage() {
         try {
             // Derive legacy fields for backward compatibility
             let derivedMappingType: Unit["mappingType"] = "none";
-            if (scopes.includes("district") || scopes.includes("battalion")) derivedMappingType = "subset";
-            if (scopes.includes("commissionerate")) derivedMappingType = "commissionerate";
-            if (scopes.includes("hq") && scopes.length === 1) derivedMappingType = "state";
-            if (scopes.length === 0) derivedMappingType = "none";
+            if (scopes.includes("district") || scopes.includes("battalion") || scopes.includes("district_stations")) derivedMappingType = "subset";
+            else if (scopes.includes("commissionerate")) derivedMappingType = "commissionerate";
+            else if (scopes.includes("hq") && scopes.length === 1) derivedMappingType = "state";
+            else if (scopes.length === 0) derivedMappingType = "none";
+
+            // Derive mappedAreaType
+            let mappedAreaType: Unit["mappedAreaType"] = "DISTRICT";
+            if (scopes.includes("battalion")) mappedAreaType = "BATTALION";
+            else if (scopes.includes("commissionerate")) mappedAreaType = "CITY";
+            else if (scopes.includes("district") || scopes.includes("district_stations")) mappedAreaType = "DISTRICT";
+            else if (scopes.includes("hq")) mappedAreaType = "HQ";
 
             const payload = {
                 name: formData.name?.trim() || "",
                 isActive: formData.isActive,
                 scopes: scopes,
-                mappedAreaIds: formData.mappedAreaIds,
+                mappedAreaIds: requiresArea ? formData.mappedAreaIds : [],
                 // Legacy / Computed Fields
-                mappedDistricts: formData.mappedAreaIds,
+                mappingType: derivedMappingType,
+                mappedAreaType: mappedAreaType,
+                mappedDistricts: requiresArea ? formData.mappedAreaIds : [],
                 isHqLevel: scopes.includes("hq"),
                 isDistrictLevel: scopes.includes("district"),
-                applicableRanks: formData.applicableRanks
+                applicableRanks: formData.applicableRanks,
+                stationKeyword: formData.stationKeyword?.trim()
             };
 
             if (editingId) {
@@ -359,6 +370,18 @@ export default function UnitsPage() {
                             />
                             {!editingId && <p className="text-xs text-slate-500 mt-1">ID will be generated from name. Cannot be changed later.</p>}
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Station Keyword Filter (Optional)</label>
+                            <input
+                                type="text"
+                                value={formData.stationKeyword || ""}
+                                onChange={(e) => setFormData({ ...formData, stationKeyword: e.target.value })}
+                                className="w-full rounded-lg bg-dark-sidebar/50 border border-dark-border px-4 py-2.5 text-slate-300 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder:text-slate-600"
+                                placeholder="e.g. DCRB"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">If set, only stations containing this keyword will be shown.</p>
+                        </div>
                     </div>
 
                     {/* Section 2: Status */}
@@ -408,21 +431,33 @@ export default function UnitsPage() {
                                         {formData.scopes?.includes("hq") && <Check className="w-3.5 h-3.5 text-white" />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={!!formData.scopes?.includes("hq")} onChange={() => toggleScope("hq")} />
-                                    <span className={`font-medium ${formData.scopes?.includes("hq") ? "text-purple-300" : "text-slate-300"}`}>HQ (State Level)</span>
+                                    <span className={`font-medium ${formData.scopes?.includes("hq") ? "text-purple-300" : "text-slate-300"}`}>HQ Level</span>
                                 </label>
                                 <p className="text-xs text-slate-500 mt-2 ml-8">Enables sections for this unit.</p>
                             </div>
 
-                            {/* District Level */}
+                            {/* District HQ (No Stations) */}
                             <div className={`p-4 rounded-lg border transition-colors ${formData.scopes?.includes("district") ? "bg-purple-900/20 border-purple-500/50" : "bg-dark-sidebar/30 border-dark-border"}`}>
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.scopes?.includes("district") ? "bg-purple-600 border-purple-600" : "border-slate-500"}`}>
                                         {formData.scopes?.includes("district") && <Check className="w-3.5 h-3.5 text-white" />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={!!formData.scopes?.includes("district")} onChange={() => toggleScope("district")} />
-                                    <span className={`font-medium ${formData.scopes?.includes("district") ? "text-purple-300" : "text-slate-300"}`}>District Level</span>
+                                    <span className={`font-medium ${formData.scopes?.includes("district") ? "text-purple-300" : "text-slate-300"}`}>District HQ</span>
                                 </label>
-                                <p className="text-xs text-slate-500 mt-2 ml-8">Allows selecting specific districts.</p>
+                                <p className="text-xs text-slate-500 mt-2 ml-8">Maps to District HQ (No Stations).</p>
+                            </div>
+
+                            {/* Districts (With Stations) */}
+                            <div className={`p-4 rounded-lg border transition-colors ${formData.scopes?.includes("district_stations") ? "bg-purple-900/20 border-purple-500/50" : "bg-dark-sidebar/30 border-dark-border"}`}>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.scopes?.includes("district_stations") ? "bg-purple-600 border-purple-600" : "border-slate-500"}`}>
+                                        {formData.scopes?.includes("district_stations") && <Check className="w-3.5 h-3.5 text-white" />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={!!formData.scopes?.includes("district_stations")} onChange={() => toggleScope("district_stations")} />
+                                    <span className={`font-medium ${formData.scopes?.includes("district_stations") ? "text-purple-300" : "text-slate-300"}`}>Districts</span>
+                                </label>
+                                <p className="text-xs text-slate-500 mt-2 ml-8">Maps to Districts (Shows Stations).</p>
                             </div>
 
                             {/* Battalion */}
@@ -449,7 +484,7 @@ export default function UnitsPage() {
                         </div>
 
                         {/* Selection Areas */}
-                        {(formData.scopes?.includes("district") || formData.scopes?.includes("battalion") || formData.scopes?.includes("commissionerate")) && (
+                        {(formData.scopes?.includes("district") || formData.scopes?.includes("battalion") || formData.scopes?.includes("commissionerate") || formData.scopes?.includes("district_stations")) && (
                             <div className="space-y-4 pt-4 border-t border-dark-border animate-in fade-in slide-in-from-top-2">
                                 <label className="block text-sm font-medium text-slate-300">
                                     Select Mapped Areas <span className="text-red-400">*</span>
@@ -457,7 +492,7 @@ export default function UnitsPage() {
 
                                 <div className="max-h-64 overflow-y-auto rounded-lg border border-dark-border bg-dark-sidebar/20 p-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 shadow-inner">
                                     {/* District List */}
-                                    {formData.scopes?.includes("district") && (
+                                    {(formData.scopes?.includes("district") || formData.scopes?.includes("district_stations")) && (
                                         <>
                                             <div className="col-span-1 sm:col-span-2 text-xs font-bold text-slate-500 uppercase mt-2 mb-1 px-1">Districts</div>
                                             {districts.filter(d => !d.name.toUpperCase().endsWith(" CITY") && !ALL_BATTALIONS.includes(d.name)).map(d => (

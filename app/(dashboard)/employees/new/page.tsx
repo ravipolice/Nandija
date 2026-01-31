@@ -19,7 +19,8 @@ import {
   HIGH_RANKING_OFFICERS,
   MINISTERIAL_RANKS,
   POLICE_STATION_RANKS,
-  UNIT_HQ_VALUE
+  UNIT_HQ_VALUE,
+  STATE_INT_SECTIONS
 } from "@/lib/constants";
 
 export default function NewEmployeePage() {
@@ -50,6 +51,8 @@ export default function NewEmployeePage() {
     isAdmin: false,
     isApproved: true,
   });
+
+  const [manualSection, setManualSection] = useState("");
 
   useEffect(() => {
     loadDistricts();
@@ -136,6 +139,7 @@ export default function NewEmployeePage() {
   const isKSRP = formData.unit === "KSRP";
   const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
   const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
+  const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE;
 
   // Rank filtering logic based on Unit
   const selectedUnitObj = units.find(u => u.name === formData.unit);
@@ -159,29 +163,30 @@ export default function NewEmployeePage() {
       if (!stationName.includes("PS")) return false;
     }
 
-    // 2. Unit-based filtering
-    if (formData.unit === "DCRB") {
-      if (!stationName.includes("DCRB")) return false;
-    } else if (formData.unit === "ESCOM") {
-      if (!stationName.includes("ESCOM")) return false;
+    // 2. Unit-based filtering (Dynamic)
+    // Fallback for DCRB/ESCOM until DB is updated
+    const stationKeyword = selectedUnitObj?.stationKeyword ||
+      (formData.unit === "DCRB" ? "DCRB" : (formData.unit === "ESCOM" ? "ESCOM" : ""));
+
+    if (stationKeyword) {
+      if (!stationName.includes(stationKeyword.toUpperCase())) return false;
     }
 
     return true;
   });
 
   const handleUnitChange = (unitName: string) => {
-    if (unitName === "SCRB") {
-      setFormData({
-        ...formData,
-        unit: unitName,
-        district: "Bengaluru City",
-        station: "",
-      });
-      setSelectedDistrict("Bengaluru City");
-    } else {
-      setFormData({ ...formData, unit: unitName });
-    }
+    // Reset district/station to ensure clean state
+    setFormData({ ...formData, unit: unitName, district: "", station: "" });
+    setSelectedDistrict("");
   };
+
+  // Reset manual section if station selection changes away from "Others"
+  useEffect(() => {
+    if (formData.station !== "Others") {
+      setManualSection("");
+    }
+  }, [formData.station]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +198,11 @@ export default function NewEmployeePage() {
       !formData.metalNumber?.trim()
     ) {
       alert(`Metal number is required for rank: ${formData.rank}`);
+      return;
+    }
+
+    if (formData.station === "Others" && !manualSection) {
+      alert("Please specify the section name");
       return;
     }
 
@@ -213,7 +223,7 @@ export default function NewEmployeePage() {
         landline2: formData.landline2,
         unit: formData.unit,
         district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : formData.station,
+        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : (formData.station === "Others" ? manualSection : formData.station),
       });
       router.push("/employees");
     } catch (error) {
@@ -442,7 +452,7 @@ export default function NewEmployeePage() {
             const mappingType = selectedUnit?.mappingType || "all";
             const hideDistrict = mappingType === "none";
             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
-            const isStateScope = selectedUnit?.scopes?.includes("state") || false;
+            const isStateScope = selectedUnit?.scopes?.includes("state") || selectedUnit?.scopes?.includes("hq") || false;
 
             if (isHighRanking || hideDistrict) return null;
 
@@ -459,23 +469,23 @@ export default function NewEmployeePage() {
               }
             }
 
-            // A. If it's a State-level unit (HQ scope), ensure "Unit HQ" is included
+            // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
             const isHqLevel = selectedUnit?.isHqLevel || false;
-            const showUnitHq = isStateScope || (unitSections.length > 0) || isHqLevel;
+            const showUnitHq = isStateScope || (hasSections) || isHqLevel;
 
             if (showUnitHq) {
               const alreadyHasHq = availableDistricts.some(d =>
-                (d.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i)
+                (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i)
               );
               if (!alreadyHasHq) {
-                availableDistricts = [{ id: "UNIT_HQ", name: "Unit HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+                availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
               }
             }
 
             // Sort Mapped Districts with HQ First
             availableDistricts = availableDistricts.sort((a, b) => {
-              const isHqA = (a.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
-              const isHqB = (b.name || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(Unit HQ|HQ|UNIT_HQ)$/i);
+              const isHqA = (a.name || "").match(/^(HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(HQ|UNIT_HQ)$/i);
+              const isHqB = (b.name || "").match(/^(HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(HQ|UNIT_HQ)$/i);
               if (isHqA && !isHqB) return -1;
               if (!isHqA && isHqB) return 1;
               return (a.name || "").localeCompare(b.name || "");
@@ -484,7 +494,7 @@ export default function NewEmployeePage() {
             return (
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  {formData.district === UNIT_HQ_VALUE ? "Unit HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
+                  {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
                 </label>
                 <select
                   required
@@ -515,7 +525,7 @@ export default function NewEmployeePage() {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const mappingType = selectedUnit?.mappingType || "all";
             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
-            const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && unitSections.length === 0) || mappingType === "state" || mappingType === "none";
+            const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections) || mappingType === "state" || mappingType === "none";
 
             if (hideStation) return null;
 
@@ -530,14 +540,17 @@ export default function NewEmployeePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, station: e.target.value })
                   }
-                  disabled={!selectedDistrict && unitSections.length === 0}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+                  disabled={!selectedDistrict && !hasSections}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500 font-bold"
                 >
                   <option value="">
-                    {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                    {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
                   </option>
-                  {(unitSections.length > 0 && (formData.district === UNIT_HQ_VALUE)) ? (
-                    unitSections.map((section) => (
+                  {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? (
+                    [
+                      ...(unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : [])),
+                      "Others"
+                    ].map((section) => (
                       <option key={section} value={section}>{section}</option>
                     ))
                   ) : (
@@ -552,7 +565,21 @@ export default function NewEmployeePage() {
             );
           })()}
 
-          {/* Row 9: Blood Group */}
+          {formData.station === "Others" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                Specify Section Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={manualSection}
+                onChange={(e) => setManualSection(e.target.value)}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 font-bold"
+                placeholder="Enter section name"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-slate-400">
               Blood Group
