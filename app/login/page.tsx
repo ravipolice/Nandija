@@ -11,7 +11,7 @@ import { db } from "@/lib/firebase/config";
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPinLogin, setShowPinLogin] = useState(false);
+  const [showPinLogin, setShowPinLogin] = useState(true);
   const [showUnregisteredPopup, setShowUnregisteredPopup] = useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = useState("");
 
