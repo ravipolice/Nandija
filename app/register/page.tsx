@@ -84,7 +84,7 @@ function RegisterPageContent() {
     const selectedRankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
     const isMetalNumberRequired = selectedRankObj ? selectedRankObj.requiresMetalNumber : RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
 
-    const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+    const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(formData.unit);
     const isKSRP = formData.unit === "KSRP";
 
     // Filter Ranks based on Unit
@@ -216,6 +216,11 @@ function RegisterPageContent() {
             return;
         }
 
+        if (name === "unit") {
+            setFormData(prev => ({ ...prev, [name]: value, district: "", station: "" }));
+            return;
+        }
+
 
 
         // Numeric filtering for numbers
@@ -247,7 +252,8 @@ function RegisterPageContent() {
 
         try {
             // Basic Validation
-            if (!formData.kgid) throw new Error("KGID is required");
+            const isIPS = formData.unit === "IPS";
+            if (!formData.kgid && !isIPS) throw new Error("KGID is required");
             if (!formData.name) throw new Error("Name is required");
             if (!formData.email) throw new Error("Email is required");
             if (!formData.mobile1 || formData.mobile1.length !== 10) throw new Error("Valid Mobile 1 is required");
@@ -259,8 +265,9 @@ function RegisterPageContent() {
             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
             const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
             const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-            const hideDistrict = mappingType === "state" || mappingType === "none";
-            const hideStation = isDistrictLevelUnit || hideDistrict || isKSRP || isMinisterial;
+            const hideDistrict = mappingType === "state" || mappingType === "none" || isSpecialUnit;
+            const hasUnitSections = (unitSections.length > 0 || formData.unit === "State INT") || (isDistrictLevelUnit && unitSections.length > 0);
+            const hideStation = (isDistrictLevelUnit && !hasUnitSections) || hideDistrict || isKSRP || isMinisterial;
 
             if (!isHighRanking && !hideDistrict) {
                 if (!formData.district) throw new Error(selectedUnit?.mappedAreaType === "BATTALION" || isKSRP ? "Battalion is required" : "District is required");
@@ -298,8 +305,10 @@ function RegisterPageContent() {
             const hashedPin = await hashPin(formData.pin);
 
             // 3. Create Pending Registration
+            const finalKgid = (isIPS && !formData.kgid) ? `IPS-${Date.now()}` : formData.kgid;
+
             await createPendingRegistration({
-                kgid: formData.kgid,
+                kgid: finalKgid,
                 name: formData.name,
                 email: formData.email.trim().toLowerCase(),
                 mobile1: formData.mobile1,
@@ -308,8 +317,8 @@ function RegisterPageContent() {
                 landline2: formData.landline2 || undefined,
                 rank: formData.rank,
                 metalNumber: formData.metalNumber || undefined,
-                district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : (formData.station === "Others" ? manualSection : formData.station),
+                district: (isSpecialUnit || isHighRanking || hideDistrict) ? "" : formData.district,
+                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || (isDistrictLevelUnit && !hasUnitSections)) ? "" : (formData.station === "Others" ? manualSection : formData.station),
                 unit: formData.unit || undefined,
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
@@ -493,19 +502,21 @@ function RegisterPageContent() {
 
                     {/* IDENTITY - KGID, Rank, Metal No */}
                     <div className={`grid grid-cols-1 gap-4 ${isMetalNumberRequired ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-                        <div>
-                            <label htmlFor="kgid" className="block text-sm font-medium text-gray-700">KGID *</label>
-                            <input
-                                type="text"
-                                name="kgid"
-                                id="kgid"
-                                required
-                                value={formData.kgid}
-                                onChange={handleChange}
-                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
-                                placeholder="e.g. 2005001"
-                            />
-                        </div>
+                        {formData.unit !== "IPS" && (
+                            <div>
+                                <label htmlFor="kgid" className="block text-sm font-medium text-gray-700">KGID *</label>
+                                <input
+                                    type="text"
+                                    name="kgid"
+                                    id="kgid"
+                                    required
+                                    value={formData.kgid}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
+                                    placeholder="e.g. 2005001"
+                                />
+                            </div>
+                        )}
 
                         <div>
                             <label htmlFor="rank" className="block text-sm font-medium text-gray-700">Rank *</label>
@@ -571,7 +582,7 @@ function RegisterPageContent() {
                         {(() => {
                             const selectedUnit = units.find(u => u.name === formData.unit);
                             const mappingType = selectedUnit?.mappingType || "all";
-                            const hideDistrict = mappingType === "none";
+                            const hideDistrict = mappingType === "none" || isSpecialUnit;
                             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
                             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
                             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
@@ -600,8 +611,8 @@ function RegisterPageContent() {
 
                             // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
                             const isHqLevel = selectedUnit?.isHqLevel || false;
-                            const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE;
-                            const showUnitHq = isStateScope || (hasSections) || isHqLevel;
+                            const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE || (isDistrictLevel && unitSections.length > 0);
+                            const showUnitHq = (isStateScope || isSpecialUnit) || (hasSections) || isHqLevel;
 
                             if (showUnitHq) {
                                 const alreadyHasHq = availableDistricts.some(d =>
@@ -659,7 +670,7 @@ function RegisterPageContent() {
                                                 <option value="" className="text-gray-500">
                                                     {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
                                                 </option>
-                                                {(hasSections && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? (
+                                                {(hasSections && (isDistrictLevel || isSpecialUnit || formData.district === UNIT_HQ_VALUE || formData.district)) ? (
                                                     [
                                                         ...(unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : [])),
                                                         "Others"

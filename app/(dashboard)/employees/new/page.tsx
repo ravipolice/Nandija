@@ -137,12 +137,14 @@ export default function NewEmployeePage() {
 
   const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
   const isKSRP = formData.unit === "KSRP";
-  const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
+  const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(formData.unit);
   const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-  const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE;
+
+  const selectedUnitObj = units.find(u => u.name === formData.unit);
+  const isDistrictLevel = selectedUnitObj?.isDistrictLevel || false;
+  const hasSections = (unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE) || (isDistrictLevel && unitSections.length > 0);
 
   // Rank filtering logic based on Unit
-  const selectedUnitObj = units.find(u => u.name === formData.unit);
   const applicableRanks = selectedUnitObj?.applicableRanks || [];
 
   const filteredRanks = ranks.filter(rank => {
@@ -215,15 +217,19 @@ export default function NewEmployeePage() {
     setLoading(true);
 
     try {
+      const isIPS = formData.unit === "IPS";
+      const finalKgid = (isIPS && !formData.kgid) ? `IPS-${Date.now()}` : formData.kgid;
+
       await createEmployee({
         ...formData,
+        kgid: finalKgid,
         email: formData.email.trim().toLowerCase(),
         mobile2: formData.mobile2,
         landline: formData.landline,
         landline2: formData.landline2,
         unit: formData.unit,
         district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : (formData.station === "Others" ? manualSection : formData.station),
+        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) ? "" : (formData.station === "Others" ? manualSection : formData.station),
       });
       router.push("/employees");
     } catch (error) {
@@ -366,22 +372,24 @@ export default function NewEmployeePage() {
 
           {/* Row 6: KGID, Rank, Metal Number */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 col-span-1 md:col-span-2 lg:col-span-3">
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-400">
-                KGID *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.kgid}
-                onChange={(e) => {
-                  // Only allow digits
-                  const value = e.target.value.replace(/\D/g, "");
-                  setFormData({ ...formData, kgid: value });
-                }}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              />
-            </div>
+            {formData.unit !== "IPS" && (
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-slate-400">
+                  KGID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.kgid}
+                  onChange={(e) => {
+                    // Only allow digits
+                    const value = e.target.value.replace(/\D/g, "");
+                    setFormData({ ...formData, kgid: value });
+                  }}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                />
+              </div>
+            )}
 
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-400">
@@ -450,7 +458,7 @@ export default function NewEmployeePage() {
           {(() => {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const mappingType = selectedUnit?.mappingType || "all";
-            const hideDistrict = mappingType === "none";
+            const hideDistrict = mappingType === "state" || mappingType === "none" || isSpecialUnit;
             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
             const isStateScope = selectedUnit?.scopes?.includes("state") || selectedUnit?.scopes?.includes("hq") || false;
 
@@ -471,7 +479,8 @@ export default function NewEmployeePage() {
 
             // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
             const isHqLevel = selectedUnit?.isHqLevel || false;
-            const showUnitHq = isStateScope || (hasSections) || isHqLevel;
+            const isDistrictLevelVal = selectedUnit?.isDistrictLevel || false;
+            const showUnitHq = isStateScope || (hasSections) || isHqLevel || (isDistrictLevelVal && unitSections.length > 0);
 
             if (showUnitHq) {
               const alreadyHasHq = availableDistricts.some(d =>
@@ -525,7 +534,7 @@ export default function NewEmployeePage() {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const mappingType = selectedUnit?.mappingType || "all";
             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
-            const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections) || mappingType === "state" || mappingType === "none";
+            const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections) || mappingType === "state" || mappingType === "none" || isSpecialUnit;
 
             if (hideStation) return null;
 

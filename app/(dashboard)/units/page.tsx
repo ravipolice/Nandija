@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getUnitSections, updateUnitSections, getRanks, Rank } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2, Save, X, Info, Check, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Check, RefreshCw } from 'lucide-react';
 import { DEFAULT_UNITS, ALL_BATTALIONS, STATE_INT_SECTIONS } from "@/lib/constants";
 
 type ColumnKey = "name" | "status" | "scope" | "actions";
@@ -15,14 +15,7 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
 };
 
 // Fixed mapping types (kept for reference/legacy display if needed)
-const MAPPING_TYPES = [
-    { value: "all", label: "All Districts" },
-    { value: "state", label: "State Level" },
-    { value: "single", label: "District Specific" },
-    { value: "subset", label: "Multi-District / Battalion" },
-    { value: "commissionerate", label: "Commissionerate" },
-    { value: "none", label: "No District Required" },
-];
+
 
 export default function UnitsPage() {
     const [units, setUnits] = useState<Unit[]>([]);
@@ -39,17 +32,15 @@ export default function UnitsPage() {
         isDistrictLevel: false,
         isHqLevel: false
     });
-    const [sectionsText, setSectionsText] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [migrating, setMigrating] = useState(false);
-    const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
+    const [columnWidths] = useState<Record<ColumnKey, number>>(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("unitColumnWidths");
             return saved ? { ...defaultColumnWidths, ...JSON.parse(saved) } : defaultColumnWidths;
         }
         return defaultColumnWidths;
     });
-    const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
     const [sectionsList, setSectionsList] = useState<string[]>([]);
     const [newSectionInput, setNewSectionInput] = useState("");
     const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
@@ -123,11 +114,10 @@ export default function UnitsPage() {
         try {
             const sections = await getUnitSections(unit.name);
             setSectionsList(sections);
-            setSectionsText(sections.join(", ")); // Keep legacy for syncing just in case, or remove if unused
+            setSectionsList(sections);
         } catch (error) {
             console.error("Error fetching sections:", error);
             setSectionsList([]);
-            setSectionsText("");
         }
 
         setShowForm(true);
@@ -149,38 +139,10 @@ export default function UnitsPage() {
             setShowForm(false);
             setEditingId(null);
             setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
-            setSectionsText("");
             setSectionsList([]);
         }
     };
 
-    const handleMouseDown = (e: React.MouseEvent, column: ColumnKey) => {
-        e.preventDefault();
-        setResizingColumn(column);
-        const startX = e.pageX;
-        const startWidth = columnWidths[column];
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const diff = e.pageX - startX;
-            const newWidth = Math.max(50, startWidth + diff);
-            setColumnWidths((prev) => {
-                const updated = { ...prev, [column]: newWidth };
-                if (typeof window !== "undefined") {
-                    localStorage.setItem("unitColumnWidths", JSON.stringify(updated));
-                }
-                return updated;
-            });
-        };
-
-        const handleMouseUp = () => {
-            setResizingColumn(null);
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-        };
-
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", handleMouseUp);
-    };
 
     const handlePopulateDefaults = async () => {
         if (!confirm(`This will add ${DEFAULT_UNITS.length} default units from the system constants. Continue?`)) return;
@@ -262,6 +224,11 @@ export default function UnitsPage() {
         // Strict Validation Rules
         const scopes = formData.scopes || [];
 
+        if (!formData.name?.trim()) {
+            alert("❌ Validation Error: Unit Name is required.");
+            return;
+        }
+
         const requiresArea = scopes.includes("district") || scopes.includes("battalion") || scopes.includes("commissionerate") || scopes.includes("district_stations");
         if (requiresArea && (!formData.mappedAreaIds || formData.mappedAreaIds.length === 0)) {
             alert("❌ Validation Error: Selected scope(s) require selecting specific areas (Districts/Battalions/Cities).");
@@ -295,8 +262,8 @@ export default function UnitsPage() {
                 mappedDistricts: requiresArea ? formData.mappedAreaIds : [],
                 isHqLevel: scopes.includes("hq"),
                 isDistrictLevel: scopes.includes("district"),
-                applicableRanks: formData.applicableRanks,
-                stationKeyword: formData.stationKeyword?.trim()
+                applicableRanks: formData.applicableRanks || [],
+                stationKeyword: formData.stationKeyword?.trim() || ""
             };
 
             if (editingId) {
@@ -314,12 +281,7 @@ export default function UnitsPage() {
 
             setShowForm(false);
             setEditingId(null);
-            setShowForm(false);
-            setEditingId(null);
             setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
-            setSectionsText("");
-            setSectionsList([]);
-            setSectionsText("");
             setSectionsList([]);
             await loadUnits();
         } catch (error) {
@@ -445,7 +407,7 @@ export default function UnitsPage() {
                                     <input type="checkbox" className="hidden" checked={!!formData.scopes?.includes("district")} onChange={() => toggleScope("district")} />
                                     <span className={`font-medium ${formData.scopes?.includes("district") ? "text-purple-300" : "text-slate-300"}`}>District HQ</span>
                                 </label>
-                                <p className="text-xs text-slate-500 mt-2 ml-8">Maps to District HQ (No Stations).</p>
+                                <p className="text-xs text-slate-500 mt-2 ml-8">Maps to District HQ (No Stations). Enables sections management.</p>
                             </div>
 
                             {/* Districts (With Stations) */}
@@ -544,8 +506,8 @@ export default function UnitsPage() {
                         )}
                     </div>
 
-                    {/* Section 4: Unit Sections (Only if HQ or Scopes include HQ) */}
-                    {(formData.scopes?.includes("hq") || formData.isHqLevel) && (
+                    {/* Section 4: Unit Sections (If HQ or District HQ scope) */}
+                    {(formData.scopes?.includes("hq") || formData.scopes?.includes("district") || formData.isHqLevel || formData.isDistrictLevel) && (
                         <div className="space-y-4">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-purple-400">4. Unit Sections</h3>
 
@@ -700,14 +662,8 @@ export default function UnitsPage() {
                 <button
                     onClick={() => {
                         setEditingId(null);
-                        setEditingId(null);
-                        setEditingId(null);
                         setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
                         setSectionsList([]);
-                        setSectionsText("");
-                        setShowForm(true);
-                        setSectionsList([]);
-                        setSectionsText("");
                         setShowForm(true);
                     }}
                     className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-white transition-all hover:shadow-lg hover:shadow-purple-500/50"
@@ -725,24 +681,12 @@ export default function UnitsPage() {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative" style={{ width: columnWidths.name }}>
                                 Name
-                                <div
-                                    onMouseDown={(e) => handleMouseDown(e, "name")}
-                                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                                />
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative" style={{ width: columnWidths.status }}>
                                 Status
-                                <div
-                                    onMouseDown={(e) => handleMouseDown(e, "status")}
-                                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                                />
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative" style={{ width: columnWidths.scope }}>
                                 Scope
-                                <div
-                                    onMouseDown={(e) => handleMouseDown(e, "scope")}
-                                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                                />
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400" style={{ width: columnWidths.actions }}>
                                 Actions

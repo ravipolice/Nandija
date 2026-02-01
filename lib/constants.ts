@@ -9,7 +9,7 @@ export const DEFAULT_UNITS = [
   "Admin", "ASC Team", "BDDS", "C Room", "CAR", "CCB", "CCRB", "CDR", "CEN", "CID",
   "Coast Guard", "Computer", "Court", "CSB", "CSP", "DAR", "DCIB", "DCRB", "DCRE",
   "Dog Squad", "DSB", "ERSS", "ESCOM", "Excise", "Fire", "Forest", "FPB", "FRRO",
-  "FSL", "Guest House", "Health", "Home Guard", "INT", "ISD", "KSRP", "Lokayukta", "L&O",
+  "FSL", "Guest House", "Health", "Home Guard", "INT", "IPS", "ISD", "KSRP", "Lokayukta", "L&O",
   "Ministrial", "Minisrial", "Others", "Prison", "PTS", "Railway", "RTO",
   "S INT", "SCRB", "Social Media", "State INT", "Toll", "Traffic", "VVIP", "Wireless"
 ];
@@ -56,7 +56,7 @@ export const DISTRICTS = [
   "Bagalkot", "Ballari", "Belagavi City", "Belagavi Dist", "Bengaluru City", "Bengaluru Dist", "Bidar",
   "Central Range", "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
   "Dakshina Kannada", "Davanagere", "Dharwad", "Eastern Range", "Gadag", "Hassan", "Haveri", "HQ",
-  "Hubballi Dharwad City", "K.G.F", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
+  "Hubballi Dharwad City", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
   "Mangaluru City", "Mysuru City", "Mysuru Dist", "Northeastern Range", "Northern Range",
   "Raichur", "Ramanagara", "Shivamogga", "Southern Range", "Tumakuru", "Udupi", "Uttara Kannada",
   "Vijayanagara", "Vijayapura", "Western Range", "Yadgir",
@@ -72,6 +72,7 @@ export const STATE_INT_SECTIONS = [
   "Administration (Store, EST, ACCTS, Admin)",
   "SITA",
   "BDDS",
+  "VVIP",
   "VIP Sec",
   "Airport Surveiilance",
   "IAD"
@@ -484,9 +485,9 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Kolhar PS", "Kudagi PS", "Managuli PS", "Muddebihal PS", "Nidagundi PS", "Sindagi PS",
     "Talikot PS", "Tikota PS", "Vijayapura CEN Crime PS", "Vijayapura Rural PS",
     "Vijayapura Traffic PS", "Vijayapura Women PS", "Zalaki PS",
-    "Control Room Vijayapur", "DPO Vijayapur", "Computer Sec Vijayapur", "DAR Vijayapur",
-    "FPB Vijayapur", "MCU Vijayapur", "DCRB Vijayapur", "DSB Vijayapur", "SMMC Vijayapur",
-    "State INT Vijayapur", "DCRE Vijayapur", "Lokayukta Vijayapur", "ESCOM Vijayapur"
+    "Control Room Vijayapura", "DPO Vijayapura", "Computer Sec Vijayapura", "DAR Vijayapura",
+    "FPB Vijayapura", "MCU Vijayapura", "DCRB Vijayapura", "DSB Vijayapura", "SMMC Vijayapura",
+    "State INT Vijayapura", "DCRE Vijayapura", "Lokayukta Vijayapura", "ESCOM Vijayapura"
   ],
   "Yadgir": [
     "Bheemarayanagudi PS", "Gogi PS", "Gurumitkal PS", "Hunasagi PS", "Kembhavi PS",

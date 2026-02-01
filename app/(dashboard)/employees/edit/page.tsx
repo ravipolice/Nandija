@@ -60,85 +60,41 @@ export default function EditEmployeePage() {
 
   const [manualSection, setManualSection] = useState("");
 
-  useEffect(() => {
-    // Mark as mounted (client-side only)
-    setMounted(true);
-
-    // Get ID from URL query parameter
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id") || "";
-    if (!id) {
-      alert("No employee ID provided");
-      router.push("/employees");
-      return;
+  const loadDistricts = async () => {
+    try {
+      const data = await getDistricts();
+      setDistricts(data);
+    } catch (error) {
+      console.error("Error loading districts:", error);
     }
-    setEmployeeId(id);
-  }, [router]);
+  };
 
-  useEffect(() => {
-    if (!employeeId) return;
-    loadDistricts();
-    loadRanks();
-    loadUnits();
-    loadEmployee();
-  }, [employeeId]);
-
-  useEffect(() => {
-    // Only auto-load stations when district changes via user interaction
-    // Don't reload if we're in the middle of loading employee data
-    // Also don't reload if stations are already loaded for this district
-    if (selectedDistrict && !loading) {
-      const currentStationDistrict = stations[0]?.district;
-      // Only reload if stations are for a different district or empty
-      if (stations.length === 0 || (currentStationDistrict && currentStationDistrict !== selectedDistrict)) {
-        loadStations(selectedDistrict);
-      }
-    } else if (!selectedDistrict && !loading) {
-      // Only clear stations if not loading
-      setStations([]);
+  const loadRanks = async () => {
+    try {
+      const data = await getRanks();
+      setRanks(data);
+    } catch (error) {
+      console.error("Error loading ranks:", error);
     }
-  }, [selectedDistrict, loading]);
+  };
 
-  useEffect(() => {
-    async function fetchUnitSectionsData() {
-      if (formData.unit) {
-        try {
-          const sections = await getUnitSections(formData.unit);
-          setUnitSections(sections);
-        } catch (error) {
-          console.error("Error fetching unit sections:", error);
-          setUnitSections([]);
-        }
-      } else {
-        setUnitSections([]);
-      }
+  const loadUnits = async () => {
+    try {
+      const data = await getUnits();
+      setUnits(data);
+    } catch (error) {
+      console.error("Error loading units:", error);
     }
-    fetchUnitSectionsData();
-  }, [formData.unit]);
+  };
 
-  const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE;
-
-  // Ensure station value is preserved when stations are loaded
-  useEffect(() => {
-    if (stations.length > 0 && formData.station) {
-      // Check if the current station exists in the stations list
-      const stationExists = stations.some(s => s.name === formData.station);
-      if (!stationExists && formData.station) {
-        // If station doesn't exist, add it to the list
-        setStations(prev => {
-          // Check if it's already been added
-          if (!prev.some(s => s.name === formData.station)) {
-            return [...prev, {
-              id: "current",
-              name: formData.station,
-              district: selectedDistrict || ""
-            }];
-          }
-          return prev;
-        });
-      }
+  const loadStations = async (district: string) => {
+    try {
+      const data = await getStations(district);
+      setStations(data);
+    } catch (error) {
+      console.error("Error loading stations:", error);
     }
-  }, [stations, formData.station, selectedDistrict]);
+  };
 
   const loadEmployee = async () => {
     if (!employeeId) return;
@@ -211,32 +167,84 @@ export default function EditEmployeePage() {
     }
   };
 
-  const loadDistricts = async () => {
-    try {
-      const data = await getDistricts();
-      setDistricts(data);
-    } catch (error) {
-      console.error("Error loading districts:", error);
-    }
-  };
+  useEffect(() => {
+    // Mark as mounted (client-side only)
+    setMounted(true);
 
-  const loadRanks = async () => {
-    try {
-      const data = await getRanks();
-      setRanks(data);
-    } catch (error) {
-      console.error("Error loading ranks:", error);
+    // Get ID from URL query parameter
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id") || "";
+    if (!id) {
+      alert("No employee ID provided");
+      router.push("/employees");
+      return;
     }
-  };
+    setEmployeeId(id);
+  }, [router]);
 
-  const loadUnits = async () => {
-    try {
-      const data = await getUnits();
-      setUnits(data);
-    } catch (error) {
-      console.error("Error loading units:", error);
+  useEffect(() => {
+    if (!employeeId) return;
+    loadDistricts();
+    loadRanks();
+    loadUnits();
+    loadEmployee();
+  }, [employeeId]);
+
+  useEffect(() => {
+    // Only auto-load stations when district changes via user interaction
+    if (selectedDistrict && !loading) {
+      const currentStationDistrict = stations[0]?.district;
+      if (stations.length === 0 || (currentStationDistrict && currentStationDistrict !== selectedDistrict)) {
+        loadStations(selectedDistrict);
+      }
+    } else if (!selectedDistrict && !loading) {
+      setStations([]);
     }
-  };
+  }, [selectedDistrict, loading]);
+
+  useEffect(() => {
+    async function fetchUnitSectionsData() {
+      if (formData.unit) {
+        try {
+          const sections = await getUnitSections(formData.unit);
+          setUnitSections(sections);
+        } catch (error) {
+          console.error("Error fetching unit sections:", error);
+          setUnitSections([]);
+        }
+      } else {
+        setUnitSections([]);
+      }
+    }
+    fetchUnitSectionsData();
+  }, [formData.unit]);
+
+  const selectedUnit = units.find(u => u.name === formData.unit);
+  const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(formData.unit);
+  const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
+  const hasSections = (unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE) || (isDistrictLevel && unitSections.length > 0);
+
+  // Ensure station value is preserved when stations are loaded
+  useEffect(() => {
+    if (stations.length > 0 && formData.station) {
+      // Check if the current station exists in the stations list
+      const stationExists = stations.some(s => s.name === formData.station);
+      if (!stationExists && formData.station) {
+        // If station doesn't exist, add it to the list
+        setStations(prev => {
+          // Check if it's already been added
+          if (!prev.some(s => s.name === formData.station)) {
+            return [...prev, {
+              id: "current",
+              name: formData.station,
+              district: (selectedDistrict || formData.district) || ""
+            }];
+          }
+          return prev;
+        });
+      }
+    }
+  }, [stations, formData.station, selectedDistrict, formData.district]);
 
   const getSelectedRank = (rankName: string): Rank | undefined => {
     return ranks.find(r =>
@@ -253,11 +261,7 @@ export default function EditEmployeePage() {
 
   const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
   const isKSRP = formData.unit === "KSRP";
-  const isSpecialUnit = ["ISD", "CCB", "CID"].includes(formData.unit);
   const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-
-  // Get unit object for dynamic config
-  const selectedUnit = units.find(u => u.name === formData.unit);
 
   // Station filtering logic
   const filteredStations = stations.filter((s) => {
@@ -291,14 +295,6 @@ export default function EditEmployeePage() {
     setSelectedDistrict("");
   };
 
-  const loadStations = async (district: string) => {
-    try {
-      const data = await getStations(district);
-      setStations(data);
-    } catch (error) {
-      console.error("Error loading stations:", error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,16 +328,21 @@ export default function EditEmployeePage() {
     setSaving(true);
 
     try {
-      await updateEmployee(employeeId, {
+      const isIPS = formData.unit === "IPS";
+
+      const updateData: any = {
         ...formData,
+        kgid: (isIPS && !formData.kgid) ? `IPS-${Date.now()}` : formData.kgid,
         email: formData.email.trim().toLowerCase(),
         mobile2: formData.mobile2,
         landline: formData.landline,
         landline2: formData.landline2,
         unit: formData.unit,
         district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
-        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial) ? "" : (formData.station === "Others" ? manualSection : formData.station),
-      });
+        station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) ? "" : (formData.station === "Others" ? manualSection : formData.station),
+      };
+
+      await updateEmployee(employeeId, updateData);
       router.push("/employees");
     } catch (error) {
       console.error("Error updating employee:", error);
@@ -459,22 +460,24 @@ export default function EditEmployeePage() {
 
           {/* Row 5: KGID, Rank, Metal Number (all in same row) */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-400">
-                KGID *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.kgid}
-                onChange={(e) => {
-                  // Only allow digits
-                  const value = e.target.value.replace(/\D/g, '');
-                  setFormData({ ...formData, kgid: value });
-                }}
-                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              />
-            </div>
+            {formData.unit !== "IPS" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-400">
+                  KGID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.kgid}
+                  onChange={(e) => {
+                    // Only allow digits
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, kgid: value });
+                  }}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-400">
@@ -559,7 +562,7 @@ export default function EditEmployeePage() {
           {(() => {
             const selectedUnit = units.find(u => u.name === formData.unit);
             const mappingType = selectedUnit?.mappingType || "all";
-            const hideDistrict = mappingType === "state" || mappingType === "none";
+            const hideDistrict = mappingType === "state" || mappingType === "none" || isSpecialUnit;
             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
 
             if (isHighRanking || hideDistrict) return null;
@@ -579,7 +582,8 @@ export default function EditEmployeePage() {
             }
 
             const isHqLevel = selectedUnit?.isHqLevel || false;
-            const showUnitHq = (unitSections.length > 0) || isHqLevel || formData.unit === "State INT";
+            const isDistrictLevelVal = selectedUnit?.isDistrictLevel || false;
+            const showUnitHq = (unitSections.length > 0) || isHqLevel || formData.unit === "State INT" || (isDistrictLevelVal && unitSections.length > 0);
 
             if (showUnitHq) {
               availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
@@ -617,7 +621,7 @@ export default function EditEmployeePage() {
               const selectedUnit = units.find(u => u.name === formData.unit);
               const mappingType = selectedUnit?.mappingType || "all";
               const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
-              const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections) || mappingType === "state" || mappingType === "none";
+              const hideStation = isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections) || mappingType === "state" || mappingType === "none" || isSpecialUnit;
 
               if (hideStation) return null;
 
