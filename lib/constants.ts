@@ -56,7 +56,7 @@ export const DISTRICTS = [
   "Bagalkot", "Ballari", "Belagavi City", "Belagavi Dist", "Bengaluru City", "Bengaluru Dist", "Bidar",
   "Central Range", "Chamarajanagar", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
   "Dakshina Kannada", "Davanagere", "Dharwad", "Eastern Range", "Gadag", "Hassan", "Haveri", "HQ",
-  "Hubballi Dharwad City", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
+  "Hubballi Dharwad City", "KGF", "Kalaburagi", "Kalaburagi City", "Kodagu", "Kolar", "Koppal", "Mandya",
   "Mangaluru City", "Mysuru City", "Mysuru Dist", "Northeastern Range", "Northern Range",
   "Raichur", "Ramanagara", "Shivamogga", "Southern Range", "Tumakuru", "Udupi", "Uttara Kannada",
   "Vijayanagara", "Vijayapura", "Western Range", "Yadgir",
@@ -301,14 +301,16 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "FPB Hubballi Dharwad City", "MCU Hubballi Dharwad City", "DCRB Hubballi Dharwad City", "DSB Hubballi Dharwad City", "SMMC Hubballi Dharwad City",
     "State INT Hubballi Dharwad City", "DCRE Hubballi Dharwad City", "Lokayukta Hubballi Dharwad City", "ESCOM Hubballi Dharwad City"
   ],
-  "K.G.F": [
+
+  "KGF": [
     "Andersonpet PS", "Bangarpet PS", "BEML Nagar PS", "Bethamangala PS", "Budikote PS",
     "Champion Reefs PS", "Kamasamudram PS", "KGF CEN Crime PS", "Kyasamballi PS",
     "Marikuppam PS", "Oorgaum PS", "Robertsonpet PS",
-    "Control Room K.G.F", "DPO K.G.F", "Computer Sec K.G.F", "DAR K.G.F",
-    "FPB K.G.F", "MCU K.G.F", "DCRB K.G.F", "DSB K.G.F", "SMMC K.G.F",
-    "State INT K.G.F", "DCRE K.G.F", "Lokayukta K.G.F", "ESCOM K.G.F"
+    "Control Room KGF", "DPO KGF", "Computer Sec KGF", "DAR KGF",
+    "FPB KGF", "MCU KGF", "DCRB KGF", "DSB KGF", "SMMC KGF",
+    "State INT KGF", "DCRE KGF", "Lokayukta KGF", "ESCOM KGF"
   ],
+
   "Kalaburagi": [
     "Afzalpur PS", "Alland PS", "Chincholi PS", "Chittapura PS", "Devalagangapur PS", "Jewargi PS",
     "Kalaburagi CEN Crime PS", "Kalaburagi Women PS", "Kalagi PS", "Kamalapur PS", "Kunchavaram PS",

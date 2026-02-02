@@ -16,7 +16,7 @@ import {
     District,
     Station
 } from "@/lib/firebase/firestore";
-import { Search, Filter, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export default function DirectoryPage() {
     const [activeTab, setActiveTab] = useState<"officers" | "employees">("officers");
@@ -68,14 +68,36 @@ export default function DirectoryPage() {
     }, []);
 
     // Derived Logic for Special Units (Sync with Android CommonEmployeeForm)
-    const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(selectedUnit);
-    const hasSections = ["State INT", "S INT"].includes(selectedUnit);
     const selectedUnitObj = units.find(u => u.name === selectedUnit);
+    // Dynamic Special Unit: mappingType == 'none' means it doesn't map to districts
+    const isSpecialUnit = selectedUnitObj?.mappingType === "none";
+
+    // Check if unit has sections (either from DB unitSections or specific logic)
+    // We can check if getUnitSections returns specific list, or rely on naming convention. 
+    // Ideally we should use a property, but for now we can infer if sections exist.
+    // However, since we fetch sections dynamically in useEffect, let's use a state for hasSections or derive it.
+    // The previous code had hardcoded ["State INT", "S INT"].
+    // Let's defer hasSections determination to the useEffect or keep it simple for now if we don't have 'hasSections' property on Unit.
+    // Wait, Android logic uses `ProduceState` to fetch sections. Here we do it in useEffect.
+    // Let's use a state for 'hasSections' which becomes true if the fetch returns > 0 sections.
+    // BUT for visibility logic (lines 77-78), we need it immediately.
+    // Let's assume for now that if mappingType is 'state' or 'commissionerate' it MIGHT have sections?
+    // Actually, let's check if we can query strictly by the hardcoded list REPLACEMENT if we can't fetch sync.
+    // BETTER: The user wants "units logic". In Android, I check `unitSections.isNotEmpty()`. 
+    // Here `unitSections` isn't state, it's fetched. 
+    // Let's add `unitSections` state.
+
     const isDistrictLevelUnit = selectedUnitObj?.isDistrictLevel || false;
 
-    // Visibility Logic
+    // Visibility Logic - will be updated after unitSections are fetched
+    const [unitSections, setUnitSections] = useState<string[]>([]);
+
+    const hasSections = unitSections.length > 0;
+
     const showDistrict = !isSpecialUnit;
-    const showStation = (!isSpecialUnit || hasSections) && (!isDistrictLevelUnit || hasSections) && (showDistrict ? !!selectedDistrict : true);
+    // Show station if it's NOT a district level unit (unless it has sections) OR if it has sections.
+    // AND if district is selected (if district is required).
+    const showStation = (!isDistrictLevelUnit || hasSections) && (showDistrict ? !!selectedDistrict : true);
 
     // Effect: Reset dependent fields when Unit changes
     useEffect(() => {
@@ -101,80 +123,101 @@ export default function DirectoryPage() {
     // Effect: Fetch Stations/Sections logic
     useEffect(() => {
         async function fetchStationsOrSections() {
-            // Case 1: "State INT" -> Fetch Sections (treated as stations)
-            if (hasSections) {
-                try {
-                    // getUnitSections returns string[]
-                    const sections = await getUnitSections(selectedUnit);
-                    // Map to Station objects for consistent dropdown
+            setLoading(true); // Short loading state for dropdowns
+            try {
+                // Always try to fetch sections for the unit first
+                // This covers "State INT", "S INT", etc.
+                const sections = selectedUnit ? await getUnitSections(selectedUnit) : [];
+                setUnitSections(sections);
+
+                if (sections.length > 0) {
+                    // Map to Station objects
                     const sectionsAsStations: Station[] = sections.map(s => ({
                         id: s,
                         name: s,
                         district: selectedUnit // Mock district
                     }));
                     setStations(sectionsAsStations);
-                } catch (e) {
-                    console.error("Error fetching sections:", e);
-                    setStations([]);
-                }
-                return;
-            }
-
-            // Case 2: Standard District Selection -> Fetch Stations for District
-            if (selectedDistrict && selectedDistrict !== "All") {
-                try {
+                } else if (selectedDistrict && selectedDistrict !== "All") {
+                    // Standard District Selection -> Fetch Stations for District
                     const stnData = await getStations(selectedDistrict);
-                    setStations(stnData.filter(s => s.isActive !== false));
-                } catch (e) {
-                    console.error("Error fetching stations:", e);
+
+                    // Dynamic Station Filtering using stationKeyword
+                    const stationKeyword = selectedUnitObj?.stationKeyword;
+                    if (stationKeyword && stationKeyword.trim() !== "") {
+                        const keywords = stationKeyword.split(',').map(k => k.trim()).filter(k => k);
+                        const filtered = stnData.filter(s =>
+                            s.isActive !== false &&
+                            keywords.some(k => s.name.toUpperCase().includes(k.toUpperCase()))
+                        );
+                        setStations(filtered);
+                    } else {
+                        setStations(stnData.filter(s => s.isActive !== false));
+                    }
+                } else {
                     setStations([]);
                 }
-            } else {
+            } catch (e) {
+                console.error("Error fetching stations/sections:", e);
                 setStations([]);
+                setUnitSections([]);
+            } finally {
+                setLoading(false);
             }
         }
 
         fetchStationsOrSections();
-    }, [selectedDistrict, selectedUnit, hasSections]);
+    }, [selectedDistrict, selectedUnit, selectedUnitObj]); // Added selectedUnitObj dependency
 
 
     // Filtering Logic
     const filterData = <T extends Officer | Employee>(data: T[]) => {
+        if (!searchTerm.trim()) return data;
+
+        const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+
         return data.filter(item => {
-            const term = searchTerm.toLowerCase();
+            // 1. Build a "Search Blob" containing all searchable text from the item
+            const searchableText = [
+                item.name,
+                item.rank,
+                (item as Employee).mobile1,
+                (item as any).mobile, // For Officer
+                (item as Employee).station, // Employee Station
+                (item as Officer).office,   // Officer Office
+                (item as Employee).kgid,
+                (item as Officer).agid,
+                (item as Employee).bloodGroup,
+                (item as Officer).bloodGroup,
+                item.district,
+                item.unit,
+                (item as Employee).email
+            ].filter(Boolean).join(" ").toLowerCase();
 
-            // Term Search
-            const matchesSearch = (
-                (item.name || "").toLowerCase().includes(term) ||
-                (item.rank || "").toLowerCase().includes(term) ||
-                (item.mobile1 || (item as any).mobile || "").includes(term) ||
-                ((item as Employee).station || (item as Officer).office || "").toLowerCase().includes(term)
-            );
+            // 2. Multi-keyword Check: Every typed word must be present in the blob
+            const matchesSearch = terms.every(term => searchableText.includes(term));
 
-            // Unit Filter
-            const matchesUnit = selectedUnit ? item.unit === selectedUnit : true;
+            if (!matchesSearch) return false;
 
-            // District Filter
-            // If 'showDistrict' is false (Special Units), we ignore district mismatch 
-            // (effectively treating them as Global/State-wide).
-            // If 'showDistrict' is true, we must match if selected.
-            const matchesDistrict = (showDistrict && selectedDistrict)
+            // 3. Apply standard Dropdown Filters (Bypassed if searching)
+            const isGlobalSearch = searchTerm.trim().length > 0;
+
+            const matchesUnit = isGlobalSearch || (selectedUnit ? item.unit === selectedUnit : true);
+
+            const matchesDistrict = isGlobalSearch || ((showDistrict && selectedDistrict)
                 ? item.district === selectedDistrict
-                : true;
+                : true);
 
-            // Station/Section Filter
-            // Map 'office' (Officer) to 'station' (Employee) for comparison
             const itemStation = (item as Employee).station || (item as Officer).office;
-            const matchesStation = (showStation && selectedStation)
+            const matchesStation = isGlobalSearch || ((showStation && selectedStation)
                 ? itemStation === selectedStation
-                : true;
+                : true);
 
-            // Rank Filter
-            const matchesRank = selectedRank
+            const matchesRank = isGlobalSearch || (selectedRank
                 ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank)))
-                : true;
+                : true);
 
-            return matchesSearch && matchesUnit && matchesDistrict && matchesStation && matchesRank;
+            return matchesUnit && matchesDistrict && matchesStation && matchesRank;
         });
     };
 
@@ -227,13 +270,13 @@ export default function DirectoryPage() {
                     {/* District Dropdown (Conditional) */}
                     {showDistrict && (
                         <div className="space-y-1 animate-fade-in">
-                            <label className="text-xs font-medium text-muted-foreground ml-1">District</label>
+                            <label className="text-xs font-medium text-muted-foreground ml-1">District / HQ</label>
                             <select
                                 value={selectedDistrict}
                                 onChange={(e) => setSelectedDistrict(e.target.value)}
                                 className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                             >
-                                <option value="">All Districts</option>
+                                <option value="">All Districts / HQs</option>
                                 {districts.map((d) => (
                                     <option key={d.id} value={d.name}>{d.name}</option>
                                 ))}
@@ -244,13 +287,13 @@ export default function DirectoryPage() {
                     {/* Station/Section Dropdown (Conditional) */}
                     {showStation && (
                         <div className="space-y-1 animate-fade-in">
-                            <label className="text-xs font-medium text-muted-foreground ml-1">{hasSections ? "Section" : "Station"}</label>
+                            <label className="text-xs font-medium text-muted-foreground ml-1">Station / Section</label>
                             <select
                                 value={selectedStation}
                                 onChange={(e) => setSelectedStation(e.target.value)}
                                 className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                             >
-                                <option value="">{hasSections ? "All Sections" : "All Stations"}</option>
+                                <option value="">All Stations / Sections</option>
                                 {stations.map((s) => (
                                     <option key={s.id || s.name} value={s.name}>{s.name}</option>
                                 ))}

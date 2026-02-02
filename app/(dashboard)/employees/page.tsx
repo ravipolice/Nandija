@@ -170,21 +170,26 @@ export default function EmployeesPage() {
   };
 
   const filteredEmployees = employees
-    .filter(
-      (emp) =>
-        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.kgid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.mobile1?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.mobile2?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.rank?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.displayRank?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.bloodGroup?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.station.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.unit?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter((emp) => {
+      if (!searchTerm.trim()) return true;
+      const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+
+      const searchableText = [
+        emp.name,
+        emp.kgid,
+        emp.email,
+        emp.mobile1,
+        emp.mobile2,
+        emp.rank,
+        emp.displayRank,
+        emp.bloodGroup,
+        emp.district,
+        emp.station,
+        emp.unit
+      ].filter(Boolean).join(" ").toLowerCase();
+
+      return terms.every(term => searchableText.includes(term));
+    })
     .sort((a, b) => {
       let aValue: string | number | boolean = "";
       let bValue: string | number | boolean = "";

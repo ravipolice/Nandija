@@ -21,6 +21,8 @@ import { Trash2, AlertTriangle, RefreshCw, Database } from "lucide-react";
 
 export default function MigrationPage() {
     const [loading, setLoading] = useState(false);
+    const [migrationLoading, setMigrationLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     // Data caches
     const [allStations, setAllStations] = useState<Station[]>([]);
@@ -58,13 +60,22 @@ export default function MigrationPage() {
             const officerDistricts = officers.map(o => o.district);
             const employeeDistricts = employees.map(e => e.district);
 
-            const uniqueDistricts = Array.from(new Set([
+            const allFoundDistricts = Array.from(new Set([
                 ...stationDistricts,
                 ...officerDistricts,
                 ...employeeDistricts
             ].filter(Boolean))).sort();
 
-            setInvalidDistricts(uniqueDistricts);
+            // Get valid district names from constants
+            const validDistrictNames = dists.map(d => d.name);
+
+            // Filter to show ONLY districts that don't exist in valid list (i.e., old/invalid districts)
+            // This automatically removes migrated districts from the dropdown
+            const oldDistrictsOnly = allFoundDistricts.filter(
+                d => !validDistrictNames.includes(d)
+            );
+
+            setInvalidDistricts(oldDistrictsOnly);
 
             // Auto analyze on load
             analyzeDuplicates(officers);
@@ -151,7 +162,7 @@ export default function MigrationPage() {
             return;
         }
 
-        setLoading(true);
+        setDeleteLoading(true);
         try {
             // 1. Fetch all employees
             const employees = await getEmployees();
@@ -171,7 +182,7 @@ export default function MigrationPage() {
             console.error("Failed to delete database:", e);
             alert("Error deleting database: " + e.message);
         } finally {
-            setLoading(false);
+            setDeleteLoading(false);
         }
     };
 
@@ -186,7 +197,7 @@ export default function MigrationPage() {
             return;
         }
 
-        setLoading(true);
+        setDeleteLoading(true);
         try {
             // 1. Fetch all officers
             const officers = await getOfficers();
@@ -206,7 +217,7 @@ export default function MigrationPage() {
             console.error("Failed to delete database:", e);
             alert("Error deleting database: " + e.message);
         } finally {
-            setLoading(false);
+            setDeleteLoading(false);
         }
     };
 
@@ -214,7 +225,7 @@ export default function MigrationPage() {
         if (!oldName || !newName) return;
         if (!confirm(`Migrate EVERYTHING (Stations, Officers, Employees) from '${oldName}' to '${newName}'?`)) return;
 
-        setLoading(true);
+        setMigrationLoading(true);
         try {
             // 1. Migrate Stations
             const stationsToMigrate = allStations.filter(s => s.district === oldName);
@@ -240,7 +251,7 @@ export default function MigrationPage() {
             console.error(e);
             alert("Migration failed");
         } finally {
-            setLoading(false);
+            setMigrationLoading(false);
         }
     };
 
@@ -335,11 +346,11 @@ export default function MigrationPage() {
                         </p>
                         <button
                             onClick={handleDeleteAllEmployees}
-                            disabled={loading || allEmployees.length === 0}
+                            disabled={deleteLoading || allEmployees.length === 0}
                             className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2"
                         >
                             <Trash2 className="h-4 w-4" />
-                            {loading ? "Deleting..." : "Delete Employees"}
+                            {deleteLoading ? "Deleting..." : "Delete Employees"}
                         </button>
                     </div>
 
@@ -355,24 +366,36 @@ export default function MigrationPage() {
                         </p>
                         <button
                             onClick={handleDeleteAllOfficers}
-                            disabled={loading || allOfficers.length === 0}
+                            disabled={deleteLoading || allOfficers.length === 0}
                             className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-2"
                         >
                             <Trash2 className="h-4 w-4" />
-                            {loading ? "Deleting..." : "Delete Officers"}
+                            {deleteLoading ? "Deleting..." : "Delete Officers"}
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Station Migration Section */}
-            <div className="bg-dark-card p-6 rounded-lg border border-dark-border opacity-75 hover:opacity-100 transition-opacity">
-                <h2 className="text-xl font-semibold mb-4">Station Migration (Legacy)</h2>
+            <div className="bg-dark-card p-6 rounded-lg border border-dark-border">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">District Migration</h2>
+                    {invalidDistricts.length > 0 ? (
+                        <div className="bg-yellow-900/30 border border-yellow-900/50 px-3 py-1 rounded text-yellow-200 text-sm">
+                            {invalidDistricts.length} district{invalidDistricts.length !== 1 ? 's' : ''} need migration
+                        </div>
+                    ) : (
+                        <div className="bg-green-900/30 border border-green-900/50 px-3 py-1 rounded text-green-200 text-sm flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-green-400" />
+                            All districts migrated!
+                        </div>
+                    )}
+                </div>
                 <ManualMigrationForm
                     districts={districts}
                     oldDistricts={invalidDistricts}
                     onMigrate={handleMigrate}
-                    loading={loading}
+                    loading={migrationLoading}
                 />
             </div>
         </div>
@@ -410,9 +433,9 @@ function ManualMigrationForm({ districts, oldDistricts, onMigrate, loading }: an
             <button
                 onClick={() => onMigrate(oldName, newName)}
                 disabled={loading || !oldName || !newName}
-                className="px-3 py-1.5 bg-primary-600/80 hover:bg-primary-600 rounded text-white text-sm"
+                className="px-3 py-1.5 bg-primary-600/80 hover:bg-primary-600 disabled:opacity-50 rounded text-white text-sm"
             >
-                Migrate Selection
+                {loading ? "Migrating..." : "Migrate Selection"}
             </button>
         </div>
     );

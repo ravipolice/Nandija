@@ -18,7 +18,6 @@ import {
 import {
   BLOOD_GROUPS,
   HIGH_RANKING_OFFICERS,
-  KSRP_BATTALIONS,
   MINISTERIAL_RANKS,
   POLICE_STATION_RANKS,
   UNIT_HQ_VALUE,
@@ -220,9 +219,9 @@ export default function EditEmployeePage() {
   }, [formData.unit]);
 
   const selectedUnit = units.find(u => u.name === formData.unit);
-  const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(formData.unit);
+  const isSpecialUnit = selectedUnit?.mappingType === "none";
   const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
-  const hasSections = (unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE) || (isDistrictLevel && unitSections.length > 0);
+  const hasSections = (unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0) || formData.district === UNIT_HQ_VALUE) || (isDistrictLevel && unitSections.length > 0);
 
   // Ensure station value is preserved when stations are loaded
   useEffect(() => {
@@ -273,9 +272,7 @@ export default function EditEmployeePage() {
     }
 
     // 2. Unit-based filtering (Dynamic)
-    // Fallback for DCRB/ESCOM until DB is updated
-    const stationKeyword = selectedUnit?.stationKeyword ||
-      (formData.unit === "DCRB" ? "DCRB" : (formData.unit === "ESCOM" ? "ESCOM" : ""));
+    const stationKeyword = selectedUnit?.stationKeyword;
 
     if (stationKeyword) {
       if (!stationName.includes(stationKeyword.toUpperCase())) return false;
@@ -564,35 +561,50 @@ export default function EditEmployeePage() {
             const mappingType = selectedUnit?.mappingType || "all";
             const hideDistrict = mappingType === "state" || mappingType === "none" || isSpecialUnit;
             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
+            const isStateScope = selectedUnit?.scopes?.includes("state") || selectedUnit?.scopes?.includes("hq") || false;
 
             if (isHighRanking || hideDistrict) return null;
 
             let availableDistricts = districts;
+            const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
+
             if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
-              const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
               if (mappedIds.length > 0) {
                 if (isBattalion) {
-                  availableDistricts = mappedIds.map(name => ({ id: name, name }));
+                  availableDistricts = mappedIds.map(name => ({ id: name, name } as District));
                 } else {
                   availableDistricts = districts.filter(d => mappedIds.includes(d.name));
                 }
               }
-            } else if (isKSRP) {
-              availableDistricts = KSRP_BATTALIONS.map(b => ({ id: b, name: b }));
             }
 
+            // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
             const isHqLevel = selectedUnit?.isHqLevel || false;
             const isDistrictLevelVal = selectedUnit?.isDistrictLevel || false;
-            const showUnitHq = (unitSections.length > 0) || isHqLevel || formData.unit === "State INT" || (isDistrictLevelVal && unitSections.length > 0);
+            const showUnitHq = (isStateScope) || (hasSections) || isHqLevel || (isDistrictLevelVal && unitSections.length > 0);
 
             if (showUnitHq) {
-              availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+              const alreadyHasHq = availableDistricts.some(d =>
+                (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i)
+              );
+              if (!alreadyHasHq) {
+                availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
+              }
             }
+
+            // Sort Mapped Districts with HQ First
+            availableDistricts = availableDistricts.sort((a, b) => {
+              const isHqA = (a.name || "").match(/^(HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(HQ|UNIT_HQ)$/i);
+              const isHqB = (b.name || "").match(/^(HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(HQ|UNIT_HQ)$/i);
+              if (isHqA && !isHqB) return -1;
+              if (!isHqA && isHqB) return 1;
+              return (a.name || "").localeCompare(b.name || "");
+            });
 
             return (
               <div className="relative" style={{ zIndex: 10 }}>
                 <label className="block text-sm font-medium text-slate-400">
-                  {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
+                  {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District / HQ *")}
                 </label>
                 <select
                   required
@@ -604,7 +616,7 @@ export default function EditEmployeePage() {
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
                   style={{ zIndex: 1000, position: 'relative' }}
                 >
-                  <option value="">{isBattalion || isKSRP ? "Select Battalion" : "Select Area / District"}</option>
+                  <option value="">{isBattalion || isKSRP ? "Select Battalion" : "Select District / HQ"}</option>
                   {availableDistricts.map((d) => (
                     <option key={d.id} value={d.value || d.name} style={{ backgroundColor: 'white', color: 'black' }}>
                       {d.name}
@@ -628,7 +640,7 @@ export default function EditEmployeePage() {
               return (
                 <div className="relative" style={{ zIndex: 10 }}>
                   <label className="block text-sm font-medium text-slate-400">
-                    {unitSections.length > 0 ? "Section *" : "Station *"}
+                    {unitSections.length > 0 ? "Section *" : "Station / Section *"}
                   </label>
                   <select
                     required
@@ -640,7 +652,7 @@ export default function EditEmployeePage() {
                     style={{ zIndex: 1000, position: 'relative' }}
                   >
                     <option value="">
-                      {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (selectedDistrict ? "Select Station" : "Select District First")}
+                      {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? "Select Station / Section" : (selectedDistrict ? "Select Station / Section" : "Select District First")}
                     </option>
                     {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? (
                       [

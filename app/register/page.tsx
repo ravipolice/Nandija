@@ -84,11 +84,13 @@ function RegisterPageContent() {
     const selectedRankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
     const isMetalNumberRequired = selectedRankObj ? selectedRankObj.requiresMetalNumber : RANKS_REQUIRING_METAL_NUMBER.includes(formData.rank);
 
-    const isSpecialUnit = ["ISD", "CCB", "CID", "State INT", "S INT", "IPS"].includes(formData.unit);
+    // Dynamic Special Unit Logic
+    const selectedUnitObj = units.find(u => u.name === formData.unit);
+    // If mappingType is "none", it behaves as a special unit (hiding districts)
+    const isSpecialUnit = selectedUnitObj?.mappingType === "none";
     const isKSRP = formData.unit === "KSRP";
 
     // Filter Ranks based on Unit
-    const selectedUnitObj = units.find(u => u.name === formData.unit);
     const applicableRanks = selectedUnitObj?.applicableRanks || [];
 
     // If we have dynamic ranks, use them. If not (loading?), might empty or fallback? 
@@ -595,11 +597,7 @@ function RegisterPageContent() {
                             let availableDistricts = [...districts];
                             const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
 
-                            // HOTFIX: Hardcoded mapping for SCRB
-                            if (formData.unit === "SCRB") {
-                                availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District];
-                            }
-                            else if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
+                            if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
                                 if (mappedIds.length > 0) {
                                     if (isBattalion) {
                                         availableDistricts = mappedIds.map(name => ({ id: name, name } as District));
@@ -611,8 +609,8 @@ function RegisterPageContent() {
 
                             // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
                             const isHqLevel = selectedUnit?.isHqLevel || false;
-                            const hasSections = unitSections.length > 0 || formData.unit === "State INT" || formData.district === UNIT_HQ_VALUE || (isDistrictLevel && unitSections.length > 0);
-                            const showUnitHq = (isStateScope || isSpecialUnit) || (hasSections) || isHqLevel;
+                            const hasSections = unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0) || (isDistrictLevel && unitSections.length > 0);
+                            const showUnitHq = (isStateScope) || (hasSections) || isHqLevel;
 
                             if (showUnitHq) {
                                 const alreadyHasHq = availableDistricts.some(d =>
@@ -636,7 +634,7 @@ function RegisterPageContent() {
                                 <>
                                     <div className={mappingType === "single" ? "sm:col-span-2" : ""}>
                                         <label htmlFor="district" className="block text-sm font-medium text-gray-700">
-                                            {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District *")}
+                                            {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District / HQ *")}
                                         </label>
                                         <select
                                             name="district"
@@ -646,7 +644,7 @@ function RegisterPageContent() {
                                             onChange={handleChange}
                                             className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
                                         >
-                                            <option value="" className="text-gray-500">{isBattalion || isKSRP ? "Select Battalion" : "Select Area / District"}</option>
+                                            <option value="" className="text-gray-500">{isBattalion || isKSRP ? "Select Battalion" : "Select District / HQ"}</option>
                                             {availableDistricts.map((d) => (
                                                 <option key={d.id} value={d.value || d.name} className="text-gray-900">{d.name}</option>
                                             ))}
@@ -656,7 +654,7 @@ function RegisterPageContent() {
                                     {!(isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) && (
                                         <div>
                                             <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-                                                {unitSections.length > 0 ? "Section *" : "Station *"}
+                                                {unitSections.length > 0 ? "Section *" : "Station / Section *"}
                                             </label>
                                             <select
                                                 name="station"
@@ -683,11 +681,13 @@ function RegisterPageContent() {
                                                         if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
                                                             if (!stationName.includes("PS")) return false;
                                                         }
-                                                        if (formData.unit === "DCRB") {
-                                                            if (!stationName.includes("DCRB")) return false;
-                                                        } else if (formData.unit === "ESCOM") {
-                                                            if (!stationName.includes("ESCOM")) return false;
+
+                                                        // Dynamic Station Keyword Filtering (DCRB, ESCOM, etc)
+                                                        const keyword = selectedUnit?.stationKeyword;
+                                                        if (keyword) {
+                                                            if (!stationName.includes(keyword.toUpperCase())) return false;
                                                         }
+
                                                         return true;
                                                     }).map((s) => (
                                                         <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
