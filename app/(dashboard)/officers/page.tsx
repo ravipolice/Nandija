@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getOfficers,
   createOfficer,
@@ -11,6 +11,7 @@ import {
   Rank,
   getDistricts,
   getStations,
+  getUnitSections,
   District,
   Station,
   getUnits,
@@ -80,12 +81,69 @@ export default function OfficersPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedDistrict) {
-      loadStations(selectedDistrict);
-    } else {
-      setStations([]);
+    loadStations(selectedDistrict, formData.unit);
+  }, [selectedDistrict, formData.unit, units]); // dependent on unit and units loaded
+
+  // Derived Logic
+  const selectedUnitObj = useMemo(() => units.find(u => u.name === formData.unit), [units, formData.unit]);
+  const isSpecialUnit = selectedUnitObj?.mappingType === "none";
+  const hasSections = ["State INT", "S INT"].includes(formData.unit); // Simplified, or use unitSections check if needed
+
+  // Available Districts based on Unit
+  const availableDistricts = useMemo(() => {
+    if (!selectedUnitObj) return districts;
+    const { mappingType, mappedDistricts } = selectedUnitObj;
+
+    if (mappingType === "subset" || mappingType === "single" || mappingType === "commissionerate") {
+      if (mappedDistricts && mappedDistricts.length > 0) {
+        return districts.filter(d => mappedDistricts.includes(d.name));
+      }
     }
-  }, [selectedDistrict]);
+    if (mappingType === "state") return districts.filter(d => d.name === "HQ"); // Or just allow all? Usually state units have HQ or specific districts.
+
+    return districts;
+  }, [districts, selectedUnitObj]);
+
+  const loadStations = async (district: string, unitName: string) => {
+    try {
+      const unitObj = units.find(u => u.name === unitName);
+      let data: Station[] = [];
+
+      // 1. Sections Logic (State INT)
+      // Check for hardcoded section logic or fetch sections if applicable
+      // For now, mirroring Directory page simple check or just fetch sections if no district selected?
+      // Actually, if district is empty but unit has sections, we might want to load them?
+      // But typically we select District -> Station.
+
+      // If "State INT", we fetch sections as stations
+      if (unitName === "State INT" || unitName === "S INT") {
+        const sections = await getUnitSections(unitName);
+        data = sections.map(s => ({ id: s, name: s, district: unitName }));
+      } else if (district) {
+        data = await getStations(district);
+
+        // 2. Keyword Filtering
+        if (unitObj?.stationKeyword) {
+          const keywords = unitObj.stationKeyword.split(',').map(k => k.trim()).filter(k => k);
+          if (keywords.length > 0) {
+            data = data.filter(s =>
+              s.isActive !== false &&
+              keywords.some(k => s.name.toUpperCase().includes(k.toUpperCase()))
+            );
+          } else {
+            data = data.filter(s => s.isActive !== false);
+          }
+        } else {
+          data = data.filter(s => s.isActive !== false);
+        }
+      }
+
+      setStations(data);
+    } catch (error) {
+      console.error("Error loading stations:", error);
+      // Don't alert on every keystroke/change, just log
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -95,36 +153,38 @@ export default function OfficersPage() {
         getRanks(),
         getUnits(),
       ]);
-      console.log("Loaded data:", { districtsData, unitsData });
       setOfficers(officersData);
       setDistricts(districtsData);
       setRanks(ranksData);
       setUnits(unitsData);
 
       if (districtsData.length === 0) {
-        console.warn("No districts found. Make sure districts exist in Firestore.");
+        console.warn("No districts found.");
       }
     } catch (error) {
       console.error("Error loading data:", error);
-      alert("Failed to load data. Please check the console for details.");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadStations = async (district: string) => {
-    try {
-      console.log("Loading stations for district:", district);
-      const data = await getStations(district);
-      console.log("Loaded stations:", data);
-      setStations(data);
-      if (data.length === 0) {
-        console.warn(`No stations found for district: ${district}`);
-      }
-    } catch (error) {
-      console.error("Error loading stations:", error);
-      alert(`Failed to load stations for ${district}. Please check the console for details.`);
+  const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newUnit = e.target.value;
+    setFormData(prev => ({ ...prev, unit: newUnit, district: "", office: "" }));
+    setSelectedDistrict("");
+    setStations([]);
+
+    // If "State INT", we might want to trigger loadStations immediately
+    if (newUnit === "State INT" || newUnit === "S INT") {
+      loadStations("", newUnit);
     }
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newDistrict = e.target.value;
+    setSelectedDistrict(newDistrict);
+    setFormData(prev => ({ ...prev, district: newDistrict, office: "" }));
+    loadStations(newDistrict, formData.unit);
   };
 
   const handleDelete = async (id: string) => {
@@ -300,6 +360,12 @@ export default function OfficersPage() {
       return;
     }
 
+    // Validate District for Non-Special Units
+    if (!isSpecialUnit && !formData.district) {
+      alert("District is required for this unit.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -310,7 +376,12 @@ export default function OfficersPage() {
         mobile: formData.mobile.trim().toUpperCase() || "",
         email: formData.email.trim() || undefined,
         landline: formData.landline.trim() || undefined,
-        district: formData.district,
+        // If special unit, we might allow empty district, or handle it as specific value?
+        // Standard Officer model has 'district'. If empty, it's fine if backend allows.
+        // Assuming undefined is fine if model allows.
+        district: formData.district || "HQ", // Fallback to HQ if hidden? Or undefined? Let's check model. 
+        // Actually, if hidden, usually we just send whatever or empty string. 
+        // Let's send what's in formData. If validation passed, it's fine.
         office: formData.office.trim() || undefined,
         unit: formData.unit.trim() || undefined,
       });
@@ -403,6 +474,24 @@ export default function OfficersPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="block text-sm font-medium text-slate-400">
+                  Unit (Optional)
+                </label>
+                <select
+                  value={formData.unit}
+                  onChange={handleUnitChange}
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                >
+                  <option value="">Select Unit</option>
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.name}>
+                      {unit.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-400">
                   AGID
                 </label>
                 <input
@@ -415,15 +504,14 @@ export default function OfficersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  Rank *
+                  Rank
                 </label>
                 <select
-                  required
                   value={formData.rank}
                   onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
                 >
-                  <option value="">Select Rank</option>
+                  <option value="">Select Rank (Optional)</option>
                   {ranks.map((rank) => (
                     <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
                       {rank.rank_id}
@@ -478,62 +566,47 @@ export default function OfficersPage() {
                   placeholder="e.g., 08151-123456"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400">
-                  District *
-                </label>
-                <select
-                  required
-                  value={selectedDistrict}
-                  onChange={(e) => {
-                    setSelectedDistrict(e.target.value);
-                    setFormData({ ...formData, district: e.target.value, office: "" });
-                  }}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                >
-                  <option value="">Select District</option>
-                  {districts.map((d) => (
-                    <option key={d.id} value={d.name}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400">
-                  Station
-                </label>
-                <select
-                  value={formData.office}
-                  onChange={(e) => setFormData({ ...formData, office: e.target.value })}
-                  disabled={!selectedDistrict}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
-                >
-                  <option value="">Select Station</option>
-                  {stations.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400">
-                  Unit (Optional)
-                </label>
-                <select
-                  value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-                >
-                  <option value="">Select Unit (Optional)</option>
-                  {units.map((unit) => (
-                    <option key={unit.id} value={unit.name}>
-                      {unit.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!isSpecialUnit && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400">
+                    District / HQ *
+                  </label>
+                  <select
+                    required={!isSpecialUnit}
+                    value={selectedDistrict}
+                    onChange={handleDistrictChange}
+                    className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                  >
+                    <option value="">Select District / HQ</option>
+                    {availableDistricts.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(!isSpecialUnit || hasSections) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400">
+                    Station / Section
+                  </label>
+                  <select
+                    value={formData.office}
+                    onChange={(e) => setFormData({ ...formData, office: e.target.value })}
+                    disabled={!selectedDistrict && !hasSections}
+                    className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 disabled:bg-dark-accent-light disabled:text-slate-500"
+                  >
+                    <option value="">Select Station / Section</option>
+                    {stations.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex gap-4">
               <button

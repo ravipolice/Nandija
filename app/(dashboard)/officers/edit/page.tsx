@@ -211,27 +211,27 @@ export default function EditOfficerPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="block text-sm font-medium text-slate-400">
-              AGID
+              AGID (Read-only)
             </label>
             <input
               type="text"
               value={formData.agid}
-              onChange={(e) => setFormData({ ...formData, agid: e.target.value })}
-              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
-              placeholder="Auto-generated or enter manually"
+              readOnly
+              disabled
+              className="mt-1 block w-full rounded-md bg-dark-accent-light border border-dark-border px-3 py-2 text-slate-400 cursor-not-allowed"
+              placeholder="Auto-generated ID"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-400">
-              Rank *
+              Rank
             </label>
             <select
-              required
               value={formData.rank}
               onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             >
-              <option value="">Select Rank</option>
+              <option value="">Select Rank (Optional)</option>
               {ranks.map((rank) => (
                 <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
                   {rank.rank_label} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
