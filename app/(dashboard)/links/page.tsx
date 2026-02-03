@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUsefulLinks, createUsefulLink, UsefulLink } from "@/lib/firebase/firestore";
+import { getUsefulLinks, createUsefulLink, deleteUsefulLink, UsefulLink } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { Timestamp } from "firebase/firestore";
-import { Plus, ExternalLink, Upload, Link as LinkIcon } from "lucide-react";
+import { Plus, ExternalLink, Upload, Link as LinkIcon, Trash2 } from "lucide-react";
 
 type UploadMethod = "url" | "file";
 
@@ -39,6 +39,18 @@ export default function LinksPage() {
     }
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    try {
+      await deleteUsefulLink(id);
+      await loadLinks();
+    } catch (error) {
+      console.error("Error deleting link:", error);
+      alert("Failed to delete link");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -57,7 +69,7 @@ export default function LinksPage() {
           .replace(/^_+|_+$/g, "") || "link";
         const fileName = `${safeName}_${Date.now()}_${Math.random().toString(36).substring(7)}.apk`;
         const storagePath = `useful_links/apks/${fileName}`;
-        
+
         try {
           finalApkUrl = await uploadFile(storagePath, apkFile);
           console.log("APK uploaded successfully:", finalApkUrl);
@@ -77,7 +89,7 @@ export default function LinksPage() {
           .replace(/^_+|_+$/g, "") || "link";
         const fileName = `${safeName}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
         const storagePath = `useful_links/icons/${fileName}`;
-        
+
         try {
           finalIconUrl = await uploadFile(storagePath, iconFile);
           console.log("Icon uploaded successfully:", finalIconUrl);
@@ -90,7 +102,7 @@ export default function LinksPage() {
       // Validation: Must have either playStoreUrl OR apkUrl (matching mobile app logic)
       const hasPlayStoreUrl = formData.playStoreUrl.trim().length > 0;
       const hasApkUrl = !!finalApkUrl;
-      
+
       if (!hasPlayStoreUrl && !hasApkUrl) {
         throw new Error("Provide either Play Store URL OR APK file/URL");
       }
@@ -109,7 +121,7 @@ export default function LinksPage() {
       });
 
       setUploadProgress(100);
-      
+
       // Reset form
       setFormData({ name: "", playStoreUrl: "", apkUrl: "", iconUrl: "" });
       setApkFile(null);
@@ -150,7 +162,7 @@ export default function LinksPage() {
       {showForm && (
         <div className="mb-6 rounded-lg bg-white p-6 shadow-md">
           <h2 className="mb-4 text-xl font-semibold">Add New Link</h2>
-          
+
           {/* Upload Method Tabs */}
           <div className="mb-4 flex gap-2 border-b border-gray-200">
             <button
@@ -160,11 +172,10 @@ export default function LinksPage() {
                 setApkFile(null);
                 setIconFile(null);
               }}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
-                uploadMethod === "url"
+              className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${uploadMethod === "url"
                   ? "border-b-2 border-primary-600 text-primary-600"
                   : "text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               <LinkIcon className="h-4 w-4" />
               URLs
@@ -175,11 +186,10 @@ export default function LinksPage() {
                 setUploadMethod("file");
                 setFormData({ ...formData, apkUrl: "", iconUrl: "" });
               }}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
-                uploadMethod === "file"
+              className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${uploadMethod === "file"
                   ? "border-b-2 border-primary-600 text-primary-600"
                   : "text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               <Upload className="h-4 w-4" />
               Upload Files
@@ -212,7 +222,7 @@ export default function LinksPage() {
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-              
+
               {uploadMethod === "file" ? (
                 <>
                   <div>
@@ -302,7 +312,7 @@ export default function LinksPage() {
                 </>
               )}
             </div>
-            
+
             {/* Upload Progress */}
             {uploadProgress > 0 && uploadProgress < 100 && (
               <div className="mt-4">
@@ -318,7 +328,7 @@ export default function LinksPage() {
                 </div>
               </div>
             )}
-            
+
             <div className="mt-4 flex gap-4">
               <button
                 type="submit"
@@ -389,7 +399,7 @@ export default function LinksPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* App Name */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 truncate">
@@ -397,7 +407,7 @@ export default function LinksPage() {
                 </h3>
               </div>
             </div>
-            
+
             {/* Links */}
             <div className="space-y-2">
               {link.playStoreUrl && (
@@ -423,6 +433,16 @@ export default function LinksPage() {
                 </a>
               )}
             </div>
+
+            {/* Delete Button */}
+            <button
+              onClick={() => handleDelete(link.id!, link.name)}
+              className="mt-3 w-full flex items-center justify-center gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 transition-colors hover:bg-red-100"
+              title="Delete link"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
           </div>
         ))}
       </div>

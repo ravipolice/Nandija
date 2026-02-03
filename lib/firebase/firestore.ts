@@ -96,6 +96,7 @@ export interface Unit {
   isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
   isHqLevel?: boolean; // New: If true, unit exists at HQ level
   stationKeyword?: string; // New: For dynamic filtering (e.g. "DCRB", "ESCOM")
+  hideFromRegistration?: boolean; // New: If true, unit is hidden from registration form
   createdAt?: Timestamp;
 }
 
@@ -1341,6 +1342,10 @@ export const createUsefulLink = async (
   data: Omit<UsefulLink, "id">
 ): Promise<string> => {
   return createDoc<UsefulLink>("useful_links", data);
+};
+
+export const deleteUsefulLink = async (id: string): Promise<void> => {
+  return deleteDoc("useful_links", id);
 };
 
 // Statistics
