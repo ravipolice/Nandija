@@ -196,7 +196,7 @@ export default function RanksPage() {
         </button>
       </div>
 
-      {showForm && (
+      {showForm && !editingRankId && (
         <div className="mb-6 rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
           <h2 className="mb-4 text-xl font-semibold text-slate-100">
             {editingRankId ? "Edit Rank" : "Add New Rank"}
@@ -421,58 +421,171 @@ export default function RanksPage() {
             </thead>
             <tbody className="divide-y divide-dark-border bg-dark-card">
               {ranks.map((rank) => (
-                <tr key={rank.rank_id} className="hover:bg-dark-sidebar transition-colors">
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
-                    {rank.rank_id}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_label }}>
-                    {rank.rank_label}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
-                    {rank.staffType || "POLICE"}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
-                    {rank.category}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
-                    {rank.requiresMetalNumber ? (
-                      <span className="inline-flex rounded-full bg-amber-500/20 px-2 text-xs font-semibold text-amber-400">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="text-slate-500">No</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
-                    {rank.isActive ? (
-                      <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-red-500/20 px-2 text-xs font-semibold text-red-400">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(rank)}
-                        className="text-purple-400 hover:text-purple-300 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(rank.rank_id, rank.rank_label)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  {editingRankId === rank.rank_id ? (
+                    <tr key={rank.rank_id} className="bg-dark-sidebar">
+                      <td colSpan={7} className="px-6 py-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-400 mb-1">
+                                Rank ID * <span className="text-xs text-slate-500">(Immutable)</span>
+                              </label>
+                              <input
+                                type="text"
+                                disabled
+                                value={formData.rank_id}
+                                className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 opacity-50 cursor-not-allowed"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-400 mb-1">
+                                Staff Type *
+                              </label>
+                              <select
+                                required
+                                value={formData.staffType}
+                                onChange={(e) => setFormData({ ...formData, staffType: e.target.value as "POLICE" | "MINISTERIAL", requiresMetalNumber: e.target.value === "POLICE" ? formData.requiresMetalNumber : false })}
+                                className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                              >
+                                <option value="POLICE">POLICE</option>
+                                <option value="MINISTERIAL">MINISTERIAL</option>
+                              </select>
+                            </div>
+                            <div className="md:col-span-2 lg:col-span-1">
+                              <label className="block text-sm font-medium text-slate-400 mb-1">
+                                Category *
+                              </label>
+                              <select
+                                required
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                              >
+                                <option value="BOTH">BOTH</option>
+                                <option value="DISTRICT">DISTRICT</option>
+                                <option value="COMMISSIONERATE">COMMISSIONERATE</option>
+                              </select>
+                            </div>
+                            <div className="md:col-span-2 lg:col-span-3">
+                              <label className="block text-sm font-medium text-slate-400 mb-1">
+                                Rank Label *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={formData.rank_label}
+                                onChange={(e) => setFormData({ ...formData, rank_label: e.target.value })}
+                                className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-slate-400 mb-1">
+                                Aliases (comma-separated)
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.aliases}
+                                onChange={(e) => setFormData({ ...formData, aliases: e.target.value })}
+                                className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                              />
+                            </div>
+                            <div className="flex items-end gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.staffType === "POLICE" ? formData.requiresMetalNumber : false}
+                                  onChange={(e) => setFormData({ ...formData, requiresMetalNumber: e.target.checked })}
+                                  disabled={formData.staffType !== "POLICE"}
+                                  className="w-5 h-5 rounded border-dark-border bg-dark-card text-purple-600 focus:ring-purple-500 focus:ring-2 disabled:opacity-50"
+                                />
+                                <span className="text-sm font-medium text-slate-400">Metal #</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.isActive}
+                                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                  className="w-5 h-5 rounded border-dark-border bg-dark-card text-purple-600 focus:ring-purple-500 focus:ring-2"
+                                />
+                                <span className="text-sm font-medium text-slate-400">Active</span>
+                              </label>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              type="submit"
+                              disabled={submitting}
+                              className="rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition-all hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50"
+                            >
+                              {submitting ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancel}
+                              className="rounded-lg border border-dark-border px-4 py-2 text-sm text-slate-400 transition-colors hover:bg-dark-card hover:text-slate-100"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={rank.rank_id} className="hover:bg-dark-sidebar transition-colors">
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_id }}>
+                        {rank.rank_id}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.rank_label }}>
+                        {rank.rank_label}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.staffType }}>
+                        {rank.staffType || "POLICE"}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.category }}>
+                        {rank.category}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.requiresMetal }}>
+                        {rank.requiresMetalNumber ? (
+                          <span className="inline-flex rounded-full bg-amber-500/20 px-2 text-xs font-semibold text-amber-400">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">No</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
+                        {rank.isActive ? (
+                          <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex rounded-full bg-red-500/20 px-2 text-xs font-semibold text-red-400">
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(rank)}
+                            className="text-purple-400 hover:text-purple-300 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(rank.rank_id, rank.rank_label)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>

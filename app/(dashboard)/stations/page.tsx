@@ -212,7 +212,7 @@ export default function StationsPage() {
         </select>
       </div>
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-6 rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
           <h2 className="mb-4 text-xl font-semibold text-slate-100">
             {editingId ? "Edit Station" : "Add New Station"}
@@ -339,40 +339,110 @@ export default function StationsPage() {
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
             {filteredStations.map((station) => (
-              <tr key={station.id} className="hover:bg-dark-sidebar transition-colors">
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
-                  {station.name}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.district }}>
-                  {station.district}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.stdCode }}>
-                  {station.stdCode || "N/A"}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
-                  <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
-                    Active
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(station)}
-                      className="text-purple-400 hover:text-purple-300 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(station.id!, station.name)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <>
+                {editingId === station.id ? (
+                  <tr key={station.id} className="bg-dark-sidebar">
+                    <td colSpan={5} className="px-6 py-4">
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">
+                              Name *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">
+                              District *
+                            </label>
+                            <select
+                              required
+                              value={selectedDistrict}
+                              onChange={(e) => setSelectedDistrict(e.target.value)}
+                              className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            >
+                              <option value="">Select District</option>
+                              {districts.map((d) => (
+                                <option key={d.id} value={d.name}>
+                                  {d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">
+                              STD Code
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.stdCode}
+                              onChange={(e) => setFormData({ ...formData, stdCode: e.target.value })}
+                              className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            type="submit"
+                            disabled={submitting}
+                            className="rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition-all hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50"
+                          >
+                            {submitting ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="rounded-lg border border-dark-border px-4 py-2 text-sm text-slate-400 transition-colors hover:bg-dark-card hover:text-slate-100"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={station.id} className="hover:bg-dark-sidebar transition-colors">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
+                      {station.name}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.district }}>
+                      {station.district}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.stdCode }}>
+                      {station.stdCode || "N/A"}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
+                      <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
+                        Active
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(station)}
+                          className="text-purple-400 hover:text-purple-300 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(station.id!, station.name)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>

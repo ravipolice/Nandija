@@ -154,6 +154,94 @@ export default function DistrictsPage() {
     }
   };
 
+  const handleAutoPopulateRanges = async () => {
+    if (!confirm("This will automatically assign ranges to all districts based on official Karnataka Police structure. Continue?")) return;
+    setMigrating(true);
+    try {
+      const rangeMapping: Record<string, string> = {
+        // Southern Range (Mysuru)
+        "Mysuru": "Southern Range",
+        "Kodagu": "Southern Range",
+        "Mandya": "Southern Range",
+        "Hassan": "Southern Range",
+        "Chamarajanagara": "Southern Range",
+        "Chamarajanagar": "Southern Range",
+
+        // Western Range (Mangaluru)
+        "Dakshina Kannada": "Western Range",
+        "Mangaluru": "Western Range",
+        "Udupi": "Western Range",
+        "Chikkamagaluru": "Western Range",
+        "Chikmagalur": "Western Range",
+        "Uttara Kannada": "Western Range",
+
+        // Eastern Range (Davangere)
+        "Chitradurga": "Eastern Range",
+        "Davanagere": "Eastern Range",
+        "Davangere": "Eastern Range",
+        "Haveri": "Eastern Range",
+        "Shivamogga": "Eastern Range",
+        "Shimoga": "Eastern Range",
+
+        // Central Range (Bengaluru)
+        "Bengaluru Rural": "Central Range",
+        "Bengaluru Urban": "Central Range",
+        "Bengaluru City": "Central Range",
+        "Bengaluru": "Central Range",
+        "Bangalore": "Central Range",
+        "Chikkaballapura": "Central Range",
+        "Chikballapur": "Central Range",
+        "Kolar": "Central Range",
+        "Ramanagara": "Central Range",
+        "Ramanagar": "Central Range",
+        "Tumakuru": "Central Range",
+        "Tumkur": "Central Range",
+
+        // Northern Range (Belagavi)
+        "Bagalkote": "Northern Range",
+        "Bagalkot": "Northern Range",
+        "Belagavi": "Northern Range",
+        "Belgaum": "Northern Range",
+        "Dharwad": "Northern Range",
+        "Gadag": "Northern Range",
+        "Vijayapura": "Northern Range",
+        "Bijapur": "Northern Range",
+
+        // North Eastern Range (Kalaburagi)
+        "Bidar": "North Eastern Range",
+        "Kalaburagi": "North Eastern Range",
+        "Gulbarga": "North Eastern Range",
+        "Yadgir": "North Eastern Range",
+        "Yadagiri": "North Eastern Range",
+
+        // Ballari Range (Ballari)
+        "Ballari": "Ballari Range",
+        "Bellary": "Ballari Range",
+        "Koppal": "Ballari Range",
+        "Raichur": "Ballari Range",
+        "Raichuru": "Ballari Range",
+        "Vijayanagara": "Ballari Range",
+      };
+
+      let updatedCount = 0;
+      for (const district of districts) {
+        const range = rangeMapping[district.name];
+        if (range && district.range !== range) {
+          await updateDistrict(district.id!, { range });
+          updatedCount++;
+        }
+      }
+
+      alert(`Successfully assigned ranges to ${updatedCount} districts.`);
+      await loadDistricts();
+    } catch (error: any) {
+      console.error("Error populating ranges:", error);
+      alert(`Failed to populate ranges: ${error.message}`);
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   const handleEdit = (district: District) => {
     setEditingId(district.id || null);
     setFormData({
@@ -256,6 +344,14 @@ export default function DistrictsPage() {
             {migrating ? "Populating..." : "Sync Defaults"}
           </button>
           <button
+            onClick={handleAutoPopulateRanges}
+            disabled={migrating}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-all hover:bg-blue-500 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${migrating ? "animate-spin" : ""}`} />
+            {migrating ? "Assigning..." : "Auto-Assign Ranges"}
+          </button>
+          <button
             onClick={handleCleanupNames}
             disabled={cleaning}
             className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-white transition-all hover:bg-orange-500 disabled:opacity-50"
@@ -273,7 +369,7 @@ export default function DistrictsPage() {
         </div>
       </div>
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-6 rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg">
           <h2 className="mb-4 text-xl font-semibold text-slate-100">
             {editingId ? "Edit District" : "Add New District"}
@@ -296,12 +392,20 @@ export default function DistrictsPage() {
                 <label className="block text-sm font-medium text-slate-400">
                   Range
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.range}
                   onChange={(e) => setFormData({ ...formData, range: e.target.value })}
                   className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                />
+                >
+                  <option value="">Select Range</option>
+                  <option value="Southern Range">Southern Range (Mysuru)</option>
+                  <option value="Western Range">Western Range (Mangaluru)</option>
+                  <option value="Eastern Range">Eastern Range (Davangere)</option>
+                  <option value="Central Range">Central Range (Bengaluru)</option>
+                  <option value="Northern Range">Northern Range (Belagavi)</option>
+                  <option value="North Eastern Range">North Eastern Range (Kalaburagi)</option>
+                  <option value="Ballari Range">Ballari Range (Ballari)</option>
+                </select>
               </div>
             </div>
             <div className="mt-4 flex gap-4">
@@ -371,37 +475,99 @@ export default function DistrictsPage() {
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
             {districts.map((district) => (
-              <tr key={district.id} className="hover:bg-dark-sidebar transition-colors">
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
-                  {district.name}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.range }}>
-                  {district.range || "N/A"}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
-                  <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
-                    Active
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(district)}
-                      className="text-purple-400 hover:text-purple-300 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(district.id!, district.name)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <>
+                {editingId === district.id ? (
+                  // Inline Edit Form
+                  <tr key={district.id} className="bg-dark-sidebar">
+                    <td colSpan={4} className="px-6 py-4">
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">
+                              Name *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">
+                              Range
+                            </label>
+                            <select
+                              value={formData.range}
+                              onChange={(e) => setFormData({ ...formData, range: e.target.value })}
+                              className="block w-full rounded-md bg-dark-card border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            >
+                              <option value="">Select Range</option>
+                              <option value="Southern Range">Southern Range (Mysuru)</option>
+                              <option value="Western Range">Western Range (Mangaluru)</option>
+                              <option value="Eastern Range">Eastern Range (Davangere)</option>
+                              <option value="Central Range">Central Range (Bengaluru)</option>
+                              <option value="Northern Range">Northern Range (Belagavi)</option>
+                              <option value="North Eastern Range">North Eastern Range (Kalaburagi)</option>
+                              <option value="Ballari Range">Ballari Range (Ballari)</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            type="submit"
+                            disabled={submitting}
+                            className="rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition-all hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50"
+                          >
+                            {submitting ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="rounded-lg border border-dark-border px-4 py-2 text-sm text-slate-400 transition-colors hover:bg-dark-card hover:text-slate-100"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  // Normal Row
+                  <tr key={district.id} className="hover:bg-dark-sidebar transition-colors">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
+                      {district.name}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.range }}>
+                      {district.range || "N/A"}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.status }}>
+                      <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">
+                        Active
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(district)}
+                          className="text-purple-400 hover:text-purple-300 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(district.id!, district.name)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
