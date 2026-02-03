@@ -366,7 +366,14 @@ export default function DirectoryPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeTab === "officers" ? (
                     filteredOfficers.map((officer) => (
-                        <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group">
+                        <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+                            {/* Blood Group Badge */}
+                            {officer.bloodGroup && (
+                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
+                                    {officer.bloodGroup}
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-start mb-2">
                                 <div>
                                     <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{officer.name}</h3>
