@@ -5,12 +5,13 @@ import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, Distr
 import { Plus, Edit, Trash2, Save, X, Check, RefreshCw } from 'lucide-react';
 import { DEFAULT_UNITS, ALL_BATTALIONS, STATE_INT_SECTIONS } from "@/lib/constants";
 
-type ColumnKey = "name" | "status" | "scope" | "actions";
+type ColumnKey = "name" | "status" | "scope" | "hideFromReg" | "actions";
 
 const defaultColumnWidths: Record<ColumnKey, number> = {
     name: 300,
     status: 120,
     scope: 150,
+    hideFromReg: 150,
     actions: 120,
 };
 
@@ -30,7 +31,8 @@ export default function UnitsPage() {
         scopes: [],
         mappedAreaIds: [],
         isDistrictLevel: false,
-        isHqLevel: false
+        isHqLevel: false,
+        hideFromRegistration: false
     });
     const [submitting, setSubmitting] = useState(false);
     const [migrating, setMigrating] = useState(false);
@@ -107,7 +109,8 @@ export default function UnitsPage() {
             isDistrictLevel: unit.isDistrictLevel || false,
             isHqLevel: unit.isHqLevel || false,
             applicableRanks: unit.applicableRanks || [],
-            stationKeyword: unit.stationKeyword || ((unit.name === "DCRB" || unit.name === "ESCOM") ? unit.name : "")
+            stationKeyword: unit.stationKeyword || ((unit.name === "DCRB" || unit.name === "ESCOM") ? unit.name : ""),
+            hideFromRegistration: unit.hideFromRegistration || false
         });
 
         // Fetch sections
@@ -138,7 +141,7 @@ export default function UnitsPage() {
         if (confirm("Discard changes?")) {
             setShowForm(false);
             setEditingId(null);
-            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
+            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], hideFromRegistration: false });
             setSectionsList([]);
         }
     };
@@ -263,7 +266,8 @@ export default function UnitsPage() {
                 isHqLevel: scopes.includes("hq"),
                 isDistrictLevel: scopes.includes("district"),
                 applicableRanks: formData.applicableRanks || [],
-                stationKeyword: formData.stationKeyword?.trim() || ""
+                stationKeyword: formData.stationKeyword?.trim() || "",
+                hideFromRegistration: formData.hideFromRegistration || false
             };
 
             if (editingId) {
@@ -281,7 +285,7 @@ export default function UnitsPage() {
 
             setShowForm(false);
             setEditingId(null);
-            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
+            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], hideFromRegistration: false });
             setSectionsList([]);
             await loadUnits();
         } catch (error) {
@@ -374,6 +378,25 @@ export default function UnitsPage() {
                                     onChange={() => setFormData({ ...formData, isActive: false })}
                                 />
                                 <span className={!formData.isActive ? "text-red-400 font-medium" : "text-slate-400 group-hover:text-slate-200"}>Inactive</span>
+                            </label>
+                        </div>
+
+                        {/* Hide from Registration */}
+                        <div className="pt-2 border-t border-dark-border">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.hideFromRegistration ? "bg-orange-600 border-orange-600" : "border-slate-500 group-hover:border-slate-400"}`}>
+                                    {formData.hideFromRegistration && <Check className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={!!formData.hideFromRegistration}
+                                    onChange={(e) => setFormData({ ...formData, hideFromRegistration: e.target.checked })}
+                                />
+                                <div className="flex flex-col">
+                                    <span className={`font-medium ${formData.hideFromRegistration ? "text-orange-300" : "text-slate-300 group-hover:text-slate-200"}`}>Hide from Registration Form</span>
+                                    <span className="text-xs text-slate-500">If checked, this unit will not appear in the registration form dropdown</span>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -662,7 +685,7 @@ export default function UnitsPage() {
                 <button
                     onClick={() => {
                         setEditingId(null);
-                        setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [] });
+                        setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], hideFromRegistration: false });
                         setSectionsList([]);
                         setShowForm(true);
                     }}
@@ -687,6 +710,9 @@ export default function UnitsPage() {
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative" style={{ width: columnWidths.scope }}>
                                 Scope
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-400 relative" style={{ width: columnWidths.hideFromReg }}>
+                                Hide from Reg
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400" style={{ width: columnWidths.actions }}>
                                 Actions
@@ -716,6 +742,24 @@ export default function UnitsPage() {
                                             <span className="text-[10px] text-blue-400 italic">HQ Level</span>
                                         )}
                                     </div>
+                                </td>
+                                <td className="whitespace-nowrap px-6 py-4 text-center">
+                                    <label className="inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!unit.hideFromRegistration}
+                                            onChange={async (e) => {
+                                                try {
+                                                    await updateUnit(unit.id!, { hideFromRegistration: e.target.checked });
+                                                    await loadUnits();
+                                                } catch (error) {
+                                                    console.error("Error updating unit:", error);
+                                                    alert("Failed to update unit");
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-orange-600 bg-dark-sidebar border-dark-border rounded focus:ring-orange-500 focus:ring-2"
+                                        />
+                                    </label>
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                     <div className="flex items-center justify-end gap-2">

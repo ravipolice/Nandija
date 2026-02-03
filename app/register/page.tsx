@@ -124,7 +124,8 @@ function RegisterPageContent() {
                 }
 
                 if (unitsData && unitsData.length > 0) {
-                    setUnits(unitsData);
+                    // Filter out units that are hidden from registration
+                    setUnits(unitsData.filter(u => !u.hideFromRegistration));
                 }
 
                 if (ranksData && ranksData.length > 0) {

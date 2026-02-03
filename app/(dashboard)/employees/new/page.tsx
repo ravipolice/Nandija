@@ -106,7 +106,8 @@ export default function NewEmployeePage() {
   const loadUnits = async () => {
     try {
       const data = await getUnits();
-      setUnits(data);
+      // Filter out units that are hidden from registration
+      setUnits(data.filter(u => !u.hideFromRegistration));
     } catch (error) {
       console.error("Error loading units:", error);
     }
