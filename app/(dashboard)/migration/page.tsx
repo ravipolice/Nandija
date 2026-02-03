@@ -391,6 +391,58 @@ export default function MigrationPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Data Inspection Tool */}
+                {invalidDistricts.length > 0 && (
+                    <div className="mb-6 bg-dark-sidebar/30 p-4 rounded-lg border border-dark-border">
+                        <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                            <Database className="h-4 w-4 text-blue-400" />
+                            Invalid District Breakdown
+                        </h3>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {invalidDistricts.map(dist => {
+                                const stationCount = allStations.filter(s => s.district === dist).length;
+                                const officerCount = allOfficers.filter(o => o.district === dist).length;
+                                const employeeCount = allEmployees.filter(e => e.district === dist).length;
+                                const totalCount = stationCount + officerCount + employeeCount;
+
+                                return (
+                                    <div key={dist} className="bg-dark-card p-3 rounded border border-dark-border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="font-medium text-slate-200">{dist}</span>
+                                            <span className="text-xs text-slate-500">Total: {totalCount} records</span>
+                                        </div>
+                                        <div className="flex gap-4 text-xs text-slate-400">
+                                            {stationCount > 0 && (
+                                                <span className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                                                    {stationCount} station{stationCount !== 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                            {officerCount > 0 && (
+                                                <span className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-purple-400" />
+                                                    {officerCount} officer{officerCount !== 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                            {employeeCount > 0 && (
+                                                <span className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-green-400" />
+                                                    {employeeCount} employee{employeeCount !== 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-dark-border text-xs text-slate-500">
+                            <strong>Note:</strong> These appear to be range names or invalid entries stored in the district field.
+                            Review each entry before migrating or consider deleting invalid records.
+                        </div>
+                    </div>
+                )}
+
                 <ManualMigrationForm
                     districts={districts}
                     oldDistricts={invalidDistricts}
