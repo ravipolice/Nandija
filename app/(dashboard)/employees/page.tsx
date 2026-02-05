@@ -6,6 +6,9 @@ import { Plus, Trash2, Edit, Search, ChevronUp, ChevronDown, FileSpreadsheet, Fi
 import Link from "next/link";
 import Papa from "papaparse";
 import { format } from "date-fns";
+import { generateSmartSearchBlob } from "@/lib/searchUtils"; // Smart Search
+
+type SearchableEmployee = Employee & { searchBlob: string };
 
 type SortField = "kgid" | "name" | "rank" | "email" | "mobile1" | "mobile2" | "bloodGroup" | "district" | "station" | "unit" | "isApproved";
 type SortDirection = "asc" | "desc";
@@ -29,7 +32,7 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
 };
 
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<SearchableEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
@@ -50,7 +53,24 @@ export default function EmployeesPage() {
   const loadEmployees = async () => {
     try {
       const data = await getEmployees();
-      setEmployees(data);
+      // Generate Smart Search Blob
+      const searchableData = data.map(emp => ({
+        ...emp,
+        searchBlob: generateSmartSearchBlob(
+          emp.name,
+          emp.kgid,
+          emp.email,
+          emp.mobile1,
+          emp.mobile2,
+          emp.rank,
+          emp.displayRank,
+          emp.bloodGroup,
+          emp.district,
+          emp.station,
+          emp.unit
+        )
+      }));
+      setEmployees(searchableData);
     } catch (error) {
       console.error("Error loading employees:", error);
     } finally {
@@ -174,21 +194,8 @@ export default function EmployeesPage() {
       if (!searchTerm.trim()) return true;
       const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
 
-      const searchableText = [
-        emp.name,
-        emp.kgid,
-        emp.email,
-        emp.mobile1,
-        emp.mobile2,
-        emp.rank,
-        emp.displayRank,
-        emp.bloodGroup,
-        emp.district,
-        emp.station,
-        emp.unit
-      ].filter(Boolean).join(" ").toLowerCase();
-
-      return terms.every(term => searchableText.includes(term));
+      // Smart Search using pre-calculated blob (Fuzzy Matching enabled)
+      return terms.every(term => emp.searchBlob.includes(term));
     })
     .sort((a, b) => {
       let aValue: string | number | boolean = "";

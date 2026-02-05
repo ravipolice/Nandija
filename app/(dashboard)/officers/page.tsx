@@ -21,6 +21,9 @@ import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search, Eye, EyeOff, FileSp
 import Link from "next/link";
 import Papa from "papaparse";
 import { format } from "date-fns";
+import { generateSmartSearchBlob } from "@/lib/searchUtils"; // Smart Search
+
+type SearchableOfficer = Officer & { searchBlob: string };
 
 type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
 type SortDirection = "asc" | "desc";
@@ -40,7 +43,7 @@ const defaultOfficerColumnWidths: Record<ColumnKey, number> = {
 };
 
 export default function OfficersPage() {
-  const [officers, setOfficers] = useState<Officer[]>([]);
+  const [officers, setOfficers] = useState<SearchableOfficer[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
@@ -153,7 +156,23 @@ export default function OfficersPage() {
         getRanks(),
         getUnits(),
       ]);
-      setOfficers(officersData);
+
+      // Generate Smart Search Blob
+      const searchableOfficers = officersData.map(off => ({
+        ...off,
+        searchBlob: generateSmartSearchBlob(
+          off.name,
+          off.agid,
+          off.rank,
+          off.mobile,
+          off.email,
+          off.district,
+          off.office || (off as any).station,
+          off.unit,
+          off.bloodGroup
+        )
+      }));
+      setOfficers(searchableOfficers);
       setDistricts(districtsData);
       setRanks(ranksData);
       setUnits(unitsData);
@@ -295,18 +314,10 @@ export default function OfficersPage() {
   });
 
   const filteredOfficers = sortedOfficers.filter((officer) => {
-    const q = searchTerm.toLowerCase();
-
-    return (
-      (officer.name && officer.name.toLowerCase().includes(q)) ||
-      (officer.rank && officer.rank.toLowerCase().includes(q)) ||
-      (officer.agid && officer.agid.toLowerCase().includes(q)) ||
-      (officer.mobile && officer.mobile.toLowerCase().includes(q)) ||
-      (officer.email && officer.email.toLowerCase().includes(q)) ||
-      (officer.district && officer.district.toLowerCase().includes(q)) ||
-      (officer.office && officer.office.toLowerCase().includes(q)) ||
-      (officer.unit && officer.unit?.toLowerCase().includes(q))
-    );
+    if (!searchTerm.trim()) return true;
+    const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    // Smart Search using pre-calculated blob
+    return terms.every(term => officer.searchBlob.includes(term));
   });
 
   const handleExportCSV = () => {

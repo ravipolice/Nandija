@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ThemeSwitcher } from "@/components/common/ThemeSwitcher";
 import { Logo } from "@/components/common/Logo";
+import { MobileUserTopBar } from "@/components/layout/MobileUserTopBar";
+import { MobileUserBottomNav } from "@/components/layout/MobileUserBottomNav";
 
 export default function UserLayout({
     children,
@@ -51,8 +53,8 @@ export default function UserLayout({
 
     return (
         <div className="min-h-screen bg-background flex flex-col">
-            {/* Simple Header */}
-            <header className="bg-card shadow-sm z-10 border-b border-border">
+            {/* Desktop Header - Hidden on Mobile */}
+            <header className="hidden md:block bg-card shadow-sm z-10 border-b border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex">
@@ -75,11 +77,17 @@ export default function UserLayout({
                 </div>
             </header>
 
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Mobile Top Bar */}
+            <MobileUserTopBar />
+
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
                 {children}
             </main>
 
-            <footer className="bg-card border-t border-border mt-auto">
+            {/* Mobile Bottom Nav */}
+            <MobileUserBottomNav />
+
+            <footer className="hidden md:block bg-card border-t border-border mt-auto">
                 <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
                     <p className="text-center text-sm text-muted-foreground">
                         © {new Date().getFullYear()} Police Mobile Directory

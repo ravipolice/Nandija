@@ -17,12 +17,17 @@ import {
     Station
 } from "@/lib/firebase/firestore";
 import { Search, X } from "lucide-react";
+import { generateSmartSearchBlob } from "@/lib/searchUtils";
+
+// Extended types for search optimization
+type SearchableOfficer = Officer & { searchBlob: string };
+type SearchableEmployee = Employee & { searchBlob: string };
 
 export default function DirectoryPage() {
     const [activeTab, setActiveTab] = useState<"officers" | "employees">("officers");
     const [searchTerm, setSearchTerm] = useState("");
-    const [officers, setOfficers] = useState<Officer[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [officers, setOfficers] = useState<SearchableOfficer[]>([]);
+    const [employees, setEmployees] = useState<SearchableEmployee[]>([]);
 
     // Filters Data
     const [units, setUnits] = useState<Unit[]>([]);
@@ -50,8 +55,46 @@ export default function DirectoryPage() {
                     getRanks(),
                     getDistricts()
                 ]);
-                setOfficers(officersData.filter(o => !o.isHidden));
-                setEmployees(employeesData.filter(e => !e.isHidden));
+
+                // Process Officers with Smart Search Blob
+                const processedOfficers = officersData
+                    .filter(o => !o.isHidden)
+                    .map(o => ({
+                        ...o,
+                        searchBlob: generateSmartSearchBlob(
+                            o.name,
+                            o.agid,
+                            o.rank,
+                            o.mobile,
+                            o.district,
+                            o.office || (o as any).station, // handle both fields 
+                            o.unit,
+                            o.bloodGroup,
+                            o.email
+                        )
+                    }));
+                setOfficers(processedOfficers);
+
+                // Process Employees with Smart Search Blob
+                const processedEmployees = employeesData
+                    .filter(e => !e.isHidden)
+                    .map(e => ({
+                        ...e,
+                        searchBlob: generateSmartSearchBlob(
+                            e.name,
+                            e.kgid,
+                            e.rank,
+                            e.mobile1,
+                            e.mobile2,
+                            e.district,
+                            e.station,
+                            e.unit,
+                            e.bloodGroup,
+                            e.email
+                        )
+                    }));
+                setEmployees(processedEmployees);
+
                 setUnits(unitsData);
                 setRanks(ranksData);
                 setDistricts(districtsData);
@@ -73,20 +116,6 @@ export default function DirectoryPage() {
     const isSpecialUnit = selectedUnitObj?.mappingType === "none";
 
     // Check if unit has sections (either from DB unitSections or specific logic)
-    // We can check if getUnitSections returns specific list, or rely on naming convention. 
-    // Ideally we should use a property, but for now we can infer if sections exist.
-    // However, since we fetch sections dynamically in useEffect, let's use a state for hasSections or derive it.
-    // The previous code had hardcoded ["State INT", "S INT"].
-    // Let's defer hasSections determination to the useEffect or keep it simple for now if we don't have 'hasSections' property on Unit.
-    // Wait, Android logic uses `ProduceState` to fetch sections. Here we do it in useEffect.
-    // Let's use a state for 'hasSections' which becomes true if the fetch returns > 0 sections.
-    // BUT for visibility logic (lines 77-78), we need it immediately.
-    // Let's assume for now that if mappingType is 'state' or 'commissionerate' it MIGHT have sections?
-    // Actually, let's check if we can query strictly by the hardcoded list REPLACEMENT if we can't fetch sync.
-    // BETTER: The user wants "units logic". In Android, I check `unitSections.isNotEmpty()`. 
-    // Here `unitSections` isn't state, it's fetched. 
-    // Let's add `unitSections` state.
-
     const isDistrictLevelUnit = selectedUnitObj?.isDistrictLevel || false;
 
     // Visibility Logic - will be updated after unitSections are fetched
@@ -171,54 +200,67 @@ export default function DirectoryPage() {
 
 
     // Filtering Logic
-    const filterData = <T extends Officer | Employee>(data: T[]) => {
+    const filterData = <T extends SearchableOfficer | SearchableEmployee>(data: T[]) => {
         if (!searchTerm.trim()) return data;
 
         const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
 
-        return data.filter(item => {
-            // 1. Build a "Search Blob" containing all searchable text from the item
-            const searchableText = [
-                item.name,
-                item.rank,
-                (item as Employee).mobile1,
-                (item as any).mobile, // For Officer
-                (item as Employee).station, // Employee Station
-                (item as Officer).office,   // Officer Office
-                (item as Employee).kgid,
-                (item as Officer).agid,
-                (item as Employee).bloodGroup,
-                (item as Officer).bloodGroup,
-                item.district,
-                item.unit,
-                (item as Employee).email
-            ].filter(Boolean).join(" ").toLowerCase();
+        // Helper to calculate relevance score
+        const calculateScore = (item: T) => {
+            let score = 0;
+            const name = item.name.toLowerCase();
+            const id = ((item as any).kgid || (item as any).agid || "").toLowerCase();
+            const rank = (item.rank || "").toLowerCase();
 
-            // 2. Multi-keyword Check: Every typed word must be present in the blob
-            const matchesSearch = terms.every(term => searchableText.includes(term));
+            terms.forEach(term => {
+                // Name priority
+                if (name === term) score += 100;
+                else if (name.startsWith(term)) score += 75;
+                else if (name.includes(term)) score += 50;
+
+                // ID priority
+                if (id === term) score += 95;
+                else if (id.startsWith(term)) score += 85;
+                else if (id.includes(term)) score += 60;
+
+                // Rank priority
+                if (rank === term) score += 40;
+                else if (rank.startsWith(term)) score += 30;
+            });
+            return score;
+        };
+
+        const filtered = data.filter(item => {
+            // 1. Use the pre-calculated Smart Search Blob
+            // This enables fuzzy matching (e.g. "bmravi" matches "B.M. Ravi")
+            const matchesSearch = terms.every(term => item.searchBlob.includes(term));
 
             if (!matchesSearch) return false;
 
-            // 3. Apply standard Dropdown Filters (Bypassed if searching)
-            const isGlobalSearch = searchTerm.trim().length > 0;
+            // 2. Apply standard Dropdown Filters
+            // Note: Global search (when typing) overrides dropdown filters to ensure results are found across all units.
+            const isSearching = searchTerm.trim().length > 0;
 
-            const matchesUnit = isGlobalSearch || (selectedUnit ? item.unit === selectedUnit : true);
+            const matchesUnit = isSearching || (selectedUnit ? item.unit === selectedUnit : true);
 
-            const matchesDistrict = isGlobalSearch || ((showDistrict && selectedDistrict)
+            const matchesDistrict = isSearching || ((showDistrict && selectedDistrict)
                 ? item.district === selectedDistrict
                 : true);
 
-            const itemStation = (item as Employee).station || (item as Officer).office;
-            const matchesStation = isGlobalSearch || ((showStation && selectedStation)
+            const itemStation = (item as any).station || (item as any).office;
+            const matchesStation = isSearching || ((showStation && selectedStation)
                 ? itemStation === selectedStation
                 : true);
 
-            const matchesRank = isGlobalSearch || (selectedRank
+            const matchesRank = isSearching || (selectedRank
                 ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank)))
                 : true);
 
             return matchesUnit && matchesDistrict && matchesStation && matchesRank;
         });
+
+        // Return sorted results
+        return filtered.sort((a, b) => calculateScore(b) - calculateScore(a));
     };
 
     const filteredOfficers = filterData(officers);
@@ -325,7 +367,7 @@ export default function DirectoryPage() {
                     <input
                         type="text"
                         className="block w-full pl-10 pr-10 py-2.5 border border-input rounded-lg bg-background text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                        placeholder="Search by name, mobile number, office..."
+                        placeholder="Search by Name, KGID/AGID, Mobile, Rank, Station, Blood Group..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />

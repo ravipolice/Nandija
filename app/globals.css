@@ -14,11 +14,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
  
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --primary: 187 100% 42%;   /* #00BCD4 (Teal) */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 100% 51%;  /* #FFC107 (Yellow) */
+    --secondary-foreground: 0 0% 0%;
  
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;

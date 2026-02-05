@@ -273,7 +273,7 @@ export default function LoginPage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 drop-shadow-lg" style={{ color: "#F8D722" }}>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 drop-shadow-lg text-secondary">
             Police Mobile Directory
           </h1>
 
@@ -413,13 +413,7 @@ export default function LoginPage() {
               </form>
             )}
 
-            <div className="mt-8 text-center border-t pt-6">
-              <p className="text-gray-500 text-sm mb-2">New User?</p>
-              <a href="/register" className="inline-flex items-center text-primary-600 hover:text-primary-800 font-semibold transition-colors">
-                Register for Access
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-              </a>
-            </div>
+
 
             {/* Footer Info inside the card for cleaner look */}
             <div className="mt-auto pt-10 text-center">

@@ -34,7 +34,7 @@
     "@eslint/eslintrc": "^3.2.0",
     "@types/node": "^22.10.5",
     "@types/papaparse": "^5.3.14",
-    "@types/react": "^19.0.6",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",

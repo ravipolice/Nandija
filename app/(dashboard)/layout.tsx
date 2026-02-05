@@ -3,7 +3,9 @@
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { MobileTopBar } from "@/components/layout/MobileTopBar";
 
 export default function DashboardLayout({
   children,
@@ -12,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading, isAdmin, employeeData } = useAuth();
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Only redirect on client side
@@ -21,27 +24,9 @@ export default function DashboardLayout({
       if (!user) {
         router.push("/login");
       } else if (!isAdmin) {
-        // If logged in but not admin
         if (employeeData) {
-          // Valid employee, send to user portal
           router.push("/directory");
         } else {
-          // Unregistered user trying to access dashboard -> kick out
-          // (This might happen if they somehow got past login page without being stopped)
-          // We can't use signOut here easily without import, but let's just redirect to login 
-          // or let UserLayout handle it if they were going to directory?
-          // Actually, if we don't push to directory, they stay on dashboard layout?
-          // Dashboard layout renders children. If they are here, they are trying to access a dashboard route.
-          // If they are not admin, they shouldn't be here.
-
-          // Wait, if they are NOT admin, we redirect them OUT of dashboard.
-          // If we just do nothing, they see the dashboard (but maybe empty?).
-          // We MUST redirect them.
-
-          // If !employeeData, they are unregistered.
-          // If we send them to /login, and they are still "logged in" to Firebase, login page logic runs.
-
-          // Best approach:
           router.push("/login");
         }
       }
@@ -61,12 +46,35 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-dark">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-gradient-dark">
-        {children}
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Desktop Sidebar (hidden on mobile) */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Top Bar for Mobile */}
+        <MobileTopBar />
+
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
+          {/* Added pb-20 for bottom nav space on mobile */}
+          {children}
+        </main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden bg-background/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
+          <div className="fixed inset-y-0 left-0 w-3/4 bg-card border-r shadow-xl" onClick={e => e.stopPropagation()}>
+            <Sidebar />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
