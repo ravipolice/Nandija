@@ -17,6 +17,7 @@ import {
   LogOut,
   Shield,
   Award,
+  FileSpreadsheet,
 } from "lucide-react";
 import { signOut } from "@/lib/firebase/auth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Documents", href: "/documents", icon: FileText },
   { name: "Gallery", href: "/gallery", icon: ImageIcon },
   { name: "Useful Links", href: "/links", icon: LinkIcon },
+  { name: "Doc Converter", href: "/converter", icon: FileSpreadsheet },
   { name: "CSV Upload", href: "/upload", icon: Upload },
 ];
 
