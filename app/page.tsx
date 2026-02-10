@@ -12,7 +12,7 @@ export default function LandingPage() {
                     <span>Nandija</span>
                 </div>
                 <Link
-                    href="/dashboard"
+                    href="/admin"
                     className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all text-sm font-medium border border-white/5"
                 >
                     <LayoutDashboard className="h-4 w-4" />
@@ -67,7 +67,7 @@ export default function LandingPage() {
 
                     {/* Admin Panel */}
                     <Link
-                        href="/dashboard"
+                        href="/admin"
                         className="md:col-span-2 group relative p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-all flex items-center justify-between"
                     >
                         <div className="flex items-center gap-4">

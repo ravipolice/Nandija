@@ -90,7 +90,7 @@ export default function LoginPage() {
     } else {
       // Redirect based on role
       if (isAdmin) {
-        router.push("/");
+        router.push("/admin");
       } else {
         router.push("/directory");
       }
@@ -159,7 +159,7 @@ export default function LoginPage() {
     try {
       const result = await loginWithPin(email, pin);
       if (result.success) {
-        router.push("/");
+        router.push("/admin");
       } else {
         setError(result.error || "Login failed");
       }

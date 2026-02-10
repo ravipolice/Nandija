@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { getPendingRegistrations } from "@/lib/firebase/firestore";
 
 const bottomNavItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Approvals", href: "/approvals", icon: UserCheck },
     { name: "Notify", href: "/notifications", icon: Bell },

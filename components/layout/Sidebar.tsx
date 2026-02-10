@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/common/Logo";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Employees", href: "/employees", icon: Users },
   { name: "Pending Approvals", href: "/approvals", icon: UserCheck },
   { name: "Officers", href: "/officers", icon: Shield },
