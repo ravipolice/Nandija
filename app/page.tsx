@@ -54,7 +54,9 @@ export default function LandingPage() {
 
                     {/* Android App */}
                     <a
-                        href="#"
+                        href="https://play.google.com/store/apps/details?id=com.pmd.userapp"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-green-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)] text-left"
                     >
                         <div className="absolute top-6 right-6 p-2 rounded-lg bg-green-500/10 text-green-400 group-hover:scale-110 transition-transform">
@@ -62,7 +64,7 @@ export default function LandingPage() {
                         </div>
                         <h3 className="text-2xl font-bold mb-2 text-white">Android App</h3>
                         <p className="text-slate-400 text-sm">Download the official mobile app for offline access and enhanced features.</p>
-                        <span className="inline-block mt-4 text-xs font-semibold text-green-500 bg-green-500/10 px-2 py-1 rounded">Coming Soon to Play Store</span>
+                        <span className="inline-block mt-4 text-xs font-semibold text-green-500 bg-green-500/10 px-2 py-1 rounded">Available on Play Store</span>
                     </a>
 
                     {/* Admin Panel */}
