@@ -1,4 +1,4 @@
-# PMD Admin Panel
+# Nandija
 
 A modern Next.js admin panel for the Police Mobile Directory (PMD) application.
 
@@ -35,23 +35,26 @@ A modern Next.js admin panel for the Police Mobile Directory (PMD) application.
 ### Installation
 
 1. Navigate to the admin panel directory:
+
 ```bash
 cd admin-panel
 ```
 
-2. Install dependencies:
+1. Install dependencies:
+
 ```bash
 npm install
 ```
 
-3. Update Firebase configuration in `lib/firebase/config.ts` with your Firebase project credentials.
+1. Update Firebase configuration in `lib/firebase/config.ts` with your Firebase project credentials.
 
-4. Run the development server:
+2. Run the development server:
+
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+1. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Building for Production
 
@@ -103,6 +106,7 @@ Make sure your Firebase project has:
 When uploading employees via CSV, ensure the following columns:
 
 **Required:**
+
 - `kgid` - Employee KGID
 - `name` - Employee name
 - `mobile1` - Primary mobile number
@@ -110,6 +114,7 @@ When uploading employees via CSV, ensure the following columns:
 - `station` - Station name
 
 **Optional:**
+
 - `email` - Email address
 - `mobile2` - Secondary mobile number
 - `rank` - Employee rank
@@ -128,6 +133,3 @@ When uploading employees via CSV, ensure the following columns:
 ## License
 
 This project is part of the Police Mobile Directory system.
-
-
-
