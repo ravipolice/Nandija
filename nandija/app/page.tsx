@@ -40,7 +40,7 @@ export default function LandingPage() {
 
                     {/* User Web App */}
                     <a
-                        href="/user"
+                        href="/directory"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] text-left"

@@ -1,0 +1,512 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+    Officer,
+    getOfficers,
+    Employee,
+    getEmployees,
+    getUnits,
+    getRanks,
+    Unit,
+    Rank,
+    getDistricts,
+    getStations,
+    getUnitSections,
+    District,
+    Station
+} from "@/lib/firebase/firestore";
+import { Search, X } from "lucide-react";
+import { generateSmartSearchBlob } from "@/lib/searchUtils";
+
+// Extended types for search optimization
+type SearchableOfficer = Officer & { searchBlob: string };
+type SearchableEmployee = Employee & { searchBlob: string };
+
+export default function DirectoryPage() {
+    const [activeTab, setActiveTab] = useState<"officers" | "employees">("officers");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [officers, setOfficers] = useState<SearchableOfficer[]>([]);
+    const [employees, setEmployees] = useState<SearchableEmployee[]>([]);
+
+    // Filters Data
+    const [units, setUnits] = useState<Unit[]>([]);
+    const [ranks, setRanks] = useState<Rank[]>([]);
+    const [districts, setDistricts] = useState<District[]>([]);
+    const [stations, setStations] = useState<Station[]>([]);
+
+    // Selected Filter States
+    const [selectedUnit, setSelectedUnit] = useState("");
+    const [selectedDistrict, setSelectedDistrict] = useState("");
+    const [selectedStation, setSelectedStation] = useState("");
+    const [selectedRank, setSelectedRank] = useState("");
+
+    // Loading State
+    const [loading, setLoading] = useState(true);
+
+    // Initial Data Fetch
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [officersData, employeesData, unitsData, ranksData, districtsData] = await Promise.all([
+                    getOfficers(),
+                    getEmployees(),
+                    getUnits(),
+                    getRanks(),
+                    getDistricts()
+                ]);
+
+                // Process Officers with Smart Search Blob
+                const processedOfficers = officersData
+                    .filter(o => !o.isHidden)
+                    .map(o => ({
+                        ...o,
+                        searchBlob: generateSmartSearchBlob(
+                            o.name,
+                            o.agid,
+                            o.rank,
+                            o.mobile,
+                            o.district,
+                            o.office || (o as any).station, // handle both fields 
+                            o.unit,
+                            o.bloodGroup,
+                            o.email
+                        )
+                    }));
+                setOfficers(processedOfficers);
+
+                // Process Employees with Smart Search Blob
+                const processedEmployees = employeesData
+                    .filter(e => !e.isHidden)
+                    .map(e => ({
+                        ...e,
+                        searchBlob: generateSmartSearchBlob(
+                            e.name,
+                            e.kgid,
+                            e.rank,
+                            e.mobile1,
+                            e.mobile2,
+                            e.district,
+                            e.station,
+                            e.unit,
+                            e.bloodGroup,
+                            e.email
+                        )
+                    }));
+                setEmployees(processedEmployees);
+
+                setUnits(unitsData);
+                setRanks(ranksData);
+                setDistricts(districtsData);
+            } catch (error: any) {
+                console.error("Error fetching data:", error);
+                if (error.code === 'permission-denied') {
+                    console.error("User does not have permission to view directory.");
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
+
+    // Derived Logic for Special Units (Sync with Android CommonEmployeeForm)
+    const selectedUnitObj = units.find(u => u.name === selectedUnit);
+    // Dynamic Special Unit: mappingType == 'none' means it doesn't map to districts
+    const isSpecialUnit = selectedUnitObj?.mappingType === "none";
+
+    // Check if unit has sections (either from DB unitSections or specific logic)
+    const isDistrictLevelUnit = selectedUnitObj?.isDistrictLevel || false;
+
+    // Visibility Logic - will be updated after unitSections are fetched
+    const [unitSections, setUnitSections] = useState<string[]>([]);
+
+    const hasSections = unitSections.length > 0;
+
+    const showDistrict = !isSpecialUnit;
+    // Show station if it's NOT a district level unit (unless it has sections) OR if it has sections.
+    // AND if district is selected (if district is required).
+    const showStation = (!isDistrictLevelUnit || hasSections) && (showDistrict ? !!selectedDistrict : true);
+
+    // Effect: Reset dependent fields when Unit changes
+    useEffect(() => {
+        if (!loading) {
+            setSelectedDistrict("");
+            setSelectedStation("");
+            // Check if rank is still valid
+            if (selectedRank && selectedUnitObj?.applicableRanks?.length) {
+                if (!selectedUnitObj.applicableRanks.includes(selectedRank)) {
+                    setSelectedRank("");
+                }
+            }
+        }
+    }, [selectedUnit, loading]);
+
+    // Effect: Reset Station when District changes
+    useEffect(() => {
+        if (!loading && showDistrict) {
+            setSelectedStation("");
+        }
+    }, [selectedDistrict, loading]);
+
+    // Effect: Fetch Stations/Sections logic
+    useEffect(() => {
+        async function fetchStationsOrSections() {
+            setLoading(true); // Short loading state for dropdowns
+            try {
+                // Always try to fetch sections for the unit first
+                // This covers "State INT", "S INT", etc.
+                const sections = selectedUnit ? await getUnitSections(selectedUnit) : [];
+                setUnitSections(sections);
+
+                if (sections.length > 0) {
+                    // Map to Station objects
+                    const sectionsAsStations: Station[] = sections.map(s => ({
+                        id: s,
+                        name: s,
+                        district: selectedUnit // Mock district
+                    }));
+                    setStations(sectionsAsStations);
+                } else if (selectedDistrict && selectedDistrict !== "All") {
+                    // Standard District Selection -> Fetch Stations for District
+                    const stnData = await getStations(selectedDistrict);
+
+                    // Dynamic Station Filtering using stationKeyword
+                    const stationKeyword = selectedUnitObj?.stationKeyword;
+                    if (stationKeyword && stationKeyword.trim() !== "") {
+                        const keywords = stationKeyword.split(',').map(k => k.trim()).filter(k => k);
+                        const filtered = stnData.filter(s =>
+                            s.isActive !== false &&
+                            keywords.some(k => s.name.toUpperCase().includes(k.toUpperCase()))
+                        );
+                        setStations(filtered);
+                    } else {
+                        setStations(stnData.filter(s => s.isActive !== false));
+                    }
+                } else {
+                    setStations([]);
+                }
+            } catch (e) {
+                console.error("Error fetching stations/sections:", e);
+                setStations([]);
+                setUnitSections([]);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchStationsOrSections();
+    }, [selectedDistrict, selectedUnit, selectedUnitObj]); // Added selectedUnitObj dependency
+
+
+    // Filtering Logic
+    const filterData = <T extends SearchableOfficer | SearchableEmployee>(data: T[]) => {
+        if (!searchTerm.trim()) return data;
+
+        const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+
+        // Helper to calculate relevance score
+        const calculateScore = (item: T) => {
+            let score = 0;
+            const name = item.name.toLowerCase();
+            const id = ((item as any).kgid || (item as any).agid || "").toLowerCase();
+            const rank = (item.rank || "").toLowerCase();
+
+            terms.forEach(term => {
+                // Name priority
+                if (name === term) score += 100;
+                else if (name.startsWith(term)) score += 75;
+                else if (name.includes(term)) score += 50;
+
+                // ID priority
+                if (id === term) score += 95;
+                else if (id.startsWith(term)) score += 85;
+                else if (id.includes(term)) score += 60;
+
+                // Rank priority
+                if (rank === term) score += 40;
+                else if (rank.startsWith(term)) score += 30;
+            });
+            return score;
+        };
+
+        const filtered = data.filter(item => {
+            // 1. Use the pre-calculated Smart Search Blob
+            // This enables fuzzy matching (e.g. "bmravi" matches "B.M. Ravi")
+            const matchesSearch = terms.every(term => item.searchBlob.includes(term));
+
+            if (!matchesSearch) return false;
+
+            // 2. Apply standard Dropdown Filters
+            // Note: Global search (when typing) overrides dropdown filters to ensure results are found across all units.
+            const isSearching = searchTerm.trim().length > 0;
+
+            const matchesUnit = isSearching || (selectedUnit ? item.unit === selectedUnit : true);
+
+            const matchesDistrict = isSearching || ((showDistrict && selectedDistrict)
+                ? item.district === selectedDistrict
+                : true);
+
+            const itemStation = (item as any).station || (item as any).office;
+            const matchesStation = isSearching || ((showStation && selectedStation)
+                ? itemStation === selectedStation
+                : true);
+
+            const matchesRank = isSearching || (selectedRank
+                ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank)))
+                : true);
+
+            return matchesUnit && matchesDistrict && matchesStation && matchesRank;
+        });
+
+        // Return sorted results
+        return filtered.sort((a, b) => calculateScore(b) - calculateScore(a));
+    };
+
+    const filteredOfficers = filterData(officers);
+    const filteredEmployees = filterData(employees);
+
+    // Derived Ranks for Dropdown
+    const applicableRanks = selectedUnitObj?.applicableRanks || [];
+    const filteredRanks = ranks.filter(rank => {
+        if (selectedUnit && applicableRanks.length > 0) {
+            return applicableRanks.includes(rank.rank_id);
+        }
+        return true;
+    });
+
+
+    if (loading) {
+        return <div className="text-center py-10">Loading directory...</div>;
+    }
+
+    return (
+        <div className="space-y-6 animate-fade-in-up">
+
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold tracking-tight">Directory</h1>
+                <div className="text-sm text-muted-foreground">
+                    {filteredOfficers.length + filteredEmployees.length} Total Records
+                </div>
+            </div>
+
+            {/* Filters & Search Container */}
+            <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-4">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Unit Dropdown */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground ml-1">Unit</label>
+                        <select
+                            value={selectedUnit}
+                            onChange={(e) => setSelectedUnit(e.target.value)}
+                            className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        >
+                            <option value="">All Units</option>
+                            {units.map((u) => (
+                                <option key={u.id} value={u.name}>{u.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* District Dropdown (Conditional) */}
+                    {showDistrict && (
+                        <div className="space-y-1 animate-fade-in">
+                            <label className="text-xs font-medium text-muted-foreground ml-1">District / HQ</label>
+                            <select
+                                value={selectedDistrict}
+                                onChange={(e) => setSelectedDistrict(e.target.value)}
+                                className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            >
+                                <option value="">All Districts / HQs</option>
+                                {districts.map((d) => (
+                                    <option key={d.id} value={d.name}>{d.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Station/Section Dropdown (Conditional) */}
+                    {showStation && (
+                        <div className="space-y-1 animate-fade-in">
+                            <label className="text-xs font-medium text-muted-foreground ml-1">Station / Section</label>
+                            <select
+                                value={selectedStation}
+                                onChange={(e) => setSelectedStation(e.target.value)}
+                                className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            >
+                                <option value="">All Stations / Sections</option>
+                                {stations.map((s) => (
+                                    <option key={s.id || s.name} value={s.name}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Rank Dropdown */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground ml-1">Rank</label>
+                        <select
+                            value={selectedRank}
+                            onChange={(e) => setSelectedRank(e.target.value)}
+                            className="block w-full px-3 py-2 border border-input rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        >
+                            <option value="">All Ranks</option>
+                            {filteredRanks.map((r) => (
+                                <option key={r.rank_id} value={r.rank_id}>{r.rank_id} - {r.rank_label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Search Bar - Full Width Row */}
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full pl-10 pr-10 py-2.5 border border-input rounded-lg bg-background text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        placeholder="Search by Name, KGID/AGID, Mobile, Rank, Station, Blood Group..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm("")}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-foreground text-muted-foreground"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-border">
+                <button
+                    onClick={() => setActiveTab("officers")}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-all ${activeTab === "officers"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    Officers <span className="ml-2 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">{filteredOfficers.length}</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab("employees")}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-all ${activeTab === "employees"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    Employees <span className="ml-2 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">{filteredEmployees.length}</span>
+                </button>
+            </div>
+
+            {/* List / Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeTab === "officers" ? (
+                    filteredOfficers.map((officer) => (
+                        <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+                            {/* Blood Group Badge */}
+                            {officer.bloodGroup && (
+                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
+                                    {officer.bloodGroup}
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{officer.name}</h3>
+                                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                                        {officer.rank}
+                                    </span>
+                                </div>
+                                {officer.district && (
+                                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                                        {officer.district}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="space-y-2 text-sm text-foreground/80 mt-4">
+                                {officer.office && (
+                                    <div className="flex items-start text-xs text-muted-foreground">
+                                        <span className="font-semibold w-16">Office:</span>
+                                        <span className="flex-1">{officer.office}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center pt-2 border-t border-dashed border-border mt-3">
+                                    <a href={`tel:${officer.mobile}`} className="flex-1 text-center py-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors font-medium text-sm pointer-events-auto">
+                                        Call
+                                    </a>
+                                    <div className="w-px h-4 bg-border mx-2"></div>
+                                    <a href={`sms:${officer.mobile}`} className="flex-1 text-center py-2 text-green-600 hover:bg-green-50 rounded-md transition-colors font-medium text-sm pointer-events-auto">
+                                        Msg
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    filteredEmployees.map((emp) => (
+                        <div key={emp.id} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+                            {/* Blood Group Badge */}
+                            {emp.bloodGroup && (
+                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
+                                    {emp.bloodGroup}
+                                </div>
+                            )}
+
+                            <div className="flex items-start space-x-4">
+                                {emp.photoUrl ? (
+                                    <img src={emp.photoUrl} alt={emp.name} className="h-14 w-14 rounded-full object-cover border-2 border-white shadow-sm" />
+                                ) : (
+                                    <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-lg shadow-inner">
+                                        {emp.name.charAt(0)}
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{emp.name}</h3>
+                                    <p className="text-sm text-primary font-medium truncate">{emp.displayRank || emp.rank}</p>
+                                    <p className="text-xs text-muted-foreground truncate mt-0.5">{emp.station || emp.district}</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
+                                <a
+                                    href={`tel:${emp.mobile1}`}
+                                    className="flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary text-foreground/80 py-2 rounded-lg text-xs font-medium transition-colors"
+                                >
+                                    <span>{emp.mobile1}</span>
+                                </a>
+                                {emp.mobile2 && (
+                                    <a
+                                        href={`tel:${emp.mobile2}`}
+                                        className="flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary text-foreground/80 py-2 rounded-lg text-xs font-medium transition-colors"
+                                    >
+                                        <span>{emp.mobile2}</span>
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Empty States */}
+            {activeTab === "officers" && filteredOfficers.length === 0 && (
+                <div className="text-center py-20 bg-secondary/20 rounded-xl border border-dashed border-border">
+                    <p className="text-muted-foreground">No officers found matching your filters.</p>
+                </div>
+            )}
+            {activeTab === "employees" && filteredEmployees.length === 0 && (
+                <div className="text-center py-20 bg-secondary/20 rounded-xl border border-dashed border-border">
+                    <p className="text-muted-foreground">No employees found matching your filters.</p>
+                </div>
+            )}
+
+        </div>
+    );
+}

@@ -6,7 +6,7 @@ import { Users, Phone, Menu } from "lucide-react"; // Different icons for user
 import { cn } from "@/lib/utils";
 
 const bottomNavItems = [
-    { name: "Directory", href: "/directory", icon: Users },
+    { name: "Directory", href: "/user", icon: Users },
     { name: "Contact", href: "/contact", icon: Phone },
     // Add more user-specific links if needed
 ];

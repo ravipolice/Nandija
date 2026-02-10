@@ -25,7 +25,7 @@ export default function DashboardLayout({
         router.push("/login");
       } else if (!isAdmin) {
         if (employeeData) {
-          router.push("/user");
+          router.push("/directory");
         } else {
           router.push("/login");
         }

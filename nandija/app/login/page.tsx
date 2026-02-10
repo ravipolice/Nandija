@@ -92,7 +92,7 @@ export default function LoginPage() {
       if (isAdmin) {
         router.push("/admin");
       } else {
-        router.push("/user");
+        router.push("/directory");
       }
     }
   };
