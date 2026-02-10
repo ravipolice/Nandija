@@ -1345,7 +1345,7 @@ export const createUsefulLink = async (
 };
 
 export const deleteUsefulLink = async (id: string): Promise<void> => {
-  return deleteDoc("useful_links", id);
+  return deleteDocument("useful_links", id);
 };
 
 // Statistics
