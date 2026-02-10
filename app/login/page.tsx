@@ -108,7 +108,10 @@ export default function LoginPage() {
         }
       } catch (err: any) {
         console.error("Redirect Login Error:", err);
-        setError(err.message || "Failed to sign in with Google");
+        // Only show error if it's not a permission error (which happens on initial load)
+        if (!err.message?.includes("Missing or insufficient permissions")) {
+          setError(err.message || "Failed to sign in with Google");
+        }
         setLoading(false);
       }
     };
