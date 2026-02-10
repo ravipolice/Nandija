@@ -32,7 +32,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="text-lg md:text-xl text-slate-400 max-w-2xl mb-12 leading-relaxed">
-                    Centralized access point for the Karnataka State Police directory services, administrative panels, and public resources.
+                    Centralized access point for the Nandija services, administrative panel, and public resources.
                 </p>
 
                 {/* Primary Actions Grid */}
@@ -40,7 +40,7 @@ export default function LandingPage() {
 
                     {/* User Web App */}
                     <a
-                        href="https://pmd-user.vercel.app"
+                        href="/directory"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] text-left"
