@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PMD Directory",
-  description: "Police Mobile Directory",
+  title: "Nandija Admin Panel",
+  description: "Police Mobile Directory Admin",
   viewport: {
     width: "device-width",
     initialScale: 1,

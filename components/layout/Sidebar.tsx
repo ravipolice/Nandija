@@ -15,6 +15,7 @@ import {
   Link as LinkIcon,
   Upload,
   LogOut,
+  Smartphone,
   Shield,
   Award,
   FileSpreadsheet,
@@ -38,6 +39,7 @@ const navigation = [
   { name: "Documents", href: "/documents", icon: FileText },
   { name: "Gallery", href: "/gallery", icon: ImageIcon },
   { name: "Useful Links", href: "/links", icon: LinkIcon },
+  { name: "App Management", href: "/app-management", icon: Smartphone },
   { name: "Doc Converter", href: "/converter", icon: FileSpreadsheet },
   { name: "CSV Upload", href: "/upload", icon: Upload },
 ];
@@ -84,7 +86,7 @@ export function Sidebar() {
     <div className="flex h-screen w-64 flex-col bg-dark-sidebar text-dark-text border-r border-dark-border">
       <div className="flex flex-col items-center justify-center border-b border-dark-border px-4 py-6 bg-gradient-to-br from-purple-900/20 to-blue-900/20">
         <Logo size="md" className="mb-4" />
-        <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">PMD Admin</h1>
+        <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Nandija Admin</h1>
         <p className="mt-1 text-xs text-dark-text-secondary">Admin Panel</p>
         <div className="mt-2 text-[10px] text-slate-500 opacity-60">
           v2.3-UnitSections

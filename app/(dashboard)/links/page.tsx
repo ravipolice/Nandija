@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getUsefulLinks, createUsefulLink, deleteUsefulLink, UsefulLink } from "@/lib/firebase/firestore";
-import { uploadFile } from "@/lib/firebase/storage";
+import { getDownloadUrl } from "@/lib/services/documents.service";
 import { Timestamp } from "firebase/firestore";
 import { Plus, ExternalLink, Upload, Link as LinkIcon, Trash2 } from "lucide-react";
 
@@ -60,46 +60,78 @@ export default function LinksPage() {
       let finalApkUrl = formData.apkUrl.trim() || undefined;
       let finalIconUrl = formData.iconUrl.trim() || undefined;
 
-      // Upload APK file if provided (matching mobile app logic)
+      // Helper to convert file to Base64
+      const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.includes(",") ? result.split(",")[1] : result;
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      // Upload APK file to Google Drive if provided
       if (!finalApkUrl && apkFile) {
-        setUploadProgress(25);
-        const safeName = formData.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "") || "link";
-        const fileName = `${safeName}_${Date.now()}_${Math.random().toString(36).substring(7)}.apk`;
-        const storagePath = `useful_links/apks/${fileName}`;
+        setUploadProgress(10);
+        const base64 = await fileToBase64(apkFile);
+        setUploadProgress(30);
 
-        try {
-          finalApkUrl = await uploadFile(storagePath, apkFile);
-          console.log("APK uploaded successfully:", finalApkUrl);
-          setUploadProgress(50);
-        } catch (error: any) {
-          console.error("APK upload failed:", error);
-          throw new Error("Failed to upload APK file. Please check your internet connection and try again.");
-        }
+        const response = await fetch("/api/documents/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "upload",
+            title: `${formData.name} (APK)`,
+            fileBase64: base64,
+            mimeType: "application/vnd.android.package-archive",
+            category: "Useful Links",
+            description: `APK for ${formData.name}`,
+            userEmail: "admin@pmd.com",
+          }),
+        });
+
+        if (!response.ok) throw new Error(`APK upload failed: ${response.status}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || "APK upload failed");
+
+        finalApkUrl = result.url || result.webViewLink;
+        setUploadProgress(50);
       }
 
-      // Upload icon image if provided (matching mobile app logic)
+      // Upload icon image to Google Drive if provided
       if (!finalIconUrl && iconFile) {
-        setUploadProgress(75);
-        const safeName = formData.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "") || "link";
-        const fileName = `${safeName}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const storagePath = `useful_links/icons/${fileName}`;
+        setUploadProgress(60);
+        const base64 = await fileToBase64(iconFile);
+        setUploadProgress(70);
 
-        try {
-          finalIconUrl = await uploadFile(storagePath, iconFile);
-          console.log("Icon uploaded successfully:", finalIconUrl);
-        } catch (error: any) {
-          console.warn("Icon upload failed, continuing without icon:", error);
-          // Don't throw - icon is optional
+        const response = await fetch("/api/documents/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "upload",
+            title: `${formData.name} (Icon)`,
+            fileBase64: base64,
+            mimeType: iconFile.type || "image/jpeg",
+            category: "Useful Links",
+            description: `Icon for ${formData.name}`,
+            userEmail: "admin@pmd.com",
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            finalIconUrl = result.url || result.webViewLink;
+          }
         }
+        setUploadProgress(90);
       }
 
-      // Validation: Must have either playStoreUrl OR apkUrl (matching mobile app logic)
+      // Validation: Must have either playStoreUrl OR apkUrl
       const hasPlayStoreUrl = formData.playStoreUrl.trim().length > 0;
       const hasApkUrl = !!finalApkUrl;
 
@@ -107,28 +139,31 @@ export default function LinksPage() {
         throw new Error("Provide either Play Store URL OR APK file/URL");
       }
 
-      setUploadProgress(90);
-
-      // Save to Firestore with timestamps (matching mobile app logic)
+      // Save to Firestore with timestamps
       const now = Timestamp.now();
-      await createUsefulLink({
+      const linkData: any = {
         name: formData.name.trim(),
-        playStoreUrl: hasPlayStoreUrl ? formData.playStoreUrl.trim() : undefined,
-        apkUrl: finalApkUrl,
-        iconUrl: finalIconUrl,
         createdAt: now,
         updatedAt: now,
-      });
+      };
+
+      if (hasPlayStoreUrl) linkData.playStoreUrl = formData.playStoreUrl.trim();
+      if (typeof finalApkUrl === 'string') linkData.apkUrl = finalApkUrl.trim();
+      if (typeof finalIconUrl === 'string') linkData.iconUrl = finalIconUrl.trim();
+
+      // Final sanitization to remove any accidental 'undefined'
+      Object.keys(linkData).forEach(key => linkData[key] === undefined && delete linkData[key]);
+
+      await createUsefulLink(linkData);
 
       setUploadProgress(100);
-
-      // Reset form
       setFormData({ name: "", playStoreUrl: "", apkUrl: "", iconUrl: "" });
       setApkFile(null);
       setIconFile(null);
       setUploadProgress(0);
       setShowForm(false);
       await loadLinks();
+      alert("Link created successfully (GDrive)!");
     } catch (error: any) {
       console.error("Error creating link:", error);
       alert(error?.message || "Failed to create link");
@@ -423,7 +458,7 @@ export default function LinksPage() {
               )}
               {link.apkUrl && (
                 <a
-                  href={link.apkUrl}
+                  href={getDownloadUrl(link.apkUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 transition-colors hover:bg-green-100"

@@ -1,7 +1,28 @@
+"use client";
+
 import Link from "next/link";
-import { Shield, Smartphone, Globe, Lock, FileText, LayoutDashboard } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Shield, Lock, FileText, LayoutDashboard, Smartphone, Download } from "lucide-react";
+import { getAppConfig, AppConfig } from "@/lib/firebase/app-config";
+import { getDownloadUrl } from "@/lib/services/documents.service";
 
 export default function LandingPage() {
+    const [config, setConfig] = useState<AppConfig | null>(null);
+
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const data = await getAppConfig();
+                if (data) setConfig(data);
+            } catch (error) {
+                console.error("Error loading config:", error);
+            }
+        };
+        loadConfig();
+    }, []);
+
+    const playStoreUrl = config?.playStoreUrl || "https://play.google.com/store/apps/details?id=com.pmd.userapp";
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white font-sans selection:bg-cyan-500 selection:text-white">
 
@@ -32,7 +53,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="text-lg md:text-xl text-slate-400 max-w-2xl mb-12 leading-relaxed">
-                    Centralized access point for the Nandija services, administrative panel, and public resources.
+                    Centralized access point for the Nandija Directory services, administrative panel, and resources.
                 </p>
 
                 {/* Primary Actions Grid */}
@@ -40,32 +61,61 @@ export default function LandingPage() {
 
                     {/* User Web App */}
                     <a
-                        href="/user"
+                        href="/directory"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] text-left"
                     >
-                        <div className="absolute top-6 right-6 p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:scale-110 transition-transform">
-                            <Globe className="h-6 w-6" />
+                        <div className="absolute top-6 right-6 p-1.5 rounded-lg bg-white/10 group-hover:scale-110 transition-transform border border-white/5 shadow-inner">
+                            <img src="/logo.png" alt="User Portal" className="h-8 w-8 object-contain" />
                         </div>
-                        <h3 className="text-2xl font-bold mb-2 text-white">User Web Portal</h3>
+                        <h3 className="text-2xl font-bold mb-2 text-white">User App</h3>
                         <p className="text-slate-400 text-sm">Access the directory from any browser. Search officers, stations, and units.</p>
                     </a>
 
                     {/* Android App */}
-                    <a
-                        href="https://play.google.com/store/apps/details?id=com.pmd.userapp"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-green-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)] text-left"
-                    >
-                        <div className="absolute top-6 right-6 p-2 rounded-lg bg-green-500/10 text-green-400 group-hover:scale-110 transition-transform">
-                            <Smartphone className="h-6 w-6" />
+                    <div className="group relative p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-green-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)] text-left flex flex-col justify-between min-h-[320px]">
+                        <div>
+                            <div className="absolute top-6 right-6 p-2 rounded-xl bg-white/5 group-hover:scale-110 transition-transform border border-white/5 shadow-inner">
+                                <img src="/logo.png" alt="Android App" className="h-10 w-10 object-contain shadow-2xl" />
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2 text-white flex items-center gap-2">
+                                <Smartphone className="h-6 w-6 text-green-400" />
+                                Android App
+                            </h3>
+                            <p className="text-slate-400 text-sm mb-6 max-w-[80%]">
+                                Official mobile app for offline access, instant notifications, and enhanced search features.
+                            </p>
                         </div>
-                        <h3 className="text-2xl font-bold mb-2 text-white">Android App</h3>
-                        <p className="text-slate-400 text-sm">Download the official mobile app for offline access and enhanced features.</p>
-                        <span className="inline-block mt-4 text-xs font-semibold text-green-500 bg-green-500/10 px-2 py-1 rounded">Available on Play Store</span>
-                    </a>
+
+                        <div className="space-y-3">
+                            {config?.apkUrl ? (
+                                <a
+                                    href={getDownloadUrl(config.apkUrl)}
+                                    className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+                                >
+                                    <Download className="h-5 w-5" />
+                                    Download APK {config.apkVersion ? `v${config.apkVersion}` : ""}
+                                    {config.apkSize && <span className="text-[10px] opacity-70 ml-1">({config.apkSize})</span>}
+                                </a>
+                            ) : (
+                                <div className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-800 border border-slate-700/50 text-slate-500 text-sm font-bold opacity-75">
+                                    <Download className="h-5 w-5" />
+                                    APK Coming Soon
+                                </div>
+                            )}
+
+                            <a
+                                href={playStoreUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition-all text-xs font-bold"
+                            >
+                                <img src="https://www.gstatic.com/android/market_images/web/play_logo.png" className="h-4 w-4 grayscale saturate-0 brightness-200 group-hover:grayscale-0 transition-all" alt="Play Store" />
+                                View on Play Store
+                            </a>
+                        </div>
+                    </div>
 
                     {/* Admin Panel */}
                     <Link
@@ -77,7 +127,7 @@ export default function LandingPage() {
                                 <LayoutDashboard className="h-6 w-6" />
                             </div>
                             <div className="text-left">
-                                <h3 className="text-lg font-bold text-white">Administrative Panel</h3>
+                                <h3 className="text-lg font-bold text-white">Admin App</h3>
                                 <p className="text-slate-400 text-sm">Restricted access for authorized personnel only.</p>
                             </div>
                         </div>

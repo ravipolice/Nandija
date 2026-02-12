@@ -8,7 +8,7 @@ export function MobileTopBar() {
         <div className="md:hidden w-full bg-gradient-to-r from-[#00BCD4] to-[#0097A7] shadow-md flex items-center px-4 pt-safe-top min-h-[calc(3.5rem+env(safe-area-inset-top))] justify-between z-40 relative sticky top-0">
             <div className="flex items-center gap-2 pt-1">
                 {/* Title */}
-                <h1 className="text-white font-bold text-lg tracking-wide">PMD Admin</h1>
+                <h1 className="text-white font-bold text-lg tracking-wide">Nandija Admin</h1>
             </div>
 
             <div className="flex items-center gap-4">

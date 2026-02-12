@@ -3,7 +3,7 @@
     "rules": "firestore.rules"
   },
   "apphosting": {
-    "backendId": "pmd-admin",
+    "backendId": "nandija",
     "rootDir": "/",
     "ignore": [
       "node_modules",

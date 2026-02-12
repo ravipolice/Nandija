@@ -5,6 +5,7 @@ import { User } from "firebase/auth";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/config";
 import { Employee } from "@/lib/firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -40,8 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user) {
           // Fetch employee data to check role
           try {
-            // Dynamic import of firestore functions to avoid "window undefined" issues if any
-            const { collection, query, where, getDocs } = await import("firebase/firestore");
 
             if (!db) {
               console.warn("Firestore not initialized for auth check");

@@ -132,6 +132,7 @@ export interface PendingRegistration {
   landline?: string;
   landline2?: string;
   photoUrl?: string;
+  firebaseUid?: string;
   status?: "pending" | "approved" | "rejected";
   createdAt?: Timestamp;
   viewedByAdmin?: boolean;
@@ -189,6 +190,15 @@ export interface UsefulLink {
   apkUrl?: string;
   iconUrl?: string;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface AppConfig {
+  id?: string;
+  playStoreUrl?: string;
+  apkUrl?: string;
+  apkSize?: string;
+  apkVersion?: string;
   updatedAt?: Timestamp;
 }
 
@@ -858,6 +868,7 @@ export const approveRegistration = async (
     landline: registration.landline,
     landline2: registration.landline2,
     photoUrl: registration.photoUrl,
+    firebaseUid: registration.firebaseUid,
   });
 
   // CRITICAL: Delete ALL pending registrations for this KGID to clear duplicates

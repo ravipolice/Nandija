@@ -31,12 +31,14 @@ import {
     UNIT_HQ_VALUE,
     STATE_INT_SECTIONS,
 } from "@/lib/constants";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 import { Suspense } from "react";
 
 function RegisterPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user: authUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -260,6 +262,7 @@ function RegisterPageContent() {
             if (!formData.name) throw new Error("Name is required");
             if (!formData.email) throw new Error("Email is required");
             if (!formData.mobile1 || formData.mobile1.length !== 10) throw new Error("Valid Mobile 1 is required");
+            if (!formData.unit) throw new Error("Unit is required");
             if (!formData.rank) throw new Error("Rank is required");
 
             const selectedUnit = units.find(u => u.name === formData.unit);
@@ -326,6 +329,7 @@ function RegisterPageContent() {
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
                 photoUrl: photoUrl || undefined,
+                firebaseUid: authUser?.uid || undefined,
             });
 
             setSuccess(true);
@@ -503,6 +507,26 @@ function RegisterPageContent() {
                         </div>
                     </div>
 
+                    {/* POSTING - Unit, District, Station */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="sm:col-span-3">
+                            <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit *</label>
+                            <select
+                                name="unit"
+                                id="unit"
+                                required
+                                value={formData.unit}
+                                onChange={handleChange}
+                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
+                            >
+                                <option value="" className="text-gray-500">Select Unit</option>
+                                {units.map((u) => (
+                                    <option key={u.id} value={u.name} className="text-gray-900">{u.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
                     {/* IDENTITY - KGID, Rank, Metal No */}
                     <div className={`grid grid-cols-1 gap-4 ${isMetalNumberRequired ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
                         {formData.unit !== "IPS" && (
@@ -564,38 +588,32 @@ function RegisterPageContent() {
                         )}
                     </div>
 
-                    {/* POSTING - Unit, District, Station */}
+                    {/* POSTING - District, Station */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div className="sm:col-span-3">
-                            <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit (Optional)</label>
-                            <select
-                                name="unit"
-                                id="unit"
-                                value={formData.unit}
-                                onChange={handleChange}
-                                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
-                            >
-                                <option value="" className="text-gray-500">Select Unit</option>
-                                {units.map((u) => (
-                                    <option key={u.id} value={u.name} className="text-gray-900">{u.name}</option>
-                                ))}
-                            </select>
-                        </div>
 
                         {(() => {
                             const selectedUnit = units.find(u => u.name === formData.unit);
                             const mappingType = selectedUnit?.mappingType || "all";
-                            const hideDistrict = mappingType === "none" || isSpecialUnit;
+                            const hideDistrict = mappingType === "none";
                             const isBattalion = selectedUnit?.mappedAreaType === "BATTALION";
                             const isDistrictLevel = selectedUnit?.isDistrictLevel || false;
                             const isHighRanking = HIGH_RANKING_OFFICERS.includes(formData.rank);
                             const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
                             const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
-                            const isStateScope = selectedUnit?.scopes?.includes("state") || selectedUnit?.scopes?.includes("hq") || false;
+
+                            // Check for various forms of district scope
+                            const hasDistrictScope = selectedUnit?.scopes?.includes("district") ||
+                                selectedUnit?.scopes?.includes("district_stations") ||
+                                selectedUnit?.isDistrictLevel || false;
+
+                            const isStateScope = selectedUnit?.scopes?.includes("state") ||
+                                selectedUnit?.scopes?.includes("hq") ||
+                                selectedUnit?.isHqLevel || false;
 
                             if (isHighRanking || hideDistrict) return null;
 
-                            let availableDistricts = [...districts];
+                            // 1. Determine Available Districts
+                            let availableDistricts: District[] = [];
                             const mappedIds = selectedUnit?.mappedAreaIds || selectedUnit?.mappedDistricts || [];
 
                             if (mappingType === "single" || mappingType === "subset" || mappingType === "commissionerate") {
@@ -605,37 +623,75 @@ function RegisterPageContent() {
                                     } else {
                                         availableDistricts = districts.filter(d => mappedIds.includes(d.name));
                                     }
+                                } else {
+                                    // Fallback if no specific mappings defined but mappingType implies subset
+                                    availableDistricts = [...districts];
                                 }
+                            } else {
+                                // mappingType "all", "state" or anything else
+                                availableDistricts = [...districts];
                             }
 
-                            // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
-                            const isHqLevel = selectedUnit?.isHqLevel || false;
-                            const hasSections = unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0) || (isDistrictLevel && unitSections.length > 0);
-                            const showUnitHq = (isStateScope) || (hasSections) || isHqLevel;
-
-                            if (showUnitHq) {
+                            // Ensure "HQ" is included for HQ-level units or units with HQ scope
+                            if (isStateScope || unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0)) {
                                 const alreadyHasHq = availableDistricts.some(d =>
-                                    (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.value || "").match(/^(HQ|UNIT_HQ)$/i)
+                                    (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.id === "UNIT_HQ")
                                 );
                                 if (!alreadyHasHq) {
                                     availableDistricts = [{ id: "UNIT_HQ", name: "HQ", value: UNIT_HQ_VALUE } as District, ...availableDistricts];
                                 }
                             }
 
-                            // Sort Mapped Districts with HQ First
-                            availableDistricts = availableDistricts.sort((a, b) => {
-                                const isHqA = (a.name || "").match(/^(HQ|UNIT_HQ)$/i) || (a.value || "").match(/^(HQ|UNIT_HQ)$/i);
-                                const isHqB = (b.name || "").match(/^(HQ|UNIT_HQ)$/i) || (b.value || "").match(/^(HQ|UNIT_HQ)$/i);
+                            // Sort: HQ first, then alphabetical
+                            availableDistricts.sort((a, b) => {
+                                const isHqA = (a.name || "").match(/^(HQ|UNIT_HQ)$/i) || (a.id === "UNIT_HQ");
+                                const isHqB = (b.name || "").match(/^(HQ|UNIT_HQ)$/i) || (b.id === "UNIT_HQ");
                                 if (isHqA && !isHqB) return -1;
                                 if (!isHqA && isHqB) return 1;
                                 return (a.name || "").localeCompare(b.name || "");
                             });
 
+                            // 2. Determine Filtered Stations
+                            const effectiveSections = unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : []);
+                            const isPoliceStationRank = POLICE_STATION_RANKS.includes(formData.rank.toUpperCase()) ||
+                                (rankObj && POLICE_STATION_RANKS.includes((rankObj.rank_id || "").toUpperCase()));
+
+                            // Station Resolution Logic (Matching CommonEmployeeForm.kt)
+                            let availableStations: string[] = [];
+                            if (effectiveSections.length > 0) {
+                                availableStations = effectiveSections;
+                            } else if (formData.district) {
+                                // 1. Start with all stations for this district
+                                let baseStations = stations.map(s => s.name);
+
+                                // 2. Apply Keyword Filter ONLY IF NOT in district scope (matched with Android logic)
+                                const keyword = selectedUnit?.stationKeyword;
+                                if (keyword && keyword.trim() && !hasDistrictScope) {
+                                    baseStations = baseStations.filter(s =>
+                                        s.toUpperCase().includes(keyword.toUpperCase())
+                                    );
+                                }
+
+                                // 3. Filter "PS" stations for non-police ranks (Matching Android logic)
+                                if (isPoliceStationRank) {
+                                    availableStations = baseStations;
+                                } else {
+                                    availableStations = baseStations.filter(s => !s.toUpperCase().endsWith(" PS"));
+                                }
+                            }
+
+                            // Add "Others" option if list is not empty or it's an HQ-level unit where manual entries are expected
+                            if (availableStations.length > 0 || (effectiveSections.length > 0 || formData.district === UNIT_HQ_VALUE)) {
+                                availableStations = Array.from(new Set([...availableStations, "Others"]));
+                            }
+
+                            const hideStationField = isMinisterial || (isDistrictLevel && effectiveSections.length === 0);
+
                             return (
                                 <>
                                     <div className={mappingType === "single" ? "sm:col-span-2" : ""}>
                                         <label htmlFor="district" className="block text-sm font-medium text-gray-700">
-                                            {formData.district === UNIT_HQ_VALUE ? "HQ" : (isBattalion || isKSRP ? "Battalion *" : "District / HQ *")}
+                                            {isBattalion ? "Battalion *" : "District / HQ *"}
                                         </label>
                                         <select
                                             name="district"
@@ -645,17 +701,17 @@ function RegisterPageContent() {
                                             onChange={handleChange}
                                             className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-gray-900"
                                         >
-                                            <option value="" className="text-gray-500">{isBattalion || isKSRP ? "Select Battalion" : "Select District / HQ"}</option>
+                                            <option value="" className="text-gray-500">{isBattalion ? "Select Battalion" : "Select District / HQ"}</option>
                                             {availableDistricts.map((d) => (
                                                 <option key={d.id} value={d.value || d.name} className="text-gray-900">{d.name}</option>
                                             ))}
                                         </select>
                                     </div>
 
-                                    {!(isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) && (
+                                    {!hideStationField && (
                                         <div>
                                             <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-                                                {unitSections.length > 0 ? "Section *" : "Station / Section *"}
+                                                {effectiveSections.length > 0 ? "Section *" : "Station / Section *"}
                                             </label>
                                             <select
                                                 name="station"
@@ -663,37 +719,15 @@ function RegisterPageContent() {
                                                 required
                                                 value={formData.station}
                                                 onChange={handleChange}
-                                                disabled={!formData.district && !hasSections}
+                                                disabled={!formData.district && effectiveSections.length === 0}
                                                 className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
                                             >
                                                 <option value="" className="text-gray-500">
-                                                    {(unitSections.length > 0 && (isDistrictLevel || formData.district === UNIT_HQ_VALUE)) ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
+                                                    {effectiveSections.length > 0 ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
                                                 </option>
-                                                {(hasSections && (isDistrictLevel || isSpecialUnit || formData.district === UNIT_HQ_VALUE || formData.district)) ? (
-                                                    [
-                                                        ...(unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : [])),
-                                                        "Others"
-                                                    ].map((section) => (
-                                                        <option key={section} value={section} className="text-gray-900">{section}</option>
-                                                    ))
-                                                ) : (
-                                                    stations.filter((s) => {
-                                                        const stationName = s.name.toUpperCase();
-                                                        if (POLICE_STATION_RANKS.includes(formData.rank.toUpperCase())) {
-                                                            if (!stationName.includes("PS")) return false;
-                                                        }
-
-                                                        // Dynamic Station Keyword Filtering (DCRB, ESCOM, etc)
-                                                        const keyword = selectedUnit?.stationKeyword;
-                                                        if (keyword) {
-                                                            if (!stationName.includes(keyword.toUpperCase())) return false;
-                                                        }
-
-                                                        return true;
-                                                    }).map((s) => (
-                                                        <option key={s.id || s.name} value={s.name} className="text-gray-900">{s.name}</option>
-                                                    ))
-                                                )}
+                                                {availableStations.map((s) => (
+                                                    <option key={s} value={s} className="text-gray-900">{s}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     )}

@@ -3,15 +3,19 @@
 import { useState, useEffect } from "react";
 import { signInWithGoogle, signInWithGoogleRedirect, getGoogleRedirectResult } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { loginWithPin, requestOtp, verifyOtpCode, resetPin } from "@/lib/auth-helpers";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPinLogin, setShowPinLogin] = useState(true);
+  const [showPinLogin, setShowPinLogin] = useState(false); // Default to Google login to avoid confusion
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams ? searchParams.get("redirect") : null;
   const [showUnregisteredPopup, setShowUnregisteredPopup] = useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = useState("");
 
@@ -71,15 +75,20 @@ export default function LoginPage() {
 
     if (!isAdmin) {
       // Check admins collection as fallback
-      const adminsRef = collection(db, "admins");
-      const qAdmin = query(adminsRef, where("email", "==", user.email), limit(1));
-      const adminSnapshot = await getDocs(qAdmin);
-      if (!adminSnapshot.empty) {
-        const adminData = adminSnapshot.docs[0].data();
-        if (adminData.isActive) {
-          isFound = true;
-          isAdmin = true;
+      try {
+        const adminsRef = collection(db, "admins");
+        const qAdmin = query(adminsRef, where("email", "==", user.email), limit(1));
+        const adminSnapshot = await getDocs(qAdmin);
+        if (!adminSnapshot.empty) {
+          const adminData = adminSnapshot.docs[0].data();
+          if (adminData.isActive) {
+            isFound = true;
+            isAdmin = true;
+          }
         }
+      } catch (adminErr) {
+        console.warn("Could not check admin status (likely not an admin):", adminErr);
+        // If query fails, assume not an admin and continue
       }
     }
 
@@ -88,30 +97,36 @@ export default function LoginPage() {
       setUnregisteredEmail(user.email || "");
       setShowUnregisteredPopup(true);
     } else {
-      // Redirect based on role
+      // Redirect based on role and intent
       if (isAdmin) {
-        router.push("/admin");
+        // If they specifically requested a path (e.g. /directory), let them go there
+        if (redirectPath === "/directory") {
+          router.push("/directory");
+        } else {
+          router.push("/admin");
+        }
       } else {
-        router.push("/user");
+        router.push("/directory");
       }
     }
   };
 
   useEffect(() => {
     const checkRedirect = async () => {
+      console.log("Checking Google redirect result...");
       try {
         const user = await getGoogleRedirectResult();
         if (user) {
+          console.log("Found redirect user:", user.email);
           setLoading(true);
           await processUserLogin(user);
           setLoading(false);
+        } else {
+          console.log("No redirect user found.");
         }
       } catch (err: any) {
         console.error("Redirect Login Error:", err);
-        // Only show error if it's not a permission error (which happens on initial load)
-        if (!err.message?.includes("Missing or insufficient permissions")) {
-          setError(err.message || "Failed to sign in with Google");
-        }
+        setError(err.message || "Failed to sign in with Google");
         setLoading(false);
       }
     };
@@ -119,11 +134,13 @@ export default function LoginPage() {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    console.log("Starting Google Sign-In popup...");
     setLoading(true);
     setError(null);
     try {
       const user = await signInWithGoogle();
-      if (!user) throw new Error("Google Sign-In failed");
+      if (!user) throw new Error("Google Sign-In failed: No user object returned");
+      console.log("Google Sign-In success:", user.email);
       await processUserLogin(user);
     } catch (err: any) {
       console.error("Google Sign In Error:", err);
@@ -134,17 +151,13 @@ export default function LoginPage() {
           await signInWithGoogleRedirect();
           return; // Redirecting, so stop here
         } catch (redirectErr: any) {
+          console.error("Google Redirect Error:", redirectErr);
           setError(redirectErr.message || "Failed to sign in with Google (Redirect)");
+          setLoading(false);
           return;
         }
       }
       setError(err.message || "Failed to sign in with Google");
-    } finally {
-      // Only stop loading if we are NOT redirecting (redirecting unmounts or navigates away)
-      // preventing flash of error/content
-      // Actually, we can just set loading false, if redirect happens page unloads.
-      // But if fallback verification happens, we might want to keep it true?
-      // For now, simple is best.
       setLoading(false);
     }
   };
@@ -266,7 +279,7 @@ export default function LoginPage() {
       />
 
       {/* Main Split Card */}
-      <div className="relative z-10 w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid md:grid-cols-2 animate-fade-in-up min-h-[600px]">
+      <div className="relative z-10 w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid md:grid-cols-2 min-h-[600px]">
 
         {/* LEFT SIDE: Branding (Dark to support Yellow text) */}
         <div className="relative flex flex-col items-center justify-center p-8 md:p-12 text-center bg-slate-900/90 text-white">
@@ -283,7 +296,7 @@ export default function LoginPage() {
           <div className="w-16 h-1 bg-white/20 rounded-full mb-8" />
 
           {/* Disclaimer */}
-          <div className="animate-pulse-slow max-w-sm">
+          <div className="max-w-sm">
             <p className="text-red-400 font-semibold text-lg bg-black/30 backdrop-blur-sm p-4 rounded-xl border border-red-500/20 shadow-inner">
               This app is exclusively for Karnataka State Police Department personnel.
             </p>
@@ -638,5 +651,20 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-lg font-medium animate-pulse">Initializing Portal...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

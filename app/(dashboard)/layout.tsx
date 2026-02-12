@@ -22,12 +22,12 @@ export default function DashboardLayout({
 
     if (!loading) {
       if (!user) {
-        router.push("/login");
+        router.push("/login?redirect=/admin");
       } else if (!isAdmin) {
         if (employeeData) {
-          router.push("/user");
+          router.push("/directory");
         } else {
-          router.push("/login");
+          router.push("/login?redirect=/admin");
         }
       }
     }

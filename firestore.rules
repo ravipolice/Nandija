@@ -150,8 +150,15 @@ service cloud.firestore {
        Supports both email and UID as document ID
     ============================================================ */
     match /admins/{adminId} {
+      // Allow user to check their own admin status
+      allow get: if isAuthenticated() && (adminId == request.auth.uid || adminId == request.auth.token.email);
+      allow list: if isAuthenticated() && (
+        request.query.limit <= 1 && 
+        (request.query.filters.size() == 0 || (request.query.filters[0].op == '==' && (request.query.filters[0].value == request.auth.token.email || request.query.filters[0].value == request.auth.uid)))
+      );
 
-      allow get, list: if isAdmin();
+      // Full access for existing admins
+      allow read: if isAdmin();
 
       // Create admin document (can use email or UID as document ID)
       allow create: if isAdmin()
@@ -370,6 +377,14 @@ service cloud.firestore {
             && (request.resource.data.remarks == null || request.resource.data.remarks is string)
             && (request.resource.data.createdAt == null || request.resource.data.createdAt is timestamp)
             && (request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp);
+    }
+
+    /* ============================================================
+       🔹 APP CONFIG (Public Read, Admin Write)
+    ============================================================ */
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
   }

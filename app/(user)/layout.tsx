@@ -15,7 +15,7 @@ export default function UserLayout({
     children: React.ReactNode;
 }) {
     // ... hooks ...
-    const { user, loading, employeeData } = useAuth();
+    const { user, loading, isAdmin, employeeData } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -23,11 +23,11 @@ export default function UserLayout({
 
         if (!loading) {
             if (!user) {
-                router.push("/login");
-            } else if (!employeeData) {
-                // User is authenticated in Firebase but not in our database
+                router.push("/login?redirect=/directory");
+            } else if (!employeeData && !isAdmin) {
+                // User is authenticated in Firebase but not in our database (and not an admin)
                 // Force logout and redirect to login
-                signOut().then(() => router.push("/login"));
+                signOut().then(() => router.push("/login?redirect=/directory"));
             }
         }
     }, [user, loading, employeeData, router]);
