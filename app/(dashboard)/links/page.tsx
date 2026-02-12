@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { getUsefulLinks, createUsefulLink, deleteUsefulLink, UsefulLink } from "@/lib/firebase/firestore";
 import { getDownloadUrl } from "@/lib/services/documents.service";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Timestamp } from "firebase/firestore";
 import { Plus, ExternalLink, Upload, Link as LinkIcon, Trash2 } from "lucide-react";
 
 type UploadMethod = "url" | "file";
 
 export default function LinksPage() {
+  const { user } = useAuth();
   const [links, setLinks] = useState<UsefulLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -90,7 +92,7 @@ export default function LinksPage() {
             mimeType: "application/vnd.android.package-archive",
             category: "Useful Links",
             description: `APK for ${formData.name}`,
-            userEmail: "admin@pmd.com",
+            userEmail: user?.email || "admin@pmd.com",
           }),
         });
 
@@ -118,7 +120,7 @@ export default function LinksPage() {
             mimeType: iconFile.type || "image/jpeg",
             category: "Useful Links",
             description: `Icon for ${formData.name}`,
-            userEmail: "admin@pmd.com",
+            userEmail: user?.email || "admin@pmd.com",
           }),
         });
 

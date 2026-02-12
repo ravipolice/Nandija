@@ -31,12 +31,12 @@ export async function POST(request: Request) {
     const token = getSecretToken();
     // Gallery Apps Script expects action=upload or uploadgallery
     const url = `${GALLERY_API_URL}?action=upload&token=${encodeURIComponent(token)}`;
-    
+
     console.log("Gallery Upload API Route: Uploading image:", title || "Untitled");
     console.log("Gallery Upload API Route: File size (base64):", fileBase64.length, "characters");
     console.log("Gallery Upload API Route: MIME type:", mimeType);
     console.log("Gallery Upload API Route: Token present:", token ? "Yes" : "No");
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         mimeType: mimeType || "image/jpeg",
         category: category || "Gallery",
         description: description || "",
-        userEmail: userEmail || "admin@pmd.com",
+        userEmail: userEmail || "",
         token: token, // Include token in body as well
       }),
       cache: "no-store",

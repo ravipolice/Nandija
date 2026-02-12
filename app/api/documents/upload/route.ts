@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     // Apps Script expects action in query parameter or body
     // Token should be in both query parameter AND body (for compatibility)
     const url = `${DOCUMENTS_API_URL}?action=upload&token=${encodeURIComponent(token)}`;
-    
+
     if (externalUrl) {
       // Firebase upload - register URL in Google Sheet
       console.log("📝 Documents API Route: Registering Firebase document in Google Sheet");
@@ -48,16 +48,16 @@ export async function POST(request: Request) {
       console.log("📤 Documents API Route: MIME type:", mimeType);
     }
     console.log("📝 Documents API Route: Token present:", token ? "Yes" : "No");
-    
+
     const requestBody: any = {
       action: "upload",
       title: title,
-      category: category || "",
+      category: category || "Gallery",
       description: description || "",
-      userEmail: userEmail || "admin@pmd.com",
+      userEmail: userEmail || "",
       token: token, // Include token in body as well (verifyToken checks both)
     };
-    
+
     // Include either fileBase64 (for Drive upload) or externalUrl (for Firebase registration)
     if (externalUrl) {
       requestBody.externalUrl = externalUrl;
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       requestBody.fileBase64 = fileBase64;
       requestBody.mimeType = mimeType || "application/pdf";
     }
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers: {

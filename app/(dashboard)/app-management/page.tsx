@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { getAppConfig, updateAppConfig, AppConfig } from "@/lib/firebase/app-config";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Download, Save, Smartphone, Upload, ExternalLink } from "lucide-react";
 
 export default function AppManagementPage() {
+    const { user } = useAuth();
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -80,7 +82,7 @@ export default function AppManagementPage() {
                         mimeType: "application/vnd.android.package-archive",
                         category: "Releases",
                         description: `Official Android APK Release v${formData.apkVersion}`,
-                        userEmail: "admin@pmd.com",
+                        userEmail: user?.email || "admin@pmd.com",
                     }),
                 });
 
