@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Shield, Lock, FileText, LayoutDashboard, Smartphone, Download } from "lucide-react";
+import { Shield, Lock, FileText, LayoutDashboard, Smartphone, Download, Keyboard } from "lucide-react";
 import { getAppConfig, AppConfig } from "@/lib/firebase/app-config";
 import { getDownloadUrl } from "@/lib/services/documents.service";
 
@@ -69,7 +69,7 @@ export default function LandingPage() {
                         <div className="absolute top-6 right-6 p-1.5 rounded-lg bg-white/10 group-hover:scale-110 transition-transform border border-white/5 shadow-inner">
                             <img src="/logo.png" alt="User Portal" className="h-8 w-8 object-contain" />
                         </div>
-                        <h3 className="text-2xl font-bold mb-2 text-white">User App</h3>
+                        <h3 className="text-2xl font-bold mb-2 text-white">PMD User App</h3>
                         <p className="text-slate-400 text-sm">Access the directory from any browser. Search officers, stations, and units.</p>
                     </a>
 
@@ -81,7 +81,7 @@ export default function LandingPage() {
                             </div>
                             <h3 className="text-2xl font-bold mb-2 text-white flex items-center gap-2">
                                 <Smartphone className="h-6 w-6 text-green-400" />
-                                Android App
+                                PMD Android App
                             </h3>
                             <p className="text-slate-400 text-sm mb-6 max-w-[80%]">
                                 Official mobile app for offline access, instant notifications, and enhanced search features.
@@ -117,24 +117,35 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Admin Panel */}
-                    <Link
-                        href="/admin"
-                        className="md:col-span-2 group relative p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-all flex items-center justify-between"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
-                                <LayoutDashboard className="h-6 w-6" />
+                    {/* Nudi Converter App */}
+                    <div className="md:col-span-2 group relative p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-all flex flex-col md:flex-row items-center justify-between hover:border-yellow-500/50 hover:shadow-[0_0_40px_-10px_rgba(234,179,8,0.3)]">
+                        <div className="flex items-center gap-4 mb-4 md:mb-0">
+                            <div className="p-3 rounded-lg bg-yellow-500/10 text-yellow-400">
+                                <Keyboard className="h-6 w-6" />
                             </div>
                             <div className="text-left">
-                                <h3 className="text-lg font-bold text-white">Admin App</h3>
-                                <p className="text-slate-400 text-sm">Restricted access for authorized personnel only.</p>
+                                <h3 className="text-lg font-bold text-white">Nudi Android App</h3>
+                                <p className="text-slate-400 text-sm">Ascii to Unicode And Unicode to AScii converter</p>
                             </div>
                         </div>
-                        <div className="hidden md:block px-4 py-2 rounded-full bg-slate-700 text-sm font-medium group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                            Login
+
+                        <div className="flex gap-2 w-full md:w-auto">
+                            {config?.nudiApkUrl ? (
+                                <a
+                                    href={getDownloadUrl(config.nudiApkUrl)}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white transition-all text-sm font-bold shadow-lg shadow-yellow-500/20"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download APK {config.nudiApkVersion ? `v${config.nudiApkVersion}` : ""}
+                                </a>
+                            ) : (
+                                <div className="px-4 py-2 rounded-xl bg-slate-700 text-slate-400 text-xs font-bold">
+                                    APK Coming Soon
+                                </div>
+                            )}
                         </div>
-                    </Link>
+                    </div>
+
 
                 </div>
 

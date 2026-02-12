@@ -8,6 +8,9 @@ export interface AppConfig {
     apkUrl?: string;
     apkSize?: string;
     apkVersion?: string;
+    nudiApkUrl?: string;
+    nudiApkSize?: string;
+    nudiApkVersion?: string;
     updatedAt?: Timestamp;
 }
 

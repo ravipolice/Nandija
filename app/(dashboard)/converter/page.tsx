@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
 import Tesseract from "tesseract.js";
-import { Upload, FileText, Download, AlertCircle, FileSpreadsheet, Image as ImageIcon, RotateCw, RotateCcw, X } from "lucide-react";
+import { Upload, FileText, Download, AlertCircle, FileSpreadsheet, RotateCw, RotateCcw, X } from "lucide-react";
 
 // Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 export default function ConverterPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -117,19 +117,104 @@ export default function ConverterPage() {
 
             } else if (file.name.endsWith(".pdf")) {
                 const arrayBuffer = await file.arrayBuffer();
-                setProgress("Extracting text from PDF...");
+                setProgress("Extracting text with layout preservation...");
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 extractedRows = [];
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     setProgress(`Processing PDF Page ${i} of ${pdf.numPages}...`);
                     const page = await pdf.getPage(i);
-                    const text = await page.getTextContent();
-                    const lines = text.items.map((item: any) => item.str);
-                    extractedRows.push([`--- Page ${i} ---`]);
-                    extractedRows.push(...lines.map(line => [line]));
+                    const textContent = await page.getTextContent();
+
+                    // define types for our items
+                    type TextItem = { str: string; x: number; y: number; width: number; height: number };
+
+                    // 1. Map items to include simplified coordinates (PDF origin is bottom-left)
+                    const items: TextItem[] = textContent.items
+                        .filter((item: any) => item.str.trim().length > 0) // Filter empty items
+                        .map((item: any) => {
+                            // transform[4] is x, transform[5] is y
+                            const tx = item.transform;
+                            return {
+                                str: item.str,
+                                x: tx[4],
+                                y: tx[5],
+                                width: item.width,
+                                height: item.height
+                            };
+                        });
+
+                    // 2. Group by Y coordinate (Row Detection) with a tolerance
+                    // Since PDF Y grows upwards, we sort descending for visual order
+                    items.sort((a, b) => b.y - a.y);
+
+                    const rows: TextItem[][] = [];
+                    if (items.length > 0) {
+                        let currentRow: TextItem[] = [items[0]];
+                        let currentRowY = items[0].y;
+
+                        for (let j = 1; j < items.length; j++) {
+                            const item = items[j];
+                            // If Y diff is small (e.g., < 5 units), consider same row
+                            if (Math.abs(item.y - currentRowY) < 5) {
+                                currentRow.push(item);
+                            } else {
+                                // New row detected
+                                rows.push(currentRow);
+                                currentRow = [item];
+                                currentRowY = item.y;
+                            }
+                        }
+                        rows.push(currentRow); // Push last row
+                    }
+
+                    // 3. Process each row: Sort by X and detect columns
+                    const pageRows: string[][] = [];
+
+                    // Add Page Header
+                    pageRows.push([`--- Page ${i} ---`]);
+
+                    for (const rowItems of rows) {
+                        // Sort items left-to-right
+                        rowItems.sort((a, b) => a.x - b.x);
+
+                        const rowCells: string[] = [];
+                        if (rowItems.length > 0) {
+                            let currentCellText = rowItems[0].str;
+                            let lastXEnd = rowItems[0].x + rowItems[0].width;
+
+                            for (let k = 1; k < rowItems.length; k++) {
+                                const item = rowItems[k];
+                                const gap = item.x - lastXEnd;
+
+                                // Threshold for new column (e.g., 20 units)
+                                // Adjust this threshold based on typical column spacing
+                                if (gap > 20) {
+                                    rowCells.push(currentCellText);
+                                    currentCellText = item.str;
+                                } else {
+                                    // Same cell, append with space
+                                    currentCellText += " " + item.str;
+                                }
+                                lastXEnd = item.x + item.width;
+                            }
+                            rowCells.push(currentCellText); // Push last cell
+                        }
+                        pageRows.push(rowCells);
+                    }
+
+                    extractedRows.push(...pageRows);
                 }
-                const worksheet = XLSX.utils.aoa_to_sheet(extractedRows);
+
+                // Calculate max columns to ensure valid sheet
+                const maxCols = extractedRows.reduce((max, row) => Math.max(max, row.length), 0);
+                // Pad rows so they all have same length (optional but good for consistency)
+                const paddedRows = extractedRows.map(row => {
+                    while (row.length < maxCols) row.push("");
+                    return row;
+                });
+
+                const worksheet = XLSX.utils.aoa_to_sheet(paddedRows);
                 newWorkbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(newWorkbook, worksheet, "PDF Data");
 
