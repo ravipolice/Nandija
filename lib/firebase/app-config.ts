@@ -12,6 +12,7 @@ export interface AppConfig {
     nudiApkSize?: string;
     nudiApkVersion?: string;
     updatedAt?: Timestamp;
+    showLogo?: boolean;
 }
 
 export const getAppConfig = async (): Promise<AppConfig | null> => {

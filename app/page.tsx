@@ -64,23 +64,35 @@ export default function LandingPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* User Web App */}
-                            <a
-                                href="/directory"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group relative p-6 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] text-left"
+                            <div
+                                className="group relative p-6 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] text-left cursor-pointer"
+                                onClick={() => window.open('/directory', '_blank')}
                             >
-                                <div className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/10 group-hover:scale-110 transition-transform border border-white/5 shadow-inner">
+                                <div
+                                    className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all border border-white/5 shadow-inner z-10 cursor-zoom-in"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setConfig(prev => prev ? { ...prev, showLogo: true } : { showLogo: true } as any);
+                                    }}
+                                >
                                     <img src="/logo.png" alt="User Portal" className="h-6 w-6 object-contain" />
                                 </div>
                                 <h3 className="text-xl font-bold mb-2 text-white">Web Portal</h3>
                                 <p className="text-slate-400 text-sm">Access the directory from any browser. Search officers, stations, and units.</p>
-                            </a>
+                            </div>
 
                             {/* Android App */}
                             <div className="group relative p-6 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 hover:border-green-500/50 transition-all hover:shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)] text-left flex flex-col justify-between min-h-[280px]">
                                 <div>
-                                    <div className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 group-hover:scale-110 transition-transform border border-white/5 shadow-inner">
+                                    <div
+                                        className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 group-hover:scale-110 transition-transform border border-white/5 shadow-inner cursor-zoom-in"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setConfig(prev => prev ? { ...prev, showLogo: true } : { showLogo: true } as any);
+                                        }}
+                                    >
                                         <img src="/logo.png" alt="Android App" className="h-8 w-8 object-contain shadow-2xl" />
                                     </div>
                                     <h3 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
@@ -259,14 +271,35 @@ export default function LandingPage() {
                         <Mail className="h-4 w-4" />
                         Contact Support
                     </button>
-
                 </div>
 
                 <div className="mt-16 pt-8 border-t border-slate-800 w-full max-w-4xl text-slate-600 text-sm">
                     &copy; {new Date().getFullYear()} Ravikumar J, Nandija Tech Group. All rights reserved. developed for KSP.
                 </div>
-
             </main>
+
+            {/* Logo Lightbox Modal */}
+            {config?.showLogo && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={() => setConfig(prev => prev ? { ...prev, showLogo: false } : null)}
+                >
+                    <div className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center">
+                        <button
+                            className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
+                            onClick={() => setConfig(prev => prev ? { ...prev, showLogo: false } : null)}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                        <img
+                            src="/logo.png"
+                            alt="Full Logo"
+                            className="max-w-full max-h-[85vh] object-contain drop-shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
