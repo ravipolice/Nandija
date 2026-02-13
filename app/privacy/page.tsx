@@ -29,7 +29,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <p className="mb-6 text-sm leading-relaxed text-gray-700">
-                    This privacy policy governs your use of the software application <strong>Police Mobile Directory</strong> ("Application") for mobile devices that was created by Ravikumar J.
+                    This privacy policy governs your use of the software application <strong>Police Mobile Directory</strong> ("Application") for mobile devices that was created by Ravikumar J, Nandija Tech Group.
                 </p>
 
                 <Section
@@ -71,7 +71,7 @@ We may disclose User Provided and Automatically Collected Information:
 
                 <Section
                     title="Data Retention Policy, Managing Your Information"
-                    content={`We will retain User Provided data for as long as you use the Application and for a reasonable time thereafter. We will retain Automatically Collected information for up to 24 months and thereafter may store it in aggregate. If you'd like us to delete User Provided Data that you have provided via the Application, please contact us at ravipolice@gmail.com and we will respond in a reasonable time.`}
+                    content={`We will retain User Provided data for as long as you use the Application and for a reasonable time thereafter. We will retain Automatically Collected information for up to 24 months and thereafter may store it in aggregate. If you'd like us to delete User Provided Data that you have provided via the Application, please contact us at noreply.pmdapp@gmail.com and we will respond in a reasonable time.`}
                 />
 
                 <div className="h-8"></div>

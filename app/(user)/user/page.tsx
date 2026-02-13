@@ -19,6 +19,8 @@ import {
 import { Search, X } from "lucide-react";
 import { generateSmartSearchBlob } from "@/lib/searchUtils";
 
+import { useAuth } from "@/components/providers/AuthProvider";
+
 // Extended types for search optimization
 type SearchableOfficer = Officer & { searchBlob: string };
 type SearchableEmployee = Employee & { searchBlob: string };
@@ -43,6 +45,9 @@ export default function DirectoryPage() {
 
     // Loading State
     const [loading, setLoading] = useState(true);
+
+    // Auth
+    const { employeeData } = useAuth();
 
     // Initial Data Fetch
     useEffect(() => {
@@ -201,8 +206,6 @@ export default function DirectoryPage() {
 
     // Filtering Logic
     const filterData = <T extends SearchableOfficer | SearchableEmployee>(data: T[]) => {
-        if (!searchTerm.trim()) return data;
-
         const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
 
         // Helper to calculate relevance score
@@ -212,25 +215,55 @@ export default function DirectoryPage() {
             const id = ((item as any).kgid || (item as any).agid || "").toLowerCase();
             const rank = (item.rank || "").toLowerCase();
 
-            terms.forEach(term => {
-                // Name priority
-                if (name === term) score += 100;
-                else if (name.startsWith(term)) score += 75;
-                else if (name.includes(term)) score += 50;
+            // 1. Text Search Relevance
+            if (terms.length > 0) {
+                terms.forEach(term => {
+                    // Name priority
+                    if (name === term) score += 100;
+                    else if (name.startsWith(term)) score += 75;
+                    else if (name.includes(term)) score += 50;
 
-                // ID priority
-                if (id === term) score += 95;
-                else if (id.startsWith(term)) score += 85;
-                else if (id.includes(term)) score += 60;
+                    // ID priority
+                    if (id === term) score += 95;
+                    else if (id.startsWith(term)) score += 85;
+                    else if (id.includes(term)) score += 60;
 
-                // Rank priority
-                if (rank === term) score += 40;
-                else if (rank.startsWith(term)) score += 30;
-            });
+                    // Rank priority
+                    if (rank === term) score += 40;
+                    else if (rank.startsWith(term)) score += 30;
+                });
+            }
+
+            // 2. Unit/District/Station Relevance (User Context - Proximity Sort)
+            if (employeeData) {
+                // Priority 3: Same Unit (+1000)
+                if (item.unit === employeeData.unit) score += 1000;
+
+                // Priority 2: Same District/HQ (+2000)
+                if (item.district === employeeData.district) score += 2000;
+
+                // Priority 1: Same Station/Section (+4000)
+                const itemStation = (item as any).station || (item as any).office;
+                if (itemStation && employeeData.station && itemStation === employeeData.station) {
+                    score += 4000;
+                }
+            }
+
             return score;
         };
 
         const filtered = data.filter(item => {
+            if (!searchTerm.trim()) {
+                // If no search term, we still want to filter by dropdowns if they are selected
+                const matchesUnit = selectedUnit ? item.unit === selectedUnit : true;
+                const matchesDistrict = (showDistrict && selectedDistrict) ? item.district === selectedDistrict : true;
+                const itemStation = (item as any).station || (item as any).office;
+                const matchesStation = (showStation && selectedStation) ? itemStation === selectedStation : true;
+                const matchesRank = selectedRank ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank))) : true;
+
+                return matchesUnit && matchesDistrict && matchesStation && matchesRank;
+            }
+
             // 1. Use the pre-calculated Smart Search Blob
             // This enables fuzzy matching (e.g. "bmravi" matches "B.M. Ravi")
             const matchesSearch = terms.every(term => item.searchBlob.includes(term));
@@ -238,29 +271,23 @@ export default function DirectoryPage() {
             if (!matchesSearch) return false;
 
             // 2. Apply standard Dropdown Filters
-            // Note: Global search (when typing) overrides dropdown filters to ensure results are found across all units.
             const isSearching = searchTerm.trim().length > 0;
-
             const matchesUnit = isSearching || (selectedUnit ? item.unit === selectedUnit : true);
-
-            const matchesDistrict = isSearching || ((showDistrict && selectedDistrict)
-                ? item.district === selectedDistrict
-                : true);
-
+            const matchesDistrict = isSearching || ((showDistrict && selectedDistrict) ? item.district === selectedDistrict : true);
             const itemStation = (item as any).station || (item as any).office;
-            const matchesStation = isSearching || ((showStation && selectedStation)
-                ? itemStation === selectedStation
-                : true);
-
-            const matchesRank = isSearching || (selectedRank
-                ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank)))
-                : true);
+            const matchesStation = isSearching || ((showStation && selectedStation) ? itemStation === selectedStation : true);
+            const matchesRank = isSearching || (selectedRank ? (item.rank === selectedRank || (item.rank && item.rank.includes(selectedRank))) : true);
 
             return matchesUnit && matchesDistrict && matchesStation && matchesRank;
         });
 
         // Return sorted results
-        return filtered.sort((a, b) => calculateScore(b) - calculateScore(a));
+        return filtered.sort((a, b) => {
+            const scoreA = calculateScore(a);
+            const scoreB = calculateScore(b);
+            if (scoreA !== scoreB) return scoreB - scoreA;
+            return a.name.localeCompare(b.name);
+        });
     };
 
     const filteredOfficers = filterData(officers);
@@ -411,20 +438,20 @@ export default function DirectoryPage() {
                         <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
                             {/* Blood Group Badge */}
                             {officer.bloodGroup && (
-                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
+                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
                                     {officer.bloodGroup}
                                 </div>
                             )}
 
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{officer.name}</h3>
-                                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">{officer.name}</h3>
+                                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
                                         {officer.rank}
                                     </span>
                                 </div>
                                 {officer.district && (
-                                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                                    <span className="text-sm text-muted-foreground bg-secondary px-2 py-1 rounded">
                                         {officer.district}
                                     </span>
                                 )}
@@ -432,20 +459,26 @@ export default function DirectoryPage() {
 
                             <div className="space-y-2 text-sm text-foreground/80 mt-4">
                                 {officer.office && (
-                                    <div className="flex items-start text-xs text-muted-foreground">
+                                    <div className="flex items-start text-sm text-muted-foreground">
                                         <span className="font-semibold w-16">Office:</span>
                                         <span className="flex-1">{officer.office}</span>
                                     </div>
                                 )}
-                                <div className="flex items-center pt-2 border-t border-dashed border-border mt-3">
-                                    <a href={`tel:${officer.mobile}`} className="flex-1 text-center py-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors font-medium text-sm pointer-events-auto">
-                                        Call
-                                    </a>
-                                    <div className="w-px h-4 bg-border mx-2"></div>
-                                    <a href={`sms:${officer.mobile}`} className="flex-1 text-center py-2 text-green-600 hover:bg-green-50 rounded-md transition-colors font-medium text-sm pointer-events-auto">
-                                        Msg
-                                    </a>
-                                </div>
+                                {officer.mobile ? (
+                                    <div className="flex items-center pt-2 border-t border-dashed border-border mt-3">
+                                        <a href={`tel:${officer.mobile}`} className="flex-1 text-center py-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/30 rounded-md transition-colors font-bold text-xl pointer-events-auto">
+                                            {officer.mobile}
+                                        </a>
+                                        <div className="w-px h-4 bg-border mx-2"></div>
+                                        <a href={`sms:${officer.mobile}`} className="flex-1 text-center py-2 text-green-400 hover:text-green-300 hover:bg-green-950/30 rounded-md transition-colors font-medium text-base pointer-events-auto">
+                                            Msg
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center pt-2 border-t border-dashed border-border mt-3 text-muted-foreground text-sm italic py-2">
+                                        No contact number available
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))
@@ -454,40 +487,47 @@ export default function DirectoryPage() {
                         <div key={emp.id} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
                             {/* Blood Group Badge */}
                             {emp.bloodGroup && (
-                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
+                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
                                     {emp.bloodGroup}
                                 </div>
                             )}
 
                             <div className="flex items-start space-x-4">
                                 {emp.photoUrl ? (
-                                    <img src={emp.photoUrl} alt={emp.name} className="h-14 w-14 rounded-full object-cover border-2 border-white shadow-sm" />
+                                    <img src={emp.photoUrl} alt={emp.name} className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm" />
                                 ) : (
-                                    <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-lg shadow-inner">
+                                    <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xl shadow-inner">
                                         {emp.name.charAt(0)}
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{emp.name}</h3>
-                                    <p className="text-sm text-primary font-medium truncate">{emp.displayRank || emp.rank}</p>
-                                    <p className="text-xs text-muted-foreground truncate mt-0.5">{emp.station || emp.district}</p>
+                                    <h3 className="text-xl font-bold text-foreground truncate group-hover:text-primary transition-colors">{emp.name}</h3>
+                                    <p className="text-base text-primary font-medium truncate">{emp.displayRank || emp.rank}</p>
+                                    <p className="text-sm text-muted-foreground truncate mt-0.5">{emp.station || emp.district}</p>
                                 </div>
                             </div>
 
                             <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
-                                <a
-                                    href={`tel:${emp.mobile1}`}
-                                    className="flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary text-foreground/80 py-2 rounded-lg text-xs font-medium transition-colors"
-                                >
-                                    <span>{emp.mobile1}</span>
-                                </a>
+                                {emp.mobile1 && (
+                                    <a
+                                        href={`tel:${emp.mobile1}`}
+                                        className="col-span-1 flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-cyan-950/30 hover:text-cyan-400 text-foreground/80 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        <span className="text-base font-bold">{emp.mobile1}</span>
+                                    </a>
+                                )}
                                 {emp.mobile2 && (
                                     <a
                                         href={`tel:${emp.mobile2}`}
-                                        className="flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary text-foreground/80 py-2 rounded-lg text-xs font-medium transition-colors"
+                                        className="col-span-1 flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-green-950/30 hover:text-green-400 text-foreground/80 py-2 rounded-lg text-sm font-medium transition-colors"
                                     >
-                                        <span>{emp.mobile2}</span>
+                                        <span className="text-base font-bold">{emp.mobile2}</span>
                                     </a>
+                                )}
+                                {(!emp.mobile1 && !emp.mobile2) && (
+                                    <div className="col-span-2 text-center text-muted-foreground text-sm italic py-2">
+                                        No contact number available
+                                    </div>
                                 )}
                             </div>
                         </div>

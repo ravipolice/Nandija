@@ -434,7 +434,7 @@ function LoginContent() {
             {/* Footer Info inside the card for cleaner look */}
             <div className="mt-auto pt-10 text-center">
               <p className="text-xs text-gray-400">
-                Developed By Ravikumar J, AHC, DAR Chikkaballapura
+                Developed By Ravikumar J, Nandija Tech Group
               </p>
               <p className="text-[10px] text-gray-300 mt-1">© {new Date().getFullYear()} Police Mobile Directory</p>
             </div>

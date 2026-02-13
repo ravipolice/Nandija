@@ -20,14 +20,14 @@ export default function ContactPage() {
                     <div className="flex flex-col space-y-2 mt-4">
                         <div className="flex items-center space-x-3">
                             <Mail className="h-5 w-5 text-muted-foreground" />
-                            <a href="mailto:support@policemobiledirectory.com" className="text-blue-600 hover:underline">
-                                support@policemobiledirectory.com
+                            <a href="mailto:noreply.pmdapp@gmail.com" className="text-blue-600 hover:underline">
+                                noreply.pmdapp@gmail.com
                             </a>
                         </div>
                         <div className="flex items-center space-x-3">
                             <Phone className="h-5 w-5 text-muted-foreground" />
-                            <a href="tel:+919876543210" className="text-blue-600 hover:underline">
-                                +91 98765 43210
+                            <a href="tel:+919844610264" className="text-blue-600 hover:underline">
+                                +91 98446 10264
                             </a>
                         </div>
                     </div>
@@ -64,8 +64,7 @@ export default function ContactPage() {
                             <h3 className="font-medium text-foreground mb-3">Developed By</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <p className="font-bold text-foreground">Tech Solutions Team</p>
-                                    <p className="text-sm text-muted-foreground">Lead Developer</p>
+                                    <p className="font-bold text-foreground">Ravikumar J, Nandija Tech Group</p>
                                 </div>
                                 <div className="flex space-x-4 pt-2">
                                     <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
