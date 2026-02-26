@@ -97,6 +97,7 @@ export interface Unit {
   isHqLevel?: boolean; // New: If true, unit exists at HQ level
   stationKeyword?: string; // New: For dynamic filtering (e.g. "DCRB", "ESCOM")
   hideFromRegistration?: boolean; // New: If true, unit is hidden from registration form
+  hiddenFields?: string[]; // New: List of fields to hide for this unit (e.g. "dateOfAppointment", "gender")
   createdAt?: Timestamp;
 }
 
@@ -587,10 +588,10 @@ export const getUnits = async (): Promise<Unit[]> => {
   try {
     const allUnits = await getDocuments<Unit>("units", []);
     return allUnits
-      .filter((u) => u.isActive !== false)
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-  } catch (error) {
-    console.error("Error fetching units:", error);
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error("Error fetching units:", err?.code ?? err?.message ?? error);
     return [];
   }
 };

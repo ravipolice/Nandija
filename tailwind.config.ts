@@ -76,6 +76,21 @@ const config: Config = {
         "gradient-dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
         "gradient-purple-blue": "linear-gradient(135deg, #7e22ce 0%, #3b82f6 100%)",
       },
+      animation: {
+        "gradient-x": "gradient-x 15s ease infinite",
+      },
+      keyframes: {
+        "gradient-x": {
+          "0%, 100%": {
+            "background-size": "200% 200%",
+            "background-position": "left center",
+          },
+          "50%": {
+            "background-size": "200% 200%",
+            "background-position": "right center",
+          },
+        },
+      },
     },
   },
   plugins: [],

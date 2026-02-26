@@ -13,6 +13,7 @@ export interface AppConfig {
     nudiApkVersion?: string;
     updatedAt?: Timestamp;
     showLogo?: boolean;
+    hiddenFields?: string[]; // Global list of hidden fields (e.g. "dateOfBirth", "dateOfAppointment")
 }
 
 export const getAppConfig = async (): Promise<AppConfig | null> => {

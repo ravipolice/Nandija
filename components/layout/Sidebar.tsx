@@ -40,6 +40,7 @@ const navigation = [
   { name: "Gallery", href: "/gallery", icon: ImageIcon },
   { name: "Useful Links", href: "/links", icon: LinkIcon },
   { name: "App Management", href: "/app-management", icon: Smartphone },
+  { name: "Registration Form", href: "/settings/registration-form", icon: FileText }, // using FileText or similar
   { name: "Doc Converter", href: "/converter", icon: FileSpreadsheet },
   { name: "CSV Upload", href: "/upload", icon: Upload },
 ];

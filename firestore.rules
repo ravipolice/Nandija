@@ -16,21 +16,6 @@ service cloud.firestore {
              && request.auth.token.email is string;
     }
 
-    /* ---------- 1️⃣ UID-Based Admin ---------- */
-    function isUidAdmin() {
-      return request.auth.uid != null
-          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true;
-    }
-
-    /* ---------- 2️⃣ Email-Based Admin ---------- */
-    function isEmailAdmin() {
-      return hasAuthEmail()
-          && exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
-          && get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.isActive == true
-          && get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.email == request.auth.token.email;
-    }
-
     /* ---------- 3️⃣ Employee Fallback Admin ---------- */
     function isEmployeeAdmin() {
       return (
@@ -49,8 +34,14 @@ service cloud.firestore {
 
     /* ---------- Final Admin Evaluator ---------- */
     function isAdmin() {
-      return isAuthenticated()
-          && (isUidAdmin() || isEmailAdmin() || isEmployeeAdmin());
+      return isAuthenticated() && (
+        // Check UID document
+        (request.auth.uid != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true) ||
+        // Check Email document
+        (hasAuthEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) && get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.isActive == true) ||
+        // Check Employee record
+        isEmployeeAdmin()
+      );
     }
 
     function isServiceAccount() {
@@ -63,6 +54,19 @@ service cloud.firestore {
       return email.matches('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$');
     }
 
+
+    /* ============================================================
+       🔹 MASTER DATA (Units, Districts, Stations, Ranks)
+    ============================================================ */
+
+    match /units/{unitId} {
+      allow read, write: if true;
+    }
+
+    match /rankMaster/{rank_id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
 
     /* ============================================================
        🔹 OTP CODES
@@ -328,13 +332,7 @@ service cloud.firestore {
     /* ============================================================
        🔹 UNITS (Master Data)
     ============================================================ */
-    match /units/{unitId} {
-      // All authenticated users can read units
-      allow read: if isAuthenticated();
-      
-      // Only admins can create, update, or delete units
-      allow create, update, delete: if isAdmin();
-    }
+    // Moved to top for visibility
 
 
     /* ============================================================
@@ -352,32 +350,7 @@ service cloud.firestore {
     /* ============================================================
        🔹 RANKS (Master Data) - rankMaster collection
     ============================================================ */
-    match /rankMaster/{rank_id} {
-      // All authenticated users can read ranks
-      allow read: if isAuthenticated();
-      
-      // Only admins can create, update, or delete ranks
-      allow create, update, delete: if isAdmin();
-      
-      // Service account can create/update with required fields
-      allow create, update: if isServiceAccount()
-            && request.resource.data.keys().hasAll(['rank_id', 'rank_label', 'staffType', 'category', 'equivalent_rank', 'seniority_order', 'aliases', 'requiresMetalNumber', 'isActive'])
-            && request.resource.data.keys().hasOnly(['rank_id', 'rank_label', 'staffType', 'category', 'equivalent_rank', 'seniority_order', 'aliases', 'requiresMetalNumber', 'isActive', 'remarks', 'createdAt', 'updatedAt'])
-            && request.resource.data.rank_id is string
-            && request.resource.data.rank_id == rank_id  // Document ID must match rank_id field
-            && request.resource.data.rank_label is string
-            && request.resource.data.staffType is string
-            && (request.resource.data.staffType == "POLICE" || request.resource.data.staffType == "MINISTERIAL")
-            && request.resource.data.category is string
-            && request.resource.data.equivalent_rank is string
-            && request.resource.data.seniority_order is int
-            && request.resource.data.aliases is list
-            && request.resource.data.requiresMetalNumber is bool
-            && request.resource.data.isActive is bool
-            && (request.resource.data.remarks == null || request.resource.data.remarks is string)
-            && (request.resource.data.createdAt == null || request.resource.data.createdAt is timestamp)
-            && (request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp);
-    }
+    // Moved to top for visibility
 
     /* ============================================================
        🔹 APP CONFIG (Public Read, Admin Write)
