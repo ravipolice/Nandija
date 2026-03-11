@@ -431,6 +431,23 @@ function LoginContent() {
 
 
 
+            {/* Play Store Link */}
+            <div className="mt-8 flex flex-col items-center">
+              <a
+                href="https://play.google.com/store/apps/details?id=com.pmd.userapp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all border border-slate-200 text-slate-700 font-bold group"
+              >
+                <img 
+                  src="https://www.gstatic.com/android/market_images/web/play_logo.png" 
+                  className="h-5 w-5 grayscale saturate-0 brightness-0 group-hover:grayscale-0 group-hover:saturate-100 transition-all" 
+                  alt="Play Store" 
+                />
+                Download Android App
+              </a>
+            </div>
+
             {/* Footer Info inside the card for cleaner look */}
             <div className="mt-auto pt-10 text-center">
               <p className="text-xs text-gray-400">

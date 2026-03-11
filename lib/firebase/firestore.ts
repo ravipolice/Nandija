@@ -204,6 +204,16 @@ export interface AppConfig {
 }
 
 // Generic CRUD functions
+const sanitizeData = (data: any) => {
+  const payload = { ...data };
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] === undefined) {
+      delete payload[key];
+    }
+  });
+  return payload;
+};
+
 const createDoc = async <T>(
   collectionName: string,
   data: Omit<T, "id">
@@ -211,10 +221,11 @@ const createDoc = async <T>(
   if (typeof window === "undefined" || !db) {
     throw new Error("Firestore not initialized (server-side or not available)");
   }
-  const docRef = await addDoc(collection(db, collectionName), {
+  const cleanData = sanitizeData({
     ...data,
     createdAt: Timestamp.now(),
   });
+  const docRef = await addDoc(collection(db, collectionName), cleanData);
   return docRef.id;
 };
 
@@ -258,10 +269,11 @@ export const updateDocument = async <T>(
     throw new Error("Firestore not initialized (server-side or not available)");
   }
   const docRef = doc(db, collectionName, id);
-  await updateDoc(docRef, {
+  const cleanData = sanitizeData({
     ...data,
     updatedAt: Timestamp.now(),
   });
+  await updateDoc(docRef, cleanData);
 };
 
 export const deleteDocument = async (
@@ -362,12 +374,28 @@ export const createEmployee = async (data: Omit<Employee, "id">): Promise<string
     throw new Error("Firestore not initialized (server-side or not available)");
   }
 
-  // Check if employee with same KGID already exists
-  const existingQuery = query(
-    collection(db, "employees"),
-    where("kgid", "==", data.kgid)
-  );
-  const existingDocs = await getDocs(existingQuery);
+  // Use provided KGID or empty string (disable auto-generation per user request)
+  const kgid = data.kgid?.trim() || "";
+
+  // 1. Check if employee with same KGID already exists
+  let existingDocs: any = { empty: true };
+  if (kgid) {
+    const existingQuery = query(
+      collection(db, "employees"),
+      where("kgid", "==", kgid)
+    );
+    existingDocs = await getDocs(existingQuery);
+  }
+
+  // 2. Secondary Check: If no KGID match (or KGID is empty) and we have a valid mobile number (not "NM"), check by mobile
+  const mobile1 = data.mobile1?.trim().toUpperCase();
+  if (existingDocs.empty && mobile1 && mobile1 !== "NM") {
+    const mobileQuery = query(
+      collection(db, "employees"),
+      where("mobile1", "==", mobile1)
+    );
+    existingDocs = await getDocs(mobileQuery);
+  }
 
   // Compute displayRank: rank + " " + metalNumber (if both exist)
   const displayRank = data.rank && data.metalNumber
@@ -376,6 +404,7 @@ export const createEmployee = async (data: Omit<Employee, "id">): Promise<string
 
   const payload = {
     ...data,
+    kgid,
     displayRank,
     updatedAt: Timestamp.now(),
   };
@@ -383,19 +412,21 @@ export const createEmployee = async (data: Omit<Employee, "id">): Promise<string
   if (!existingDocs.empty) {
     // Upsert: Update existing document
     const docId = existingDocs.docs[0].id;
-    console.log(`Upserting employee: ${data.kgid} (ID: ${docId})`);
+    const existingData = existingDocs.docs[0].data() as Employee;
 
-    // Don't overwrite createdAt if it exists (though we are passing data, so we merge)
-    // We'll update everything provided in CSV + updatedAt
-    await updateDoc(doc(db, "employees", docId), payload);
+    console.log(`Upserting employee matching ${existingData.kgid === kgid ? 'KGID' : 'Mobile'}: ${kgid} (ID: ${docId})`);
+
+    // Use existing KGID if we matched by mobile and the new one is missing or auto-generated
+    if (existingData.kgid && (!kgid || kgid.startsWith("TEMP_"))) {
+      payload.kgid = existingData.kgid;
+    }
+
+    await updateDoc(doc(db, "employees", docId), sanitizeData(payload));
     return docId;
   }
 
   // Create new document
-  return createDoc<Employee>("employees", {
-    ...payload,
-    createdAt: Timestamp.now(),
-  });
+  return createDoc<Employee>("employees", payload);
 };
 
 export const updateEmployee = async (
@@ -449,31 +480,51 @@ export const createOfficer = async (data: Omit<Officer, "id">): Promise<string> 
     throw new Error("Firestore not initialized (server-side or not available)");
   }
 
-  // Check if officer with same AGID already exists (if AGID is provided)
-  if (data.agid) {
-    const existingQuery = query(
+  // Auto-generate AGID if missing
+  const agid = data.agid?.trim() || `OFF_${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+
+  // 1. Check if officer with same AGID already exists
+  const existingQuery = query(
+    collection(db, "officers"),
+    where("agid", "==", agid)
+  );
+  let existingDocs = await getDocs(existingQuery);
+
+  // 2. Secondary Check: If no AGID match and we have a valid mobile number (not "NM"), check by mobile
+  const mobile = data.mobile?.trim().toUpperCase();
+  if (existingDocs.empty && mobile && mobile !== "NM") {
+    const mobileQuery = query(
       collection(db, "officers"),
-      where("agid", "==", data.agid)
+      where("mobile", "==", mobile)
     );
-    const existingDocs = await getDocs(existingQuery);
+    existingDocs = await getDocs(mobileQuery);
+  }
 
-    if (!existingDocs.empty) {
-      // Upsert: Update existing document
-      const docId = existingDocs.docs[0].id;
-      console.log(`Upserting officer: ${data.agid} (ID: ${docId})`);
+  if (!existingDocs.empty) {
+    // Upsert: Update existing document
+    const docId = existingDocs.docs[0].id;
+    const existingData = existingDocs.docs[0].data() as Officer;
 
-      // Update fields
-      await updateDoc(doc(db, "officers", docId), {
-        ...data,
-        // Preserve createdAt if we were just updating partials, but here we replace mostly
-      });
-      return docId;
+    console.log(`Upserting officer matching ${existingData.agid === agid ? 'AGID' : 'Mobile'}: ${agid} (ID: ${docId})`);
+
+    // Use existing AGID if we matched by mobile and the new one was auto-generated
+    let finalAgid = agid;
+    if (existingData.agid && agid.startsWith("OFF_")) {
+      finalAgid = existingData.agid;
     }
+
+    // Update fields
+    await updateDoc(doc(db, "officers", docId), sanitizeData({
+      ...data,
+      agid: finalAgid,
+      updatedAt: Timestamp.now(),
+    }));
+    return docId;
   }
 
   return createDoc<Officer>("officers", {
     ...data,
-    createdAt: Timestamp.now(),
+    agid,
   });
 };
 

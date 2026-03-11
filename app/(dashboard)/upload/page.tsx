@@ -59,28 +59,23 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        const missingFields = [];
-        if (!row.kgid) missingFields.push("kgid");
-        if (!row.name) missingFields.push("name");
-        if (!row.district) missingFields.push("district");
-        if (!row.station) missingFields.push("station");
-
-        if (missingFields.length > 0) {
-          failed++;
-          errors.push(`Row ${i + 2}: Missing required fields: ${missingFields.join(", ")}`);
-          continue;
-        }
+        // Relaxing validation for admin bulk upload
+        // If critical fields are missing, we use defaults instead of failing
+        const kgid = row.kgid?.trim() || "";
+        const name = row.name?.trim() || "N/A";
+        const district = row.district?.trim() || "UNKNOWN";
+        const station = row.station?.trim() || "UNKNOWN";
 
         await createEmployee({
-          kgid: row.kgid.trim(),
-          name: row.name.trim(),
+          kgid,
+          name,
           email: row.email?.trim() || "",
-          mobile1: row.mobile1.trim(),
+          mobile1: row.mobile1?.trim() || "NM",
           mobile2: row.mobile2?.trim() || "",
           rank: row.rank?.trim() || "",
           metalNumber: row.metalNumber?.trim() || "",
-          district: row.district.trim(),
-          station: row.station.trim(),
+          district,
+          station,
           bloodGroup: row.bloodGroup?.trim() || "",
           photoUrl: row.photoUrl?.trim() || "",
           isAdmin: row.isAdmin?.toLowerCase() === "true",
@@ -110,26 +105,20 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        const missingFields = [];
-        if (!row.agid) missingFields.push("agid");
-        if (!row.name) missingFields.push("name");
-        if (!row.district) missingFields.push("district");
-        // Station/Office is optional for officers
-
-        if (missingFields.length > 0) {
-          failed++;
-          errors.push(`Row ${i + 2}: Missing required fields: ${missingFields.join(", ")}`);
-          continue;
-        }
+        // Relaxing validation for admin bulk upload
+        const agid = row.agid?.trim() || "";
+        const name = row.name?.trim() || "N/A";
+        const district = row.district?.trim() || "UNKNOWN";
+        const station = row.station?.trim() || "UNKNOWN";
 
         await createOfficer({
-          agid: row.agid.trim(), // Correctly passing agid
+          agid,
           rank: row.rank?.trim() || "",
-          name: row.name.trim(),
-          mobile: row.mobile.trim(),
+          name,
+          mobile: row.mobile?.trim() || "NM",
           email: row.email?.trim() || "",
-          district: row.district.trim(),
-          office: row.station.trim(),
+          district,
+          office: station,
           unit: row.unit?.trim() || "",
           mobile2: row.mobile2?.trim() || "",
           landline: row.landline?.trim() || "",

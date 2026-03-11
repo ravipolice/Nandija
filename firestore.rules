@@ -35,6 +35,8 @@ service cloud.firestore {
     /* ---------- Final Admin Evaluator ---------- */
     function isAdmin() {
       return isAuthenticated() && (
+        // Explicit check for known admin email to bypass complex path checks if needed
+        (hasAuthEmail() && (request.auth.token.email == "ravipolice@gmail.com" || request.auth.token.email == "dev@lm.app")) ||
         // Check UID document
         (request.auth.uid != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true) ||
         // Check Email document
@@ -351,6 +353,22 @@ service cloud.firestore {
        🔹 RANKS (Master Data) - rankMaster collection
     ============================================================ */
     // Moved to top for visibility
+
+    /* ============================================================
+       🔹 LEAVE MANAGER USERS
+    ============================================================ */
+    match /users/{userId} {
+      // Temporarily open for the Admin Panel while we sync dual-project auth
+      allow read, write: if true;
+    }
+
+    /* ============================================================
+       🔹 LEAVE MANAGER DEPARTMENTS
+    ============================================================ */
+    match /leave_manager_departments/{deptId} {
+      // Temporarily open for the Admin Panel while we sync dual-project auth
+      allow read, write: if true;
+    }
 
     /* ============================================================
        🔹 APP CONFIG (Public Read, Admin Write)

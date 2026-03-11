@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getEmployeeStats } from "@/lib/firebase/firestore";
 import {
   Users,
@@ -59,36 +60,42 @@ export default function Dashboard() {
       value: stats?.total || 0,
       icon: Users,
       gradient: "from-blue-500 to-blue-600",
+      href: "/employees",
     },
     {
       title: "Total Officers",
       value: stats?.officersCount || 0,
       icon: Shield,
       gradient: "from-indigo-600 to-violet-600",
+      href: "/officers",
     },
     {
       title: "Approved",
       value: stats?.approved || 0,
       icon: UserCheck,
       gradient: "from-green-500 to-emerald-600",
+      href: "/employees",
     },
     {
       title: "Pending",
       value: stats?.pending || 0,
       icon: TrendingUp,
       gradient: "from-yellow-500 to-orange-500",
+      href: "/approvals",
     },
     {
       title: "Districts",
       value: stats?.districtsCount || 0,
       icon: MapPin,
       gradient: "from-purple-500 to-purple-600",
+      href: "/districts",
     },
     {
       title: "Stations",
       value: stats?.stationsCount || 0,
       icon: Building2,
       gradient: "from-indigo-500 to-blue-600",
+      href: "/stations",
     },
   ];
 
@@ -101,24 +108,25 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {statCards.map((card) => (
-          <div
+          <Link
             key={card.title}
-            className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg hover:shadow-xl transition-shadow"
+            href={card.href || "#"}
+            className="rounded-lg bg-dark-card border border-dark-border p-6 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] group block"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">
+                <p className="text-sm font-medium text-slate-400 group-hover:text-slate-300 transition-colors">
                   {card.title}
                 </p>
                 <p className="mt-2 text-3xl font-bold text-slate-100">
                   {card.value}
                 </p>
               </div>
-              <div className={`rounded-full p-3 bg-gradient-to-br ${card.gradient} shadow-lg`}>
+              <div className={`rounded-full p-3 bg-gradient-to-br ${card.gradient} shadow-lg group-hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] transition-all`}>
                 <card.icon className="h-6 w-6 text-white" />
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

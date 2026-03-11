@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { getRanks, createRank, updateRank, deleteRank, Rank } from "@/lib/firebase/firestore";
 import { Plus, Edit, Trash2 } from "lucide-react";
 
@@ -421,7 +421,7 @@ export default function RanksPage() {
             </thead>
             <tbody className="divide-y divide-dark-border bg-dark-card">
               {ranks.map((rank) => (
-                <>
+                <Fragment key={rank.rank_id}>
                   {editingRankId === rank.rank_id ? (
                     <tr key={rank.rank_id} className="bg-dark-sidebar">
                       <td colSpan={7} className="px-6 py-4">
@@ -585,7 +585,7 @@ export default function RanksPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

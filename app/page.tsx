@@ -111,7 +111,7 @@ export default function LandingPage() {
                                             className="w-full flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98]"
                                         >
                                             <Download className="h-4 w-4" />
-                                            Download APK {config.apkVersion ? `v${config.apkVersion}` : ""}
+                                            Download APK {config.apkVersion || "v1.33"}
                                             {config.apkSize && <span className="text-[10px] opacity-70 ml-1">({config.apkSize})</span>}
                                         </a>
                                     ) : (
@@ -154,7 +154,36 @@ export default function LandingPage() {
                                     className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white transition-all text-sm font-bold shadow-lg shadow-yellow-500/20"
                                 >
                                     <Download className="h-4 w-4" />
-                                    Download APK {config.nudiApkVersion ? `v${config.nudiApkVersion}` : ""}
+                                    Download APK {config.nudiApkVersion || "v1.0"}
+                                </a>
+                            ) : (
+                                <div className="px-4 py-2 rounded-xl bg-slate-700 text-slate-400 text-xs font-bold">
+                                    APK Coming Soon
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Leave Manager App */}
+                    <div className="group relative p-6 rounded-3xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-all flex flex-col md:flex-row items-center justify-between hover:border-purple-500/50 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.3)]">
+                        <div className="flex items-center gap-4 mb-4 md:mb-0">
+                            <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                <FileText className="h-6 w-6" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="text-lg font-bold text-white">Leave Manager App</h3>
+                                <p className="text-slate-400 text-sm">Personal digital leave register for KSP officers.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 w-full md:w-auto">
+                            {config?.lmApkUrl || true ? (
+                                <a
+                                    href={config?.lmApkUrl ? getDownloadUrl(config.lmApkUrl) : "/pmd-lm.apk"}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition-all text-sm font-bold shadow-lg shadow-purple-500/20"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download APK {config?.lmApkVersion || "v1.0"}
                                 </a>
                             ) : (
                                 <div className="px-4 py-2 rounded-xl bg-slate-700 text-slate-400 text-xs font-bold">

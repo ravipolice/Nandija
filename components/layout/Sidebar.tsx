@@ -28,7 +28,7 @@ import { Logo } from "@/components/common/Logo";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Employees", href: "/employees", icon: Users },
+  { name: "PMD User Management", href: "/employees", icon: Users },
   { name: "Pending Approvals", href: "/approvals", icon: UserCheck },
   { name: "Officers", href: "/officers", icon: Shield },
   { name: "Ranks", href: "/ranks", icon: Award },
@@ -43,6 +43,9 @@ const navigation = [
   { name: "Registration Form", href: "/settings/registration-form", icon: FileText }, // using FileText or similar
   { name: "Doc Converter", href: "/converter", icon: FileSpreadsheet },
   { name: "CSV Upload", href: "/upload", icon: Upload },
+  { name: "LM Approvals", href: "/leave-manager/approvals", icon: UserCheck },
+  { name: "LM User Management", href: "/leave-manager/users", icon: Users },
+  { name: "LM Departments", href: "/leave-manager/departments", icon: Building2 },
 ];
 
 export function Sidebar() {

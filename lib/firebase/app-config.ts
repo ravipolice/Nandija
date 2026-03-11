@@ -11,6 +11,9 @@ export interface AppConfig {
     nudiApkUrl?: string;
     nudiApkSize?: string;
     nudiApkVersion?: string;
+    lmApkUrl?: string;
+    lmApkSize?: string;
+    lmApkVersion?: string;
     updatedAt?: Timestamp;
     showLogo?: boolean;
     hiddenFields?: string[]; // Global list of hidden fields (e.g. "dateOfBirth", "dateOfAppointment")
