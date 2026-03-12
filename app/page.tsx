@@ -111,7 +111,7 @@ export default function LandingPage() {
                                             className="w-full flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 transition-all text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98]"
                                         >
                                             <Download className="h-4 w-4" />
-                                            Download APK {config.apkVersion || "v1.33"}
+                                            Download APK {config.apkVersion || "v1.34"}
                                             {config.apkSize && <span className="text-[10px] opacity-70 ml-1">({config.apkSize})</span>}
                                         </a>
                                     ) : (

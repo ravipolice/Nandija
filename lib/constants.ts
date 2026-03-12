@@ -20,14 +20,14 @@ export const RANKS_LIST = [
   "RPI", "CPI", "PI", "PIW", "WPI", "DYSP", "SDA", "FDA", "SS",
   "GHA", "AO", "Typist", "Steno", "PA",
   "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
-].sort();
+];
 
 export const HIGH_RANKING_OFFICERS = [
   "DG & IGP", "ADGP", "IGP", "DIG", "Commandant", "DCP", "SP", "Addl SP"
 ];
 
 export const RANKS_REQUIRING_METAL_NUMBER = [
-  "APC", "CPC", "WPC", "PC", "AHC", "CHC", "WHC", "HC"
+  "AHC", "APC", "CHC", "CPC", "HC", "HCW", "PC", "PCW", "S.RHC", "S.RPC", "WHC", "WPC"
 ].sort();
 
 // Ranks that do NOT need a station (Ministerial / Office Staff)

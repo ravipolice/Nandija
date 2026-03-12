@@ -1,0 +1,292 @@
+[
+  {
+    "id": "AAO",
+    "label": "Asisstant Administrative Officer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ACP",
+    "label": "Assistant Commissioner of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "AD",
+    "label": "Asst. Director",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ADDL_SP",
+    "label": "Additional Superintendent of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ADGP",
+    "label": "Additional Director General of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "AHC",
+    "label": "Armed Head Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "AIO",
+    "label": "Asst. Intelligence Officer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ALL",
+    "label": "All ranks",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "AO",
+    "label": "Assistant Officer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "APC",
+    "label": "Armed Police Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "ARSI",
+    "label": "Assistant Reserve Sub Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ASI",
+    "label": "Assistant Sub Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ASIW",
+    "label": "ASI WIreless",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "ASST.CMDT",
+    "label": "Assistant Commandant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "CHC",
+    "label": "Civil Head Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "CIO",
+    "label": "Chief Intelligence Officer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "CMDT",
+    "label": "Commandant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "CPC",
+    "label": "Civil Police Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "CPI",
+    "label": "Circle PI",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DCP",
+    "label": "Deputy Commissioner of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DD",
+    "label": "Deputy Directory",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DEPT.CMDT",
+    "label": "Deputy commandant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DG",
+    "label": "Director General of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DG_IGP",
+    "label": "Director General & Inspector General of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DIG",
+    "label": "Deputy Inspector General of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "DSP",
+    "label": "Deputy Superintendent of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "FDA",
+    "label": "First Division Assistant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "FOLLOWER",
+    "label": "Follower in ksrp",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "HC",
+    "label": "Head Constable",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "HCW",
+    "label": "HC Wireless",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "IA",
+    "label": "Intelligence Assistant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "IGP",
+    "label": "Inspector General of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "IO",
+    "label": "Int Officer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PA",
+    "label": "Personal Asst",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PC",
+    "label": "Police Constable",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PCW",
+    "label": "PC Wireless",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PI",
+    "label": "Police Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PIW",
+    "label": "PI Wireless",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PSI",
+    "label": "Police Sub-Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "PSIW",
+    "label": "PSI Wireless",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "RPI",
+    "label": "Reserve Police Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "RSI",
+    "label": "Reserve Sub Inspector",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "S.ARSI",
+    "label": "special ARSI",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "S.RHC",
+    "label": "Special RHC",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "S.RPC",
+    "label": "Special  Reserve Police Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "S.RPI",
+    "label": "Special",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "S.RSI",
+    "label": "Special",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "SDA",
+    "label": "Second Division Assistant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "SIA",
+    "label": "Senior Intelligence Asisstant",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "SP",
+    "label": "Superintendent of Police",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "SS",
+    "label": "Section Superintendent",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "STENO",
+    "label": "Stenographer",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "TYPIST",
+    "label": "Typist",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "WASI",
+    "label": "Women ASI",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "WHC",
+    "label": "Women Head Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "WPC",
+    "label": "Women Police Constable",
+    "requiresMetalNumber": true
+  },
+  {
+    "id": "WPI",
+    "label": "Women PI",
+    "requiresMetalNumber": false
+  },
+  {
+    "id": "WPSI",
+    "label": "Women PSI",
+    "requiresMetalNumber": false
+  }
+]

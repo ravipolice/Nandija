@@ -59,8 +59,9 @@ export default function DashboardLayout({
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
-          {/* Added pb-20 for bottom nav space on mobile */}
-          {children}
+          <div className="max-w-screen-2xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
 
