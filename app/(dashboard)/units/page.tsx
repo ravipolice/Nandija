@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useMemo, useRef, Fragment } from "react";
 import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getUnitSections, updateUnitSections, getRanks, Rank } from "@/lib/firebase/firestore";
 import { getAppConfig } from "@/lib/firebase/app-config";
-import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown, Layers, LayoutGrid, AlertCircle, Filter } from 'lucide-react';
 import { DEFAULT_UNITS, ALL_BATTALIONS } from "@/lib/constants";
 
 // Configurable Fields for Visibility
