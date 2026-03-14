@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createNotification, getDistricts, getStations, District, Station } from "@/lib/firebase/firestore";
 import { Send, Users, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 type TabType = "admin" | "users";
 
@@ -64,7 +65,7 @@ export default function NotificationsPage() {
     
     // Validate form
     if (!adminFormData.title.trim() || !adminFormData.body.trim()) {
-      alert("Please fill in both title and message fields");
+      toast.error("Please fill in both title and message fields");
       return;
     }
     
@@ -78,10 +79,10 @@ export default function NotificationsPage() {
       };
 
       console.log("📤 Creating admin notification:", notificationData);
-      const notificationId = await createNotification(notificationData, true); // true = admin notification
+      const notificationId = await createNotification(notificationData); 
       console.log("✅ Admin notification created with ID:", notificationId);
       
-      alert("Admin notification queued successfully! It will be sent shortly.");
+      toast.success("Admin notification queued successfully!");
       setAdminFormData({
         title: "",
         body: "",
@@ -93,7 +94,7 @@ export default function NotificationsPage() {
         code: error?.code,
         stack: error?.stack
       });
-      alert(`Failed to create admin notification: ${error?.message || "Unknown error"}`);
+      toast.error(`Failed to create admin notification: ${error?.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ export default function NotificationsPage() {
     
     // Validate form
     if (!userFormData.title.trim() || !userFormData.body.trim()) {
-      alert("Please fill in both title and message fields");
+      toast.error("Please fill in both title and message fields");
       return;
     }
     
@@ -120,14 +121,14 @@ export default function NotificationsPage() {
       // Add target-specific fields
       if (userFormData.targetType === "SINGLE") {
         if (!userFormData.targetKgid?.trim()) {
-          alert("Please enter a KGID for single user notification");
+          toast.error("Please enter a KGID for single user notification");
           setLoading(false);
           return;
         }
         notificationData.targetKgid = userFormData.targetKgid.trim();
       } else if (userFormData.targetType === "STATION") {
         if (!userFormData.targetDistrict || !userFormData.targetStation) {
-          alert("Please select both district and station");
+          toast.error("Please select both district and station");
           setLoading(false);
           return;
         }
@@ -135,7 +136,7 @@ export default function NotificationsPage() {
         notificationData.targetStation = userFormData.targetStation;
       } else if (userFormData.targetType === "DISTRICT") {
         if (!userFormData.targetDistrict) {
-          alert("Please select a district");
+          toast.error("Please select a district");
           setLoading(false);
           return;
         }
@@ -143,10 +144,10 @@ export default function NotificationsPage() {
       }
 
       console.log("📤 Creating user notification:", notificationData);
-      const notificationId = await createNotification(notificationData, false); // false = user notification
+      const notificationId = await createNotification(notificationData);
       console.log("✅ User notification created with ID:", notificationId);
       
-      alert("User notification queued successfully! It will be sent shortly.");
+      toast.success("User notification queued successfully!");
       setUserFormData({
         title: "",
         body: "",
@@ -164,7 +165,7 @@ export default function NotificationsPage() {
         code: error?.code,
         stack: error?.stack
       });
-      alert(`Failed to create user notification: ${error?.message || "Unknown error"}`);
+      toast.error(`Failed to create user notification: ${error?.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }

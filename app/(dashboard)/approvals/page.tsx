@@ -8,6 +8,8 @@ import {
   markPendingRegistrationAsViewed,
   PendingRegistration,
 } from "@/lib/firebase/firestore";
+import { logAudit } from "@/lib/firebase/auditLog";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   Check,
   X,
@@ -28,6 +30,7 @@ import { formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function ApprovalsPage() {
+  const { user } = useAuth();
   const [registrations, setRegistrations] = useState<PendingRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,7 +67,16 @@ export default function ApprovalsPage() {
 
     toast.promise(promise, {
       loading: `Approving ${registration.name}...`,
-      success: () => {
+      success: async () => {
+        await logAudit({
+          action: "approve_registration",
+          targetType: "pending_registration",
+          targetId: registration.id,
+          targetName: registration.name,
+          performedBy: user?.uid ?? "unknown",
+          performedByEmail: user?.email ?? undefined,
+          details: `Approved KGID: ${registration.kgid}`,
+        });
         setRegistrations(prev => prev.filter(r => r.id !== registration.id));
         setProcessingId(null);
         return `Registration for ${registration.name} approved!`;
@@ -82,6 +94,15 @@ export default function ApprovalsPage() {
     setProcessingId(id);
     try {
       await rejectRegistration(id);
+      await logAudit({
+        action: "reject_registration",
+        targetType: "pending_registration",
+        targetId: id,
+        targetName: name,
+        performedBy: user?.uid ?? "unknown",
+        performedByEmail: user?.email ?? undefined,
+        details: "Registration rejected",
+      });
       setRegistrations(prev => prev.filter(r => r.id !== id));
       toast.success(`Registration for ${name} rejected`);
     } catch (error) {
@@ -180,6 +201,9 @@ export default function ApprovalsPage() {
                   <InfoRow icon={<GraduationCap className="w-3.5 h-3.5" />} label="Rank" value={reg.rank || "N/A"} />
                   <InfoRow icon={<MapPin className="w-3.5 h-3.5 text-red-500/50" />} label="District" value={reg.district} />
                   <InfoRow icon={<Building2 className="w-3.5 h-3.5 text-blue-500/50" />} label="Station" value={reg.station} />
+                  {reg.gender && <InfoRow icon={<UserPlus className="w-3.5 h-3.5 text-indigo-400" />} label="Gender" value={reg.gender} />}
+                  {reg.dateOfBirth && <InfoRow icon={<Clock className="w-3.5 h-3.5 text-amber-500" />} label="DOB" value={reg.dateOfBirth instanceof Date ? reg.dateOfBirth.toLocaleDateString() : String(reg.dateOfBirth)} />}
+                  {reg.serviceStartDate && <InfoRow icon={<Clock className="w-3.5 h-3.5 text-green-500" />} label="DOA" value={reg.serviceStartDate instanceof Date ? reg.serviceStartDate.toLocaleDateString() : String(reg.serviceStartDate)} />}
                 </div>
 
                 {reg.createdAt && (

@@ -50,6 +50,9 @@ export default function NewEmployeePage() {
     photoUrl: "",
     isAdmin: false,
     isApproved: true,
+    gender: "",
+    dateOfBirth: "",
+    serviceStartDate: "",
   });
 
   const [manualSection, setManualSection] = useState("");
@@ -623,6 +626,47 @@ export default function NewEmployeePage() {
               }
               className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
               placeholder="https://..."
+            />
+          </div>
+
+          {/* New Fields: Gender, DOB, DOA */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Gender
+            </label>
+            <select
+              value={formData.gender}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Date of Birth (DOB)
+            </label>
+            <input
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Date of Appointment (DOA)
+            </label>
+            <input
+              type="date"
+              value={formData.serviceStartDate}
+              onChange={(e) => setFormData({ ...formData, serviceStartDate: e.target.value })}
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
             />
           </div>
         </div>

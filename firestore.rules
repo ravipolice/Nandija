@@ -378,5 +378,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    /* ============================================================
+       🔹 AUDIT LOG (Append-only for admins)
+    ============================================================ */
+    match /audit_log/{entryId} {
+      allow create: if isAdmin();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
   }
 }

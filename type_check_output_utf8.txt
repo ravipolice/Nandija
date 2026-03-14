@@ -1,0 +1,25 @@
+﻿
+> nandija@2.0.0 type-check
+> tsc --noEmit
+
+app/(dashboard)/app-management/page.tsx(6,10): error TS6133: 'Download' is declared but its value is never read.
+app/(dashboard)/app-management/page.tsx(6,46): error TS6133: 'ExternalLink' is declared but its value is never read.
+app/(dashboard)/districts/page.tsx(6,33): error TS6133: 'deleteDocument' is declared but its value is never read.
+app/(dashboard)/leave-manager/users/page.tsx(16,5): error TS6133: 'Calendar' is declared but its value is never read.
+app/(dashboard)/units/page.tsx(10,7): error TS6133: 'CONFIGURABLE_FIELDS' is declared but its value is never read.
+app/(dashboard)/units/page.tsx(137,12): error TS6133: 'globalHiddenFields' is declared but its value is never read.
+app/(dashboard)/units/page.tsx(155,12): error TS6133: 'expandedSections' is declared but its value is never read.
+app/(dashboard)/units/page.tsx(212,11): error TS6133: 'toggleSectionCollapse' is declared but its value is never read.
+app/(dashboard)/units/page.tsx(313,11): error TS6133: 'toggleHiddenField' is declared but its value is never read.
+app/(user)/contact/page.tsx(3,29): error TS6133: 'Server' is declared but its value is never read.
+app/(user)/contact/page.tsx(3,37): error TS6133: 'Database' is declared but its value is never read.
+lib/firebase/auditLog.ts(33,29): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(firestore: Firestore, path: string, ...pathSegments: string[]): CollectionReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | undefined' is not assignable to parameter of type 'Firestore'.
+      Type 'undefined' is not assignable to type 'Firestore'.
+  Overload 2 of 3, '(reference: CollectionReference<unknown, DocumentData>, path: string, ...pathSegments: string[]): CollectionReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | undefined' is not assignable to parameter of type 'CollectionReference<unknown, DocumentData>'.
+      Type 'undefined' is not assignable to type 'CollectionReference<unknown, DocumentData>'.
+  Overload 3 of 3, '(reference: DocumentReference<unknown, DocumentData>, path: string, ...pathSegments: string[]): CollectionReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | undefined' is not assignable to parameter of type 'DocumentReference<unknown, DocumentData>'.
+      Type 'undefined' is not assignable to type 'DocumentReference<unknown, DocumentData>'.

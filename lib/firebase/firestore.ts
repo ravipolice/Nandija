@@ -42,6 +42,9 @@ export interface Employee {
   updatedAt?: Timestamp;
   unit?: string;
   isHidden?: boolean;
+  gender?: string;
+  dateOfBirth?: any;
+  serviceStartDate?: any;
 }
 
 export interface Officer {
@@ -133,10 +136,15 @@ export interface PendingRegistration {
   landline?: string;
   landline2?: string;
   photoUrl?: string;
+  photoUrlFromGoogle?: string;
   firebaseUid?: string;
   status?: "pending" | "approved" | "rejected";
+  gender?: string;
+  dateOfBirth?: any;
+  serviceStartDate?: any;
   createdAt?: Timestamp;
   viewedByAdmin?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface NotificationQueue {
@@ -902,25 +910,21 @@ export const approveRegistration = async (
   // Normalize KGID
   const kgid = registration.kgid.trim();
 
+  // Dynamically map all fields from registration to employee, excluding internal fields
+  const { 
+    id: _id, 
+    status: _status, 
+    createdAt: _createdAt, 
+    viewedByAdmin: _viewedByAdmin, 
+    ...passThroughData 
+  } = registration;
+
   // Create or update employee from registration (using upsert logic)
   await createEmployee({
-    kgid: kgid,
-    name: registration.name,
-    email: registration.email,
-    mobile1: registration.mobile1,
-    mobile2: registration.mobile2,
-    rank: registration.rank,
-    district: registration.district,
-    station: registration.station,
-    pin: registration.pin,
+    ...passThroughData,
+    kgid: kgid, // Ensure trimmed KGID is used
     isApproved: true,
-    isAdmin: false,
-    unit: registration.unit,
-    bloodGroup: registration.bloodGroup,
-    landline: registration.landline,
-    landline2: registration.landline2,
-    photoUrl: registration.photoUrl,
-    firebaseUid: registration.firebaseUid,
+    isAdmin: registration.isAdmin || false,
   });
 
   // CRITICAL: Delete ALL pending registrations for this KGID to clear duplicates
@@ -954,10 +958,10 @@ export const markPendingRegistrationAsViewed = async (registrationId: string): P
 // Notifications
 export const createNotification = async (
   data: Omit<NotificationQueue, "id">,
-  isAdmin: boolean = false
+  _isAdmin: boolean = false
 ): Promise<string> => {
-  // Use different collection for admin notifications
-  const collectionName = isAdmin ? "admin_notifications" : "notifications_queue";
+  // Use a single collection for all notifications to ensure Cloud Function processing
+  const collectionName = "notifications_queue";
   return createDoc<NotificationQueue>(collectionName, {
     ...data,
     status: "pending",

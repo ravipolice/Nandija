@@ -19,7 +19,8 @@ import {
   ShieldAlert,
   Phone,
   MapPin,
-  Building2
+  Building2,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import Papa from "papaparse";
@@ -33,6 +34,7 @@ type SortDirection = "asc" | "desc";
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<SearchableEmployee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -43,6 +45,8 @@ export default function EmployeesPage() {
   }, []);
 
   const loadEmployees = async () => {
+    setError(null);
+    setLoading(true);
     try {
       const data = await getEmployees();
       const searchableData = data.map(emp => ({
@@ -58,12 +62,16 @@ export default function EmployeesPage() {
           emp.bloodGroup,
           emp.district,
           emp.station,
-          emp.unit
+          emp.unit,
+          emp.gender,
+          emp.dateOfBirth,
+          emp.serviceStartDate
         )
       }));
       setEmployees(searchableData);
-    } catch (error) {
-      console.error("Error loading PMD users:", error);
+    } catch (err) {
+      console.error("Error loading PMD users:", err);
+      setError(err instanceof Error ? err.message : "Failed to load employees");
       toast.error("Failed to load PMD users");
     } finally {
       setLoading(false);
@@ -121,7 +129,10 @@ export default function EmployeesPage() {
       Unit: emp.unit || "N/A",
       BloodGroup: emp.bloodGroup || "N/A",
       Status: emp.isApproved ? "Approved" : "Pending",
-      Hidden: emp.isHidden ? "Yes" : "No"
+      Hidden: emp.isHidden ? "Yes" : "No",
+      Gender: emp.gender || "N/A",
+      DOB: emp.dateOfBirth || "N/A",
+      DOA: emp.serviceStartDate || "N/A"
     }));
     const csv = Papa.unparse(csvData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -159,10 +170,30 @@ export default function EmployeesPage() {
       return sortDirection === "asc" ? (aVal === bVal ? 0 : aVal ? -1 : 1) : (aVal === bVal ? 0 : aVal ? 1 : -1);
     });
 
-  if (loading) {
+  if (loading && employees.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[500px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+        <p className="text-slate-400">Loading employees...</p>
+      </div>
+    );
+  }
+
+  if (error && employees.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 p-8">
+        <div className="rounded-2xl bg-red-500/10 border border-red-500/30 p-8 max-w-md text-center">
+          <ShieldAlert className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-200 mb-2">Could not load employees</h2>
+          <p className="text-slate-400 text-sm mb-6">{error}</p>
+          <button
+            onClick={() => loadEmployees()}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -250,8 +281,16 @@ export default function EmployeesPage() {
                           {emp.name}
                           {emp.isHidden && <EyeOff className="w-3 h-3 text-slate-500" />}
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                          <Phone className="w-2.5 h-2.5" /> {emp.mobile1}
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                            <Phone className="w-2.5 h-2.5" /> {emp.mobile1}
+                          </div>
+                          {(emp.unit || emp.district) && (
+                            <div className="flex items-center gap-2 text-[10px] text-blue-400/70 font-medium">
+                              <Building2 className="w-2.5 h-2.5" />
+                              {[emp.unit, emp.district].filter(Boolean).join(" • ")}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -163,10 +163,11 @@ export default function UnitsPage() {
 
     // Resizable columns state
     const [columnWidths, setColumnWidths] = useState({
-        status: 100,
-        name: 450,
+        status: 80,
+        privacy: 140,
+        name: 400,
         scopes: 180,
-        areas: 250,
+        areas: 160,
         actions: 100
     });
     const resizingColumn = useRef<string | null>(null);
@@ -455,6 +456,30 @@ export default function UnitsPage() {
             setSubmitting(false);
         }
     };
+    
+    const handleToggleStatus = async (unit: Unit) => {
+        if (!unit.id) return;
+        try {
+            const newStatus = unit.isActive === false;
+            await updateUnit(unit.id, { isActive: newStatus });
+            setUnits(prev => prev.map(u => u.id === unit.id ? { ...u, isActive: newStatus } : u));
+        } catch (error) {
+            console.error("Error toggling status:", error);
+            alert("Failed to update status");
+        }
+    };
+
+    const handleTogglePrivacy = async (unit: Unit) => {
+        if (!unit.id) return;
+        try {
+            const newPrivacy = !unit.hideFromRegistration;
+            await updateUnit(unit.id, { hideFromRegistration: newPrivacy });
+            setUnits(prev => prev.map(u => u.id === unit.id ? { ...u, hideFromRegistration: newPrivacy } : u));
+        } catch (error) {
+            console.error("Error toggling privacy:", error);
+            alert("Failed to update privacy");
+        }
+    };
 
     const scopeOptions = [
         { id: "hq", label: "HQ Level" },
@@ -593,41 +618,7 @@ export default function UnitsPage() {
                             placeholder="Select authorized ranks..."
                         />
 
-                        {/* Status Toggles */}
-                        <div className="pt-4 space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-dark-sidebar/20 border border-dark-border">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full ${formData.isActive ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500"}`} />
-                                    <span className="text-sm font-semibold text-slate-300">Unit Status</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${formData.isActive ? "bg-green-500/10 text-green-500 hover:bg-green-500/20" : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                                        }`}
-                                >
-                                    {formData.isActive ? "Active" : "Inactive"}
-                                </button>
-                            </div>
-                            <label className="flex items-center justify-between p-4 rounded-2xl bg-dark-sidebar/20 border border-dark-border cursor-pointer group">
-                                <div className="flex items-center gap-3">
-                                    <AlertCircle className={`w-4 h-4 ${formData.hideFromRegistration ? "text-orange-500" : "text-slate-600"}`} />
-                                    <div>
-                                        <span className="text-sm font-semibold text-slate-300">Privacy Control</span>
-                                        <p className="text-[10px] text-slate-500">Hide from enrollment forms</p>
-                                    </div>
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={!!formData.hideFromRegistration}
-                                    onChange={(e) => setFormData({ ...formData, hideFromRegistration: e.target.checked })}
-                                />
-                                <div className={`w-10 h-5 rounded-full relative transition-colors ${formData.hideFromRegistration ? "bg-orange-600" : "bg-slate-700"}`}>
-                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${formData.hideFromRegistration ? "left-6" : "left-1"}`} />
-                                </div>
-                            </label>
-                        </div>
+                        {/* Status Toggles REMOVED - Managed from list view */}
                     </div>
                 </div>
 
@@ -756,6 +747,15 @@ export default function UnitsPage() {
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.privacy }}>
+                                    Hide in Reg Form
+                                    <div
+                                        onMouseDown={(e) => handleMouseDown(e, 'privacy')}
+                                        className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
+                                    >
+                                        <div className="w-[1px] h-full bg-purple-500/50" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.name }}>
                                     Unit Name
                                     <div
@@ -791,20 +791,36 @@ export default function UnitsPage() {
                                 filteredUnits.map((unit) => (
                                     <Fragment key={unit.id}>
                                         {editingId === unit.id ? (
-                                            <tr className="bg-dark-sidebar">
-                                                <td colSpan={5} className="p-0">
-                                                    {renderForm()}
-                                                </td>
-                                            </tr>
+                                             <tr className="bg-dark-sidebar">
+                                                 <td colSpan={6} className="p-0">
+                                                     {renderForm()}
+                                                 </td>
+                                             </tr>
                                         ) : (
                                             <tr className={`hover:bg-dark-sidebar transition-colors ${unit.isActive === false ? "opacity-50" : ""}`}>
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm">
-                                                    {unit.isActive !== false ? (
-                                                        <span className="inline-flex rounded-full bg-green-500/20 px-2 text-xs font-semibold text-green-400">Active</span>
-                                                    ) : (
-                                                        <span className="inline-flex rounded-full bg-red-500/20 px-2 text-xs font-semibold text-red-400">Inactive</span>
-                                                    )}
-                                                </td>
+                                                 <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                     <button
+                                                         onClick={() => handleToggleStatus(unit)}
+                                                         className={`inline-flex rounded-full px-2 text-[10px] font-bold uppercase transition-all ${unit.isActive !== false
+                                                             ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                                                             : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                                             }`}
+                                                     >
+                                                         {unit.isActive !== false ? "Active" : "Inactive"}
+                                                     </button>
+                                                 </td>
+                                                 <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                     <button
+                                                         onClick={() => handleTogglePrivacy(unit)}
+                                                         className={`p-1.5 rounded-lg transition-all ${unit.hideFromRegistration
+                                                             ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                                                             : "bg-slate-700/50 text-slate-500 hover:text-slate-300"
+                                                             }`}
+                                                         title={unit.hideFromRegistration ? "Hidden from enrollment" : "Visible in enrollment"}
+                                                     >
+                                                         <Shield className={`w-4 h-4 ${unit.hideFromRegistration ? "fill-orange-400/20" : ""}`} />
+                                                     </button>
+                                                 </td>
                                                 <td className="px-6 py-4 text-sm font-medium text-slate-100 overflow-hidden text-ellipsis whitespace-nowrap">{unit.name}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-wrap gap-1">
@@ -844,7 +860,7 @@ export default function UnitsPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                                     <td colSpan={6} className="py-12 text-center text-slate-400">
                                         No units found
                                     </td>
                                 </tr>
