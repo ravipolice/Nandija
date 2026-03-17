@@ -22,9 +22,10 @@ export async function GET() {
 
   // Build URL - Gallery script works without action, but add token if needed
   // Test shows it works with just the base URL
-  let targetUrl = GALLERY_API_URL;
+  const timestamp = Date.now();
+  let targetUrl = `${GALLERY_API_URL}?nocache=${timestamp}`;
   if (token) {
-    targetUrl += `?token=${encodeURIComponent(token)}`;
+    targetUrl += `&token=${encodeURIComponent(token)}`;
   }
 
   console.log("🔥 Gallery Proxy - Forwarding to:", targetUrl.replace(token, "[REDACTED]"));

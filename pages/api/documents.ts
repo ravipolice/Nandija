@@ -52,10 +52,11 @@ export default async function handler(
             const token = getSecretToken();
             console.log("📄 Pages API: Fetching documents...");
 
+            const timestamp = Date.now();
             const url = `${DOCUMENTS_API_URL}?action=${DOCUMENTS_GET_ACTION}${token && token !== "CHANGE_THIS_IN_PRODUCTION"
                 ? `&token=${encodeURIComponent(token)}`
                 : ""
-                }`;
+                }&nocache=${timestamp}`;
 
             const response = await fetch(url, {
                 method: "GET",
