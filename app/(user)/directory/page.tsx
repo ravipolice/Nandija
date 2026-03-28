@@ -18,6 +18,7 @@ import {
 } from "@/lib/firebase/firestore";
 import { Search, X } from "lucide-react";
 import { generateSmartSearchBlob } from "@/lib/searchUtils";
+import { getRankColorClass } from "@/lib/rankUtils";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 // Extended types for search optimization
@@ -476,104 +477,141 @@ export default function DirectoryPage() {
             {/* List / Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeTab === "officers" ? (
-                    filteredOfficers.map((officer) => (
-                        <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-                            {/* Blood Group Badge */}
-                            {officer.bloodGroup && (
-                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
-                                    {officer.bloodGroup}
-                                </div>
-                            )}
+                    filteredOfficers.map((officer) => {
+                        
+                        
+                        // Unified Subtitle logic (similar to Android)
+                        const subtitleParts = [];
+                        if (officer.dutyRole && officer.dutyRole !== "Others") subtitleParts.push(officer.dutyRole);
+                        if (officer.unit && officer.unit !== officer.district) subtitleParts.push(officer.unit);
+                        if (officer.office) subtitleParts.push(officer.office);
+                        if (officer.district) subtitleParts.push(officer.district);
+                        const finalSubtitle = Array.from(new Set(subtitleParts)).join(", ");
 
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">{officer.name}</h3>
-                                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
-                                        {officer.rank}
-                                    </span>
-                                </div>
-                                {officer.district && (
-                                    <span className="text-sm text-muted-foreground bg-secondary px-2 py-1 rounded">
-                                        {officer.district}
-                                    </span>
+                        return (
+                            <div key={officer.id || officer.agid} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden flex flex-col h-full">
+                                {/* Blood Group Badge (Round) */}
+                                {officer.bloodGroup && (
+                                    <div className={`absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full text-[9px] font-bold text-white ${
+                                        officer.bloodGroup.startsWith('A') ? 'bg-red-500' :
+                                        officer.bloodGroup.startsWith('B') ? 'bg-blue-500' :
+                                        officer.bloodGroup.startsWith('O') ? 'bg-orange-500' : 'bg-slate-500'
+                                    }`}>
+                                        {officer.bloodGroup}
+                                    </div>
                                 )}
-                            </div>
 
-                            <div className="space-y-2 text-sm text-foreground/80 mt-4">
-                                {officer.office && (
-                                    <div className="flex items-start text-sm text-muted-foreground">
-                                        <span className="font-semibold w-16">Office:</span>
-                                        <span className="flex-1">{officer.office}</span>
+                                <div className="flex-1">
+                                    <div className="flex flex-col mb-1 pr-8">
+                                        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{officer.name}</h3>
+                                        <div className={`text-sm mt-0.5 ${getRankColorClass(officer.rank)}`}>
+                                            {officer.rank}
+                                        </div>
                                     </div>
-                                )}
-                                {officer.mobile ? (
-                                    <div className="flex items-center pt-2 border-t border-dashed border-border mt-3">
-                                        <a href={`tel:${officer.mobile}`} className="flex-1 text-center py-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/30 rounded-md transition-colors font-bold text-xl pointer-events-auto">
-                                            {officer.mobile}
-                                        </a>
-                                        <div className="w-px h-4 bg-border mx-2"></div>
-                                        <a href={`sms:${officer.mobile}`} className="flex-1 text-center py-2 text-green-400 hover:text-green-300 hover:bg-green-950/30 rounded-md transition-colors font-medium text-base pointer-events-auto">
-                                            Msg
-                                        </a>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-center pt-2 border-t border-dashed border-border mt-3 text-muted-foreground text-sm italic py-2">
-                                        No contact number available
-                                    </div>
-                                )}
+
+                                    {finalSubtitle && (
+                                        <div className="text-xs text-muted-foreground/80 mt-1 line-clamp-2">
+                                            {finalSubtitle}
+                                        </div>
+                                    )}
+                                    
+                                </div>
+
+                                <div className="mt-4 pt-3 border-t border-dashed border-border">
+                                    {officer.mobile ? (
+                                        <div className="flex items-center">
+                                            <a href={`tel:${officer.mobile}`} className="flex-1 text-center py-1 text-cyan-500 hover:text-cyan-400 font-bold text-lg transition-colors">
+                                                {officer.mobile}
+                                            </a>
+                                            <div className="w-px h-4 bg-border mx-2"></div>
+                                            <a href={`sms:${officer.mobile}`} className="flex-1 text-center py-1 text-emerald-500 hover:text-emerald-400 font-medium text-sm transition-colors">
+                                                Msg
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-muted-foreground text-xs italic py-1">
+                                            No contact number
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 ) : (
-                    filteredEmployees.map((emp) => (
-                        <div key={emp.id} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-                            {/* Blood Group Badge */}
-                            {emp.bloodGroup && (
-                                <div className="absolute top-0 right-0 bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded-bl-lg border-l border-b border-red-100">
-                                    {emp.bloodGroup}
-                                </div>
-                            )}
+                    filteredEmployees.map((emp) => {
+                        
+                        
+                        // Unified Subtitle logic
+                        const subtitleParts = [];
+                        if (emp.dutyRole && emp.dutyRole !== "Others") subtitleParts.push(emp.dutyRole);
+                        if (emp.unit && emp.unit !== emp.district) subtitleParts.push(emp.unit);
+                        if (emp.station) subtitleParts.push(emp.station);
+                        if (emp.district) subtitleParts.push(emp.district);
+                        const finalSubtitle = Array.from(new Set(subtitleParts)).join(", ");
 
-                            <div className="flex items-start space-x-4">
-                                {emp.photoUrl ? (
-                                    <img src={emp.photoUrl} alt={emp.name} className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm" />
-                                ) : (
-                                    <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xl shadow-inner">
-                                        {emp.name.charAt(0)}
+                        return (
+                            <div key={emp.id} className="bg-card rounded-lg shadow-sm border border-border p-5 hover:shadow-md transition-all duration-200 group relative overflow-hidden flex flex-col h-full">
+                                {/* Blood Group Badge (Round) */}
+                                {emp.bloodGroup && (
+                                    <div className={`absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full text-[9px] font-bold text-white ${
+                                        emp.bloodGroup.startsWith('A') ? 'bg-red-500' :
+                                        emp.bloodGroup.startsWith('B') ? 'bg-blue-500' :
+                                        emp.bloodGroup.startsWith('O') ? 'bg-orange-500' : 'bg-slate-500'
+                                    }`}>
+                                        {emp.bloodGroup}
                                     </div>
                                 )}
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-xl font-bold text-foreground truncate group-hover:text-primary transition-colors">{emp.name}</h3>
-                                    <p className="text-base text-primary font-medium truncate">{emp.displayRank || emp.rank}</p>
-                                    <p className="text-sm text-muted-foreground truncate mt-0.5">{emp.station || emp.district}</p>
+
+                                <div className="flex-1">
+                                    <div className="flex items-start space-x-4 mb-4 pr-8">
+                                        {emp.photoUrl ? (
+                                            <img src={emp.photoUrl} alt={emp.name} className="h-14 w-14 rounded-full object-cover border-2 border-white shadow-sm shrink-0" />
+                                        ) : (
+                                            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-lg shadow-inner shrink-0">
+                                                {emp.name.charAt(0)}
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <h3 className="text-xl font-bold text-foreground truncate group-hover:text-primary transition-colors leading-tight">{emp.name}</h3>
+                                            <div className={`text-sm mt-0.5 ${getRankColorClass(emp.displayRank || emp.rank)}`}>
+                                                {emp.displayRank || emp.rank}
+                                            </div>
+                                            {finalSubtitle && (
+                                                <div className="text-xs text-muted-foreground/80 mt-1 line-clamp-1">
+                                                    {finalSubtitle}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div className="mt-2 pt-3 border-t border-border grid grid-cols-2 gap-2">
+                                    {emp.mobile1 && (
+                                        <a
+                                            href={`tel:${emp.mobile1}`}
+                                            className="col-span-1 flex items-center justify-center bg-secondary/30 hover:bg-cyan-50 text-foreground/80 hover:text-cyan-600 py-1.5 rounded-lg text-sm font-bold transition-all border border-transparent hover:border-cyan-200"
+                                        >
+                                            {emp.mobile1}
+                                        </a>
+                                    )}
+                                    {emp.mobile2 && (
+                                        <a
+                                            href={`tel:${emp.mobile2}`}
+                                            className="col-span-1 flex items-center justify-center bg-secondary/30 hover:bg-emerald-50 text-foreground/80 hover:text-emerald-600 py-1.5 rounded-lg text-sm font-bold transition-all border border-transparent hover:border-emerald-200"
+                                        >
+                                            {emp.mobile2}
+                                        </a>
+                                    )}
+                                    {(!emp.mobile1 && !emp.mobile2) && (
+                                        <div className="col-span-2 text-center text-muted-foreground text-xs italic py-1">
+                                            No contact number
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
-                                {emp.mobile1 && (
-                                    <a
-                                        href={`tel:${emp.mobile1}`}
-                                        className="col-span-1 flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-cyan-950/30 hover:text-cyan-400 text-foreground/80 py-2 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                        <span className="text-base font-bold">{emp.mobile1}</span>
-                                    </a>
-                                )}
-                                {emp.mobile2 && (
-                                    <a
-                                        href={`tel:${emp.mobile2}`}
-                                        className="col-span-1 flex items-center justify-center space-x-2 bg-secondary/50 hover:bg-green-950/30 hover:text-green-400 text-foreground/80 py-2 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                        <span className="text-base font-bold">{emp.mobile2}</span>
-                                    </a>
-                                )}
-                                {(!emp.mobile1 && !emp.mobile2) && (
-                                    <div className="col-span-2 text-center text-muted-foreground text-sm italic py-2">
-                                        No contact number available
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 

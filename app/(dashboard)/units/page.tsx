@@ -1,21 +1,12 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, Fragment } from "react";
-import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getUnitSections, updateUnitSections, getRanks, Rank } from "@/lib/firebase/firestore";
+import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getRanks, Rank, getSubSections } from "@/lib/firebase/firestore";
 import { getAppConfig } from "@/lib/firebase/app-config";
-import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown, Layers, LayoutGrid, AlertCircle, Filter } from 'lucide-react';
+import Link from "next/link";
+import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown, Layers, LayoutGrid, Briefcase } from 'lucide-react';
 import { DEFAULT_UNITS, ALL_BATTALIONS } from "@/lib/constants";
 
-// Configurable Fields for Visibility
-const CONFIGURABLE_FIELDS = [
-    { id: "gender", label: "Gender" },
-    { id: "bloodGroup", label: "Blood Group" },
-    { id: "email", label: "Email" },
-    { id: "mobile2", label: "Mobile 2" },
-    { id: "landline", label: "Landline" },
-    { id: "dob", label: "Date of Birth (DOB)" },
-    { id: "doa", label: "Date of Appointment (DOA)" },
-];
 
 interface MultiSelectProps {
     label: string;
@@ -134,7 +125,7 @@ export default function UnitsPage() {
     const [units, setUnits] = useState<Unit[]>([]);
     const [districts, setDistricts] = useState<District[]>([]);
     const [allRanks, setAllRanks] = useState<Rank[]>([]);
-    const [globalHiddenFields, setGlobalHiddenFields] = useState<string[]>([]);
+    const [allDutyRoles, setAllDutyRoles] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -145,21 +136,13 @@ export default function UnitsPage() {
         mappedAreaIds: [],
         isDistrictLevel: false,
         isHqLevel: false,
-        hideFromRegistration: false
+        hideFromRegistration: false,
+        dutyRoles: [],
+        hiddenFields: []
     });
     const [submitting, setSubmitting] = useState(false);
     const [migrating, setMigrating] = useState(false);
-    const [sectionsList, setSectionsList] = useState<string[]>([]);
-    const [newSectionInput, setNewSectionInput] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
-    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        identity: true,
-        status: true,
-        visibility: false,
-        scope: true,
-        sections: true,
-        ranks: false
-    });
 
     // Resizable columns state
     const [columnWidths, setColumnWidths] = useState({
@@ -168,6 +151,7 @@ export default function UnitsPage() {
         name: 400,
         scopes: 180,
         areas: 160,
+        dutyRoles: 250,
         actions: 100
     });
     const resizingColumn = useRef<string | null>(null);
@@ -210,12 +194,6 @@ export default function UnitsPage() {
         };
     }, []);
 
-    const toggleSectionCollapse = (sectionId: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [sectionId]: !prev[sectionId]
-        }));
-    };
 
     const filteredUnits = useMemo(() => {
         return units.filter(unit =>
@@ -228,13 +206,22 @@ export default function UnitsPage() {
         loadUnits();
         loadDistricts();
         loadRanks();
+        loadDutyRoles();
         loadGlobalConfig();
     }, []);
 
+    const loadDutyRoles = async () => {
+        try {
+            const data = await getSubSections();
+            setAllDutyRoles(data);
+        } catch (error) {
+            console.error("Error loading duty roles:", error);
+        }
+    };
+
     const loadGlobalConfig = async () => {
         try {
-            const config = await getAppConfig();
-            setGlobalHiddenFields(config?.hiddenFields || []);
+            await getAppConfig();
         } catch (error) {
             console.error("Error loading global config:", error);
         }
@@ -295,28 +282,13 @@ export default function UnitsPage() {
             isDistrictLevel: unit.isDistrictLevel || false,
             isHqLevel: unit.isHqLevel || false,
             applicableRanks: unit.applicableRanks || [],
+            dutyRoles: unit.dutyRoles || [],
             stationKeyword: unit.stationKeyword || "",
             hideFromRegistration: unit.hideFromRegistration || false,
             hiddenFields: unit.hiddenFields || [],
         });
 
-        try {
-            const sections = await getUnitSections(unit.name);
-            setSectionsList(sections);
-        } catch (error) {
-            console.error("Error fetching sections:", error);
-            setSectionsList([]);
-        }
-
         setShowForm(true);
-    };
-
-    const toggleHiddenField = (fieldId: string) => {
-        const current = formData.hiddenFields || [];
-        setFormData({
-            ...formData,
-            hiddenFields: current.includes(fieldId) ? current.filter(id => id !== fieldId) : [...current, fieldId]
-        });
     };
 
     const handleDelete = async (id: string, name: string) => {
@@ -333,8 +305,7 @@ export default function UnitsPage() {
     const handleCancel = () => {
         setShowForm(false);
         setEditingId(null);
-        setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], hideFromRegistration: false, hiddenFields: [] });
-        setSectionsList([]);
+        setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], dutyRoles: [], hideFromRegistration: false, hiddenFields: [] });
     };
 
     const handlePopulateDefaults = async () => {
@@ -382,12 +353,14 @@ export default function UnitsPage() {
         });
     };
 
-    const handleAddSection = () => {
-        const trimmed = newSectionInput.trim();
-        if (!trimmed || sectionsList.includes(trimmed)) return;
-        setSectionsList([...sectionsList, trimmed].sort());
-        setNewSectionInput("");
+    const toggleDutyRole = (role: string) => {
+        const current = formData.dutyRoles || [];
+        setFormData({
+            ...formData,
+            dutyRoles: current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+        });
     };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -428,6 +401,7 @@ export default function UnitsPage() {
                 isHqLevel: scopes.includes("hq"),
                 isDistrictLevel: scopes.includes("district"),
                 applicableRanks: formData.applicableRanks || [],
+                dutyRoles: formData.dutyRoles || [],
                 stationKeyword: formData.stationKeyword?.trim() || "",
                 hideFromRegistration: formData.hideFromRegistration || false,
                 hiddenFields: formData.hiddenFields || []
@@ -439,15 +413,9 @@ export default function UnitsPage() {
                 await createUnit(payload);
             }
 
-            const unitName = formData.name?.trim();
-            if (unitName) {
-                await updateUnitSections(unitName, sectionsList);
-            }
-
             setShowForm(false);
             setEditingId(null);
-            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], hideFromRegistration: false });
-            setSectionsList([]);
+            setFormData({ name: "", isActive: true, scopes: [], mappedAreaIds: [], applicableRanks: [], dutyRoles: [], hideFromRegistration: false });
             await loadUnits();
             alert("Unit saved successfully!");
         } catch (error: any) {
@@ -510,6 +478,10 @@ export default function UnitsPage() {
     const rankOptions = useMemo(() =>
         allRanks.map(r => ({ id: r.rank_id, label: `${r.rank_id} - ${r.rank_label}` }))
         , [allRanks]);
+
+    const dutyRoleOptions = useMemo(() =>
+        allDutyRoles.map(role => ({ id: role, label: role }))
+        , [allDutyRoles]);
 
     if (loading) {
         return (
@@ -618,51 +590,29 @@ export default function UnitsPage() {
                             placeholder="Select authorized ranks..."
                         />
 
-                        {/* Status Toggles REMOVED - Managed from list view */}
+                        <div className="space-y-6 pt-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="w-4 h-4 text-indigo-400" />
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Duty Roles</h3>
+                                </div>
+                                <Link href="/duty-roles" className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-tighter flex items-center gap-1 group/link">
+                                    Manage Master List
+                                    <Plus className="w-3 h-3 transition-transform group-hover/link:rotate-90" />
+                                </Link>
+                            </div>
+                            <MultiSelectBox
+                                label="Applicable Duty Roles"
+                                options={dutyRoleOptions}
+                                selectedIds={formData.dutyRoles || []}
+                                onToggle={toggleDutyRole}
+                                placeholder="Select assigned duty roles..."
+                            />
+                            <p className="text-[10px] text-slate-600 italic">If no roles are selected, all global roles will be available for this unit by default.</p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Sections Management */}
-                {(formData.scopes?.includes("hq") || formData.scopes?.includes("district")) && (
-                    <div className="space-y-6 pt-6 border-t border-dark-border">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Filter className="w-4 h-4 text-emerald-400" />
-                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Branch Sections</h3>
-                        </div>
-                        <div className="flex gap-4">
-                            <input
-                                type="text"
-                                value={newSectionInput}
-                                onChange={(e) => setNewSectionInput(e.target.value)}
-                                placeholder="Add specialized section (e.g. Accounts)..."
-                                className="flex-1 rounded-xl bg-dark-sidebar/50 border border-dark-border px-4 py-3 text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500/30"
-                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSection())}
-                            />
-                            <button
-                                type="button"
-                                onClick={handleAddSection}
-                                className="px-6 py-3 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 rounded-xl font-bold hover:bg-emerald-600/30 active:scale-95 transition-all"
-                            >
-                                Append
-                            </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {sectionsList.map(s => (
-                                <span key={s} className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-300 transition-all hover:border-emerald-500/40">
-                                    {s}
-                                    <button
-                                        type="button"
-                                        onClick={() => setSectionsList(prev => prev.filter(x => x !== s))}
-                                        className="opacity-40 group-hover:opacity-100 transition-opacity hover:text-white"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </span>
-                            ))}
-                            {sectionsList.length === 0 && <p className="text-xs text-slate-600 italic py-2">No sections defined yet for this HQ unit.</p>}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Form Footer */}
@@ -783,6 +733,15 @@ export default function UnitsPage() {
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.dutyRoles }}>
+                                    Duty Roles
+                                    <div
+                                        onMouseDown={(e) => handleMouseDown(e, 'dutyRoles')}
+                                        className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
+                                    >
+                                        <div className="w-[1px] h-full bg-purple-500/50" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar" style={{ width: columnWidths.actions }}>Actions</th>
                             </tr>
                         </thead>
@@ -792,10 +751,10 @@ export default function UnitsPage() {
                                     <Fragment key={unit.id}>
                                         {editingId === unit.id ? (
                                              <tr className="bg-dark-sidebar">
-                                                 <td colSpan={6} className="p-0">
-                                                     {renderForm()}
-                                                 </td>
-                                             </tr>
+                                                <td colSpan={7} className="p-0">
+                                                    {renderForm()}
+                                                </td>
+                                            </tr>
                                         ) : (
                                             <tr className={`hover:bg-dark-sidebar transition-colors ${unit.isActive === false ? "opacity-50" : ""}`}>
                                                  <td className="whitespace-nowrap px-6 py-4 text-sm">
@@ -834,7 +793,18 @@ export default function UnitsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis whitespace-nowrap">
-                                                    <span className="text-blue-400">{unit.mappedAreaIds?.length || 0}</span> areas Â· <span className="text-orange-400">{unit.applicableRanks?.length || 0}</span> ranks
+                                                    <span className="text-blue-400">{unit.mappedAreaIds?.length || 0}</span> areas · <span className="text-orange-400">{unit.applicableRanks?.length || 0}</span> ranks
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(unit.dutyRoles || []).length > 0
+                                                            ? unit.dutyRoles?.map(role => (
+                                                                <span key={role} className="inline-flex rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
+                                                                    {role}
+                                                                </span>
+                                                            ))
+                                                            : <span className="text-slate-600 text-[10px] italic">Global Fallback</span>}
+                                                    </div>
                                                 </td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
@@ -860,7 +830,7 @@ export default function UnitsPage() {
                                 ))
                             ) : (
                                 <tr>
-                                     <td colSpan={6} className="py-12 text-center text-slate-400">
+                                    <td colSpan={7} className="py-12 text-center text-slate-400">
                                         No units found
                                     </td>
                                 </tr>

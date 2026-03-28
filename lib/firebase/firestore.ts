@@ -45,7 +45,9 @@ export interface Employee {
   gender?: string;
   dateOfBirth?: any;
   serviceStartDate?: any;
+  dutyRole?: string; // New: Unit-scoped duty role
 }
+
 
 export interface Officer {
   id?: string;
@@ -62,6 +64,7 @@ export interface Officer {
   district: string;
   office?: string;
   unit?: string;
+  dutyRole?: string; // New: Unit-scoped duty role
   bloodGroup?: string;
   createdAt?: Timestamp;
   isHidden?: boolean;
@@ -72,6 +75,7 @@ export interface District {
   name: string;
   value?: string; // For reserved values like __UNIT_HQ__
   range?: string;
+  shortCode?: string; // 3-digit short code (e.g., "BLR", "MYS")
   isActive?: boolean;
   createdAt?: Timestamp;
 }
@@ -96,6 +100,7 @@ export interface Unit {
   mappedAreaType?: "BATTALION" | "DISTRICT" | "CITY" | "RANGE" | "HQ";
   mappedAreaIds?: string[];
   applicableRanks?: string[]; // List of rank_ids allowed for this unit
+  dutyRoles?: string[]; // New: List of duty roles allowed for this unit
   isDistrictLevel?: boolean; // New: If true, unit exists at District HQ (no station required)
   isHqLevel?: boolean; // New: If true, unit exists at HQ level
   stationKeyword?: string; // New: For dynamic filtering (e.g. "DCRB", "ESCOM")
@@ -142,6 +147,7 @@ export interface PendingRegistration {
   gender?: string;
   dateOfBirth?: any;
   serviceStartDate?: any;
+  dutyRole?: string; // New: Selected duty role
   createdAt?: Timestamp;
   viewedByAdmin?: boolean;
   isAdmin?: boolean;
@@ -677,6 +683,7 @@ export interface UnitSections {
   updatedAt?: Timestamp;
 }
 
+/** @deprecated Use Unit.dutyRoles instead */
 export const getUnitSections = async (unitName: string): Promise<string[]> => {
   try {
     const docSnap = await getDocument<UnitSections>("unit_sections", unitName);
@@ -687,13 +694,37 @@ export const getUnitSections = async (unitName: string): Promise<string[]> => {
   }
 };
 
-export const updateUnitSections = async (unitName: string, sections: string[]): Promise<void> => {
+/** @deprecated No longer used. Consolidation into Duty Roles. */
+export const updateUnitSections = async (
+  unitName: string, sections: string[]): Promise<void> => {
   if (typeof window === "undefined" || !db) {
     throw new Error("Firestore not initialized");
   }
   const docRef = doc(db, "unit_sections", unitName);
   await setDoc(docRef, {
     sections,
+    updatedAt: Timestamp.now(),
+  }, { merge: true });
+};
+
+// Stored in app_config/station_sub_sections as a list of strings in 'items' field
+export const getSubSections = async (): Promise<string[]> => {
+  try {
+    const docSnap = await getDocument<{ items: string[] }>("app_config", "station_sub_sections");
+    return docSnap?.items || [];
+  } catch (error) {
+    console.error("Error fetching duty roles:", error);
+    return [];
+  }
+};
+
+export const updateSubSections = async (list: string[]): Promise<void> => {
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized");
+  }
+  const docRef = doc(db, "app_config", "station_sub_sections");
+  await setDoc(docRef, {
+    items: list.sort(),
     updatedAt: Timestamp.now(),
   }, { merge: true });
 };

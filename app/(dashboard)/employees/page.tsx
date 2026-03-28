@@ -18,7 +18,6 @@ import {
   ChevronDown,
   ShieldAlert,
   Phone,
-  MapPin,
   Building2,
   RefreshCw
 } from "lucide-react";
@@ -26,6 +25,7 @@ import Link from "next/link";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { generateSmartSearchBlob } from "@/lib/searchUtils";
+import { getRankColorClass } from "@/lib/rankUtils";
 
 type SearchableEmployee = Employee & { searchBlob: string };
 type SortField = "kgid" | "name" | "rank" | "email" | "district" | "station" | "unit" | "isApproved" | "mobile1";
@@ -41,15 +41,19 @@ export default function EmployeesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadEmployees();
+    loadData();
   }, []);
 
-  const loadEmployees = async () => {
+  const loadData = async () => {
     setError(null);
     setLoading(true);
     try {
-      const data = await getEmployees();
-      const searchableData = data.map(emp => ({
+      const [empData] = await Promise.all([
+        getEmployees(),
+      ]);
+      
+      
+      const searchableData = empData.map(emp => ({
         ...emp,
         searchBlob: generateSmartSearchBlob(
           emp.name,
@@ -187,7 +191,7 @@ export default function EmployeesPage() {
           <h2 className="text-lg font-bold text-slate-200 mb-2">Could not load employees</h2>
           <p className="text-slate-400 text-sm mb-6">{error}</p>
           <button
-            onClick={() => loadEmployees()}
+            onClick={() => loadData()}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-all"
           >
             <RefreshCw className="w-4 h-4" />
@@ -249,6 +253,7 @@ export default function EmployeesPage() {
                 <SortableHeader label="Rank" field="rank" current={sortField} dir={sortDirection} onSort={handleSort} />
                 <SortableHeader label="District" field="district" current={sortField} dir={sortDirection} onSort={handleSort} />
                 <SortableHeader label="Station" field="station" current={sortField} dir={sortDirection} onSort={handleSort} />
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Duty Role</th>
                 <SortableHeader label="Status" field="isApproved" current={sortField} dir={sortDirection} onSort={handleSort} />
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">App Access</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -258,61 +263,76 @@ export default function EmployeesPage() {
               {filteredEmployees.map((emp) => (
                 <tr key={emp.id} className={`hover:bg-slate-800/30 transition-colors group ${emp.isHidden ? 'opacity-50 grayscale' : ''}`}>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="shrink-0">
+                    <div className="flex items-center gap-4 relative">
+                      <div className="shrink-0 relative">
                         {emp.photoUrl || emp.photoUrlFromGoogle ? (
                           <img
                             src={emp.photoUrl || emp.photoUrlFromGoogle || ""}
                             alt={emp.name}
-                            className="h-10 w-10 rounded-full object-cover border border-slate-700"
+                            className="h-12 w-12 rounded-full object-cover border-2 border-slate-700 shadow-sm"
                             onError={(e) => {
                               const img = e.currentTarget;
                               img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=1e293b&color=94a3b8`;
                             }}
                           />
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-400 font-bold text-sm border border-slate-700">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-400 font-bold text-lg border-2 border-slate-700 shadow-inner">
                             {emp.name.charAt(0).toUpperCase()}
                           </div>
                         )}
+                        {/* Blood Group Badge (Round, Small) */}
+                        {emp.bloodGroup && (
+                          <div className={`absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-bold text-white shadow-sm ring-2 ring-slate-900 ${
+                            emp.bloodGroup.startsWith('A') ? 'bg-red-500' :
+                            emp.bloodGroup.startsWith('B') ? 'bg-blue-500' :
+                            emp.bloodGroup.startsWith('O') ? 'bg-orange-500' : 'bg-slate-500'
+                          }`}>
+                            {emp.bloodGroup}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <div className="font-bold text-slate-200 flex items-center gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-100 text-base flex items-center gap-2 truncate">
                           {emp.name}
                           {emp.isHidden && <EyeOff className="w-3 h-3 text-slate-500" />}
                         </div>
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                            <Phone className="w-2.5 h-2.5" /> {emp.mobile1}
+                        <div className={`text-xs mt-0.5 ${getRankColorClass(emp.displayRank || emp.rank)}`}>
+                          {emp.displayRank || emp.rank}
+                        </div>
+                        <div className="flex flex-col gap-0.5 mt-1">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                            <Phone className="w-2.5 h-2.5 text-slate-500" /> {emp.mobile1}
                           </div>
-                          {(emp.unit || emp.district) && (
-                            <div className="flex items-center gap-2 text-[10px] text-blue-400/70 font-medium">
-                              <Building2 className="w-2.5 h-2.5" />
-                              {[emp.unit, emp.district].filter(Boolean).join(" • ")}
-                            </div>
-                          )}
+                          {(() => {
+                            const subtitleParts = [];
+                            if (emp.dutyRole && emp.dutyRole !== "Others") subtitleParts.push(emp.dutyRole);
+                            if (emp.unit && emp.unit !== emp.district) subtitleParts.push(emp.unit);
+                            if (emp.station) subtitleParts.push(emp.station);
+                            if (emp.district) subtitleParts.push(emp.district);
+                            const finalSubtitle = Array.from(new Set(subtitleParts)).join(", ");
+                            return finalSubtitle ? (
+                              <div className="flex items-center gap-2 text-[10px] text-slate-500 truncate max-w-[200px]">
+                                <Building2 className="w-2.5 h-2.5 opacity-50" />
+                                {finalSubtitle}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-mono text-sm text-blue-400">{emp.kgid}</td>
+                  <td className="px-6 py-4 font-mono text-sm text-blue-400/80">{emp.kgid}</td>
                   <td className="px-6 py-4 font-mono text-sm text-slate-300">{emp.mobile1 || "N/A"}</td>
-                  <td className="px-6 py-4 text-xs text-slate-400 font-medium lowercase truncate max-w-[150px]" title={emp.email || "N/A"}>
+                  <td className="px-6 py-4 text-xs text-slate-400 font-medium lowercase truncate max-w-[120px]" title={emp.email || "N/A"}>
                     {emp.email || "N/A"}
                   </td>
-                  <td className="px-6 py-4 text-xs text-slate-400 font-medium">{emp.displayRank || emp.rank || "N/A"}</td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <MapPin className="w-3 h-3 text-red-500/50" />
-                      {emp.district}
+                    <div className="flex flex-col">
+                        <span className="text-xs text-slate-300 font-semibold">{emp.district}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <Building2 className="w-3 h-3 text-blue-500/50" />
-                      {emp.station}
-                    </div>
-                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-400 font-medium">{emp.station}</td>
+                  <td className="px-6 py-4 text-xs text-slate-400 font-medium capitalize">{emp.dutyRole || "N/A"}</td>
                   <td className="px-6 py-4">
                     <AppBadge isApproved={emp.isApproved} />
                   </td>

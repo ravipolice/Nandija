@@ -199,6 +199,7 @@ export default function ApprovalsPage() {
                   <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={reg.email} />
                   <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile" value={reg.mobile1} />
                   <InfoRow icon={<GraduationCap className="w-3.5 h-3.5" />} label="Rank" value={reg.rank || "N/A"} />
+                  {reg.dutyRole && <InfoRow icon={<ShieldCheck className="w-3.5 h-3.5 text-blue-400" />} label="Duty Role" value={reg.dutyRole} />}
                   <InfoRow icon={<MapPin className="w-3.5 h-3.5 text-red-500/50" />} label="District" value={reg.district} />
                   <InfoRow icon={<Building2 className="w-3.5 h-3.5 text-blue-500/50" />} label="Station" value={reg.station} />
                   {reg.gender && <InfoRow icon={<UserPlus className="w-3.5 h-3.5 text-indigo-400" />} label="Gender" value={reg.gender} />}

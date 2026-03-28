@@ -15,19 +15,21 @@ import {
   District,
   Station,
   getUnits,
-  Unit
+  Unit,
+  getSubSections,
 } from "@/lib/firebase/firestore";
 import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search, Eye, EyeOff, FileSpreadsheet, FileJson } from "lucide-react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { format } from "date-fns";
 import { generateSmartSearchBlob } from "@/lib/searchUtils"; // Smart Search
+import { getRankColorClass } from "@/lib/rankUtils";
 
 type SearchableOfficer = Officer & { searchBlob: string };
 
-type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit";
+type SortField = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit" | "dutyRole";
 type SortDirection = "asc" | "desc";
-type ColumnKey = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit" | "actions";
+type ColumnKey = "rank" | "agid" | "name" | "mobile" | "email" | "landline" | "district" | "office" | "unit" | "dutyRole" | "actions";
 
 const defaultOfficerColumnWidths: Record<ColumnKey, number> = {
   rank: 100,
@@ -39,6 +41,7 @@ const defaultOfficerColumnWidths: Record<ColumnKey, number> = {
   district: 150,
   office: 150,
   unit: 100,
+  dutyRole: 120,
   actions: 100,
 };
 
@@ -48,6 +51,7 @@ export default function OfficersPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [allDutyRoles, setAllDutyRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -76,7 +80,9 @@ export default function OfficersPage() {
     district: "",
     office: "",
     unit: "",
+    dutyRole: "",
   });
+  const [manualDutyRole, setManualDutyRole] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -150,12 +156,15 @@ export default function OfficersPage() {
 
   const loadData = async () => {
     try {
-      const [officersData, districtsData, ranksData, unitsData] = await Promise.all([
+      const [officersData, districtsData, ranksData, unitsData, dutyRolesData] = await Promise.all([
         getOfficers(),
         getDistricts(),
         getRanks(),
         getUnits(),
+        getSubSections(),
       ]);
+
+      setAllDutyRoles(dutyRolesData);
 
       // Generate Smart Search Blob
       const searchableOfficers = officersData.map(off => ({
@@ -169,7 +178,7 @@ export default function OfficersPage() {
           off.district,
           off.office || (off as any).station,
           off.unit,
-          off.bloodGroup
+          (off as any).bloodGroup
         )
       }));
       setOfficers(searchableOfficers);
@@ -189,7 +198,7 @@ export default function OfficersPage() {
 
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newUnit = e.target.value;
-    setFormData(prev => ({ ...prev, unit: newUnit, district: "", office: "" }));
+    setFormData(prev => ({ ...prev, unit: newUnit, district: "", office: "", dutyRole: "" }));
     setSelectedDistrict("");
     setStations([]);
 
@@ -304,8 +313,11 @@ export default function OfficersPage() {
         bValue = b.office || "";
         break;
       case "unit":
-        aValue = a.unit || "";
         bValue = b.unit || "";
+        break;
+      case "dutyRole":
+        aValue = a.dutyRole || "";
+        bValue = b.dutyRole || "";
         break;
     }
 
@@ -319,6 +331,21 @@ export default function OfficersPage() {
     // Smart Search using pre-calculated blob
     return terms.every(term => officer.searchBlob.includes(term));
   });
+
+  // Duty Role filtering logic
+  const filteredDutyRoles = useMemo(() => {
+    let roles = allDutyRoles;
+    const unitObj = units.find(u => u.name === formData.unit);
+    if (unitObj && unitObj.dutyRoles && unitObj.dutyRoles.length > 0) {
+      roles = unitObj.dutyRoles;
+    }
+    
+    // Add "Other" if not present
+    if (!roles.includes("Other")) {
+      return [...roles, "Other"];
+    }
+    return roles;
+  }, [formData.unit, units, allDutyRoles]);
 
   const handleExportCSV = () => {
     if (officers.length === 0) return;
@@ -377,6 +404,11 @@ export default function OfficersPage() {
       return;
     }
 
+    if (formData.dutyRole === "Others" && !manualDutyRole) {
+      alert("Please specify the duty role");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -387,14 +419,10 @@ export default function OfficersPage() {
         mobile: formData.mobile.trim().toUpperCase() || "",
         email: formData.email.trim() || undefined,
         landline: formData.landline.trim() || undefined,
-        // If special unit, we might allow empty district, or handle it as specific value?
-        // Standard Officer model has 'district'. If empty, it's fine if backend allows.
-        // Assuming undefined is fine if model allows.
-        district: formData.district || "HQ", // Fallback to HQ if hidden? Or undefined? Let's check model. 
-        // Actually, if hidden, usually we just send whatever or empty string. 
-        // Let's send what's in formData. If validation passed, it's fine.
+        district: formData.district || "HQ", 
         office: formData.office.trim() || undefined,
         unit: formData.unit.trim() || undefined,
+        dutyRole: formData.dutyRole === "Others" ? manualDutyRole : (formData.dutyRole.trim() || undefined),
       });
       setFormData({
         agid: "",
@@ -408,6 +436,7 @@ export default function OfficersPage() {
         district: "",
         office: "",
         unit: "",
+        dutyRole: "",
       });
       setSelectedDistrict("");
       setStations([]);
@@ -618,6 +647,42 @@ export default function OfficersPage() {
                   </select>
                 </div>
               )}
+              {/* Duty Role Field */}
+              <div>
+                <label className="block text-sm font-medium text-slate-400">
+                  Duty Role (e.g. Writer, Court)
+                </label>
+                <select
+                  value={formData.dutyRole}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dutyRole: e.target.value })
+                  }
+                  className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                >
+                  <option value="">Select Duty Role (Optional)</option>
+                  {filteredDutyRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.dutyRole === "Others" && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400">
+                    Specify Duty Role *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={manualDutyRole}
+                    onChange={(e) => setManualDutyRole(e.target.value)}
+                    className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 font-bold"
+                    placeholder="Enter duty role"
+                  />
+                </div>
+              )}
             </div>
             <div className="mt-4 flex gap-4">
               <button
@@ -643,6 +708,7 @@ export default function OfficersPage() {
                     district: "",
                     office: "",
                     unit: "",
+                    dutyRole: "",
                   });
                   setSelectedDistrict("");
                   setStations([]);
@@ -832,57 +898,72 @@ export default function OfficersPage() {
                 />
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
-                style={{ width: columnWidths.actions }}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 cursor-pointer hover:bg-dark-card select-none relative"
+                onClick={() => handleSort("dutyRole")}
+                style={{ width: columnWidths.dutyRole }}
               >
-                Actions
+                <div className="flex items-center gap-1">
+                  Duty Role
+                  {sortField === "dutyRole" && (
+                    sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
                 <div
                   className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary-500 bg-transparent"
-                  onMouseDown={(e) => handleMouseDown(e, "actions")}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDown(e, "dutyRole");
+                  }}
                 />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400" style={{ width: columnWidths.actions }}>
+                Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-dark-border bg-dark-card">
+          <tbody className="divide-y divide-dark-border">
             {filteredOfficers.map((officer) => (
-              <tr key={officer.id} className={`hover:bg-dark-sidebar transition-colors ${officer.isHidden ? 'opacity-50 grayscale' : ''}`}>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.agid }}>
-                  {officer.agid || "N/A"}
-                  {officer.isHidden && <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-1 rounded">Hidden</span>}
+              <tr key={officer.id} className={`${officer.isHidden ? 'opacity-50' : ''} hover:bg-dark-accent-light/30 transition-colors`}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-blue-400">
+                  {officer.agid}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-100">
+                <td className={`whitespace-nowrap px-6 py-4 text-sm ${getRankColorClass(officer.rank)}`}>
                   {officer.rank}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.name }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-100 font-bold">
                   {officer.name}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.mobile }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
                   {officer.mobile}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.email }}>
-                  {officer.email || "N/A"}
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
+                  {officer.email}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.landline }}>
-                  {officer.landline || "N/A"}
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
+                  {officer.landline}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.district }}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-300">
                   {officer.district}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.office }}>
-                  {officer.office || "N/A"}
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-300">
+                  {officer.office}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400 overflow-hidden text-ellipsis" style={{ maxWidth: columnWidths.unit }}>
-                  {officer.unit || "N/A"}
+                <td className="whitespace-nowrap px-6 py-4 text-sm">
+                  <span className="inline-flex items-center rounded bg-primary-500/10 px-2 py-0.5 text-[10px] font-medium text-primary-400 border border-primary-500/20">
+                    {officer.unit}
+                  </span>
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleToggleVisibility(officer)}
-                      className="text-slate-400 hover:text-slate-200"
-                      title={officer.isHidden ? "Unhide" : "Hide"}
-                    >
-                      {officer.isHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
+                <td className="whitespace-nowrap px-6 py-4 text-sm">
+                  {officer.dutyRole ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      {officer.dutyRole}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-600 italic">None</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
+                  <div className="flex items-center gap-3">
                     <Link
                       href={`/officers/edit?id=${officer.id}`}
                       className="text-primary-400 hover:text-primary-300"
@@ -890,7 +971,14 @@ export default function OfficersPage() {
                       <Edit className="h-5 w-5" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(officer.id!)}
+                      onClick={() => handleToggleVisibility(officer)}
+                      className="text-slate-400 hover:text-slate-200"
+                      title={officer.isHidden ? "Show in Directory" : "Hide from Directory"}
+                    >
+                      {officer.isHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                    <button
+                      onClick={() => officer.id && handleDelete(officer.id)}
                       className="text-red-400 hover:text-red-300"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -899,13 +987,6 @@ export default function OfficersPage() {
                 </td>
               </tr>
             ))}
-            {filteredOfficers.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-6 py-4 text-center text-sm text-slate-400">
-                  No officers found.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

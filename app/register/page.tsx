@@ -13,7 +13,6 @@ import {
     Unit,
     getStations,
     Station,
-    getUnitSections,
     getRanks,
     Rank,
 } from "@/lib/firebase/firestore";
@@ -29,7 +28,6 @@ import {
     MINISTERIAL_RANKS,
     POLICE_STATION_RANKS,
     UNIT_HQ_VALUE,
-    STATE_INT_SECTIONS,
 } from "@/lib/constants";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -48,7 +46,6 @@ function RegisterPageContent() {
     const [units, setUnits] = useState<Unit[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
     const [ranks, setRanks] = useState<Rank[]>([]);
-    const [unitSections, setUnitSections] = useState<string[]>([]);
 
     // Loading states for data
     const [loadingData, setLoadingData] = useState(true);
@@ -169,23 +166,6 @@ function RegisterPageContent() {
         }
     }, [formData.station]);
 
-    // Fetch Unit Sections
-    useEffect(() => {
-        async function fetchUnitSectionsData() {
-            if (formData.unit) {
-                try {
-                    const sections = await getUnitSections(formData.unit);
-                    setUnitSections(sections);
-                } catch (error) {
-                    console.error("Error fetching unit sections:", error);
-                    setUnitSections([]);
-                }
-            } else {
-                setUnitSections([]);
-            }
-        }
-        fetchUnitSectionsData();
-    }, [formData.unit]);
 
     // Prefill Email & Name
     useEffect(() => {
@@ -272,13 +252,12 @@ function RegisterPageContent() {
             const rankObj = ranks.find(r => r.rank_id === formData.rank || r.equivalent_rank === formData.rank);
             const isMinisterial = rankObj ? rankObj.staffType === "MINISTERIAL" : MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
             const hideDistrict = mappingType === "state" || mappingType === "none" || isSpecialUnit;
-            const hasUnitSections = (unitSections.length > 0 || formData.unit === "State INT") || (isDistrictLevelUnit && unitSections.length > 0);
-            const hideStation = (isDistrictLevelUnit && !hasUnitSections) || hideDistrict || isKSRP || isMinisterial;
+            const hideStation = isDistrictLevelUnit || hideDistrict || isKSRP || isMinisterial;
 
             if (!isHighRanking && !hideDistrict) {
                 if (!formData.district) throw new Error(selectedUnit?.mappedAreaType === "BATTALION" || isKSRP ? "Battalion is required" : "District is required");
                 if (!hideStation && !formData.station) {
-                    throw new Error(unitSections.length > 0 ? "Section is required" : "Station is required");
+                    throw new Error("Station is required");
                 }
                 if (formData.station === "Others" && !manualSection) {
                     throw new Error("Please specify your section name");
@@ -324,7 +303,7 @@ function RegisterPageContent() {
                 rank: formData.rank,
                 metalNumber: formData.metalNumber || undefined,
                 district: (isSpecialUnit || isHighRanking || hideDistrict) ? "" : formData.district,
-                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || (isDistrictLevelUnit && !hasUnitSections)) ? "" : (formData.station === "Others" ? manualSection : formData.station),
+                station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || isDistrictLevelUnit) ? "" : (formData.station === "Others" ? manualSection : formData.station),
                 unit: formData.unit || undefined,
                 pin: hashedPin,
                 bloodGroup: formData.bloodGroup || undefined,
@@ -633,7 +612,7 @@ function RegisterPageContent() {
                             }
 
                             // Ensure "HQ" is included for HQ-level units or units with HQ scope
-                            if (isStateScope || unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0)) {
+                            if (isStateScope) {
                                 const alreadyHasHq = availableDistricts.some(d =>
                                     (d.name || "").match(/^(HQ|UNIT_HQ)$/i) || (d.id === "UNIT_HQ")
                                 );
@@ -652,15 +631,12 @@ function RegisterPageContent() {
                             });
 
                             // 2. Determine Filtered Stations
-                            const effectiveSections = unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : []);
                             const isPoliceStationRank = POLICE_STATION_RANKS.includes(formData.rank.toUpperCase()) ||
                                 (rankObj && POLICE_STATION_RANKS.includes((rankObj.rank_id || "").toUpperCase()));
 
                             // Station Resolution Logic (Matching CommonEmployeeForm.kt)
                             let availableStations: string[] = [];
-                            if (effectiveSections.length > 0) {
-                                availableStations = effectiveSections;
-                            } else if (formData.district) {
+                            if (formData.district) {
                                 // 1. Start with all stations for this district
                                 let baseStations = stations.map(s => s.name);
 
@@ -680,12 +656,12 @@ function RegisterPageContent() {
                                 }
                             }
 
-                            // Add "Others" option if list is not empty or it's an HQ-level unit where manual entries are expected
-                            if (availableStations.length > 0 || (effectiveSections.length > 0 || formData.district === UNIT_HQ_VALUE)) {
+                            // Add "Others" option if list is not empty
+                            if (availableStations.length > 0) {
                                 availableStations = Array.from(new Set([...availableStations, "Others"]));
                             }
 
-                            const hideStationField = isMinisterial || (isDistrictLevel && effectiveSections.length === 0);
+                            const hideStationField = isMinisterial || isDistrictLevel;
 
                             return (
                                 <>
@@ -710,20 +686,18 @@ function RegisterPageContent() {
 
                                     {!hideStationField && (
                                         <div>
-                                            <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-                                                {effectiveSections.length > 0 ? "Section *" : "Station / Section *"}
-                                            </label>
+                                            <label htmlFor="station" className="block text-sm font-medium text-gray-700"> Station / Section * </label>
                                             <select
                                                 name="station"
                                                 id="station"
                                                 required
                                                 value={formData.station}
                                                 onChange={handleChange}
-                                                disabled={!formData.district && effectiveSections.length === 0}
+                                                disabled={!formData.district}
                                                 className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-gray-100 text-gray-900"
                                             >
                                                 <option value="" className="text-gray-500">
-                                                    {effectiveSections.length > 0 ? "Select Section" : (formData.district ? "Select Station" : "Select District First")}
+                                                    {formData.district ? "Select Station" : "Select District First"}
                                                 </option>
                                                 {availableStations.map((s) => (
                                                     <option key={s} value={s} className="text-gray-900">{s}</option>

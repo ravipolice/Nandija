@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   getOfficer,
@@ -13,6 +13,7 @@ import {
   Station,
   Rank,
   Unit,
+  getSubSections,
 } from "@/lib/firebase/firestore";
 import { BLOOD_GROUPS } from "@/lib/constants";
 
@@ -27,6 +28,7 @@ export default function EditOfficerPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [allDutyRoles, setAllDutyRoles] = useState<string[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -42,7 +44,9 @@ export default function EditOfficerPage() {
     office: "",
     unit: "",
     bloodGroup: "",
+    dutyRole: "",
   });
+  const [manualDutyRole, setManualDutyRole] = useState("");
 
   const loadOfficer = async () => {
     if (!officerId) return;
@@ -55,7 +59,7 @@ export default function EditOfficerPage() {
       }
 
       setFormData({
-        agid: officer.agid || officer.cfd || "",
+        agid: officer.agid || (officer as any).cfd || "",
         rank: officer.rank || "",
         name: officer.name || "",
         mobile: officer.mobile || "",
@@ -67,7 +71,14 @@ export default function EditOfficerPage() {
         office: officer.office || "",
         unit: officer.unit || "",
         bloodGroup: officer.bloodGroup || "",
+        dutyRole: officer.dutyRole || "",
       });
+
+      // Handle manual duty role initialization
+      if (officer.dutyRole && !allDutyRoles.includes(officer.dutyRole)) {
+        setManualDutyRole(officer.dutyRole);
+        setFormData(prev => ({ ...prev, dutyRole: "Others" }));
+      }
 
       // Set selected district to load stations
       if (officer.district) {
@@ -109,6 +120,15 @@ export default function EditOfficerPage() {
     }
   };
 
+  const loadDutyRoles = async () => {
+    try {
+      const data = await getSubSections();
+      setAllDutyRoles(data);
+    } catch (error) {
+      console.error("Error loading duty roles:", error);
+    }
+  };
+
   const loadStations = async (district: string) => {
     try {
       const data = await getStations(district);
@@ -136,9 +156,12 @@ export default function EditOfficerPage() {
   useEffect(() => {
     if (!officerId) return;
     const loadData = async () => {
-      await loadDistricts();
-      await loadRanks();
-      await loadUnits();
+      await Promise.all([
+        loadDistricts(),
+        loadRanks(),
+        loadUnits(),
+        loadDutyRoles(),
+      ]);
       await loadOfficer();
     };
     loadData();
@@ -154,6 +177,21 @@ export default function EditOfficerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDistrict]);
 
+  // Duty Role filtering logic
+  const filteredDutyRoles = useMemo(() => {
+    let roles = allDutyRoles;
+    const unitObj = units.find(u => u.name === formData.unit);
+    if (unitObj && unitObj.dutyRoles && unitObj.dutyRoles.length > 0) {
+      roles = unitObj.dutyRoles;
+    }
+    
+    // Add "Others" if not present
+    if (!roles.includes("Others")) {
+      return [...roles, "Others"];
+    }
+    return roles;
+  }, [formData.unit, units, allDutyRoles]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -166,6 +204,11 @@ export default function EditOfficerPage() {
     const mobileUpper = formData.mobile.trim().toUpperCase();
     if (mobileUpper && mobileUpper !== "NM" && mobileUpper.length !== 10) {
       alert("Mobile number must be 10 digits or 'NM' if provided");
+      return;
+    }
+
+    if (formData.dutyRole === "Others" && !manualDutyRole) {
+      alert("Please specify the duty role");
       return;
     }
 
@@ -185,6 +228,7 @@ export default function EditOfficerPage() {
         office: formData.office.trim(),
         unit: formData.unit.trim(),
         bloodGroup: formData.bloodGroup,
+        dutyRole: formData.dutyRole === "Others" ? manualDutyRole : formData.dutyRole.trim(),
       });
       router.push("/officers");
     } catch (error) {
@@ -234,7 +278,7 @@ export default function EditOfficerPage() {
               <option value="">Select Rank (Optional)</option>
               {ranks.map((rank) => (
                 <option key={rank.rank_id} value={rank.equivalent_rank || rank.rank_id}>
-                  {rank.rank_label} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
+                  {rank.rank_label || rank.rank_id} {rank.equivalent_rank ? `(${rank.equivalent_rank})` : ""}
                 </option>
               ))}
             </select>
@@ -369,6 +413,42 @@ export default function EditOfficerPage() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Duty Role (e.g. Writer, Court)
+            </label>
+            <select
+              value={formData.dutyRole}
+              onChange={(e) =>
+                setFormData({ ...formData, dutyRole: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Duty Role (Optional)</option>
+              {filteredDutyRoles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formData.dutyRole === "Other" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                Specify Duty Role *
+              </label>
+              <input
+                type="text"
+                required
+                value={manualDutyRole}
+                onChange={(e) => setManualDutyRole(e.target.value)}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 font-bold"
+                placeholder="Enter duty role"
+              />
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex gap-4">
@@ -387,7 +467,7 @@ export default function EditOfficerPage() {
             Cancel
           </button>
         </div>
-      </form >
-    </div >
+      </form>
+    </div>
   );
 }

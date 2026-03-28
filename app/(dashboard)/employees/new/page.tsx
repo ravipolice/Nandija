@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   createEmployee,
@@ -12,7 +12,7 @@ import {
   Station,
   Rank,
   Unit,
-  getUnitSections,
+  getSubSections,
 } from "@/lib/firebase/firestore";
 import {
   BLOOD_GROUPS,
@@ -20,7 +20,6 @@ import {
   MINISTERIAL_RANKS,
   POLICE_STATION_RANKS,
   UNIT_HQ_VALUE,
-  STATE_INT_SECTIONS
 } from "@/lib/constants";
 
 export default function NewEmployeePage() {
@@ -30,7 +29,7 @@ export default function NewEmployeePage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [unitSections, setUnitSections] = useState<string[]>([]);
+  const [allDutyRoles, setAllDutyRoles] = useState<string[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const [formData, setFormData] = useState({
@@ -53,15 +52,27 @@ export default function NewEmployeePage() {
     gender: "",
     dateOfBirth: "",
     serviceStartDate: "",
+    dutyRole: "",
   });
 
   const [manualSection, setManualSection] = useState("");
+  const [manualDutyRole, setManualDutyRole] = useState("");
 
   useEffect(() => {
     loadDistricts();
     loadRanks();
     loadUnits();
+    loadDutyRoles();
   }, []);
+
+  const loadDutyRoles = async () => {
+    try {
+      const roles = await getSubSections();
+      setAllDutyRoles(roles);
+    } catch (error) {
+      console.error("Error loading duty roles:", error);
+    }
+  };
 
   useEffect(() => {
     if (selectedDistrict) {
@@ -71,22 +82,6 @@ export default function NewEmployeePage() {
     }
   }, [selectedDistrict]);
 
-  useEffect(() => {
-    async function fetchUnitSectionsData() {
-      if (formData.unit) {
-        try {
-          const sections = await getUnitSections(formData.unit);
-          setUnitSections(sections);
-        } catch (error) {
-          console.error("Error fetching unit sections:", error);
-          setUnitSections([]);
-        }
-      } else {
-        setUnitSections([]);
-      }
-    }
-    fetchUnitSectionsData();
-  }, [formData.unit]);
 
   const loadDistricts = async () => {
     try {
@@ -145,7 +140,7 @@ export default function NewEmployeePage() {
   const selectedUnitObj = units.find(u => u.name === formData.unit);
   const isSpecialUnit = selectedUnitObj?.mappingType === "none";
   const isDistrictLevel = selectedUnitObj?.isDistrictLevel || false;
-  const hasSections = (unitSections.length > 0 || (formData.unit === "State INT" && STATE_INT_SECTIONS.length > 0) || formData.district === UNIT_HQ_VALUE) || (isDistrictLevel && unitSections.length > 0);
+  const hasSections = false; // Retired Unit Sections
 
   // Restore isMinisterial logic
   const isMinisterial = MINISTERIAL_RANKS.includes(formData.rank.toUpperCase());
@@ -181,9 +176,24 @@ export default function NewEmployeePage() {
     return true;
   });
 
+  // Duty Role filtering logic
+  const filteredDutyRoles = useMemo(() => {
+    let roles = allDutyRoles;
+    const unitObj = units.find(u => u.name === formData.unit);
+    if (unitObj && unitObj.dutyRoles && unitObj.dutyRoles.length > 0) {
+      roles = unitObj.dutyRoles;
+    }
+    
+    // Add "Others" if not present
+    if (!roles.includes("Others")) {
+      return [...roles, "Others"];
+    }
+    return roles;
+  }, [formData.unit, units, allDutyRoles]);
+
   const handleUnitChange = (unitName: string) => {
-    // Reset district/station to ensure clean state
-    setFormData({ ...formData, unit: unitName, district: "", station: "" });
+    // Reset district/station/dutyRole to ensure clean state
+    setFormData({ ...formData, unit: unitName, district: "", station: "", dutyRole: "" });
     setSelectedDistrict("");
   };
 
@@ -193,6 +203,13 @@ export default function NewEmployeePage() {
       setManualSection("");
     }
   }, [formData.station]);
+
+  // Reset manual duty role if selection changes away from "Others"
+  useEffect(() => {
+    if (formData.dutyRole !== "Others") {
+      setManualDutyRole("");
+    }
+  }, [formData.dutyRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,6 +226,11 @@ export default function NewEmployeePage() {
 
     if (formData.station === "Others" && !manualSection) {
       alert("Please specify the section name");
+      return;
+    }
+
+    if (formData.dutyRole === "Others" && !manualDutyRole) {
+      alert("Please specify the duty role");
       return;
     }
 
@@ -234,6 +256,7 @@ export default function NewEmployeePage() {
         unit: formData.unit,
         district: (isSpecialUnit || isHighRanking) ? "" : formData.district,
         station: (isSpecialUnit || isHighRanking || isKSRP || isMinisterial || (isDistrictLevel && !hasSections)) ? "" : (formData.station === "Others" ? manualSection : formData.station),
+        dutyRole: formData.dutyRole === "Others" ? manualDutyRole : formData.dutyRole,
       });
       router.push("/employees");
     } catch (error) {
@@ -374,6 +397,43 @@ export default function NewEmployeePage() {
             </select>
           </div>
 
+          {/* Duty Role Field */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400">
+              Duty Role (e.g. Writer, Court)
+            </label>
+            <select
+              value={formData.dutyRole}
+              onChange={(e) =>
+                setFormData({ ...formData, dutyRole: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+            >
+              <option value="">Select Duty Role (Optional)</option>
+              {filteredDutyRoles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formData.dutyRole === "Others" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400">
+                Specify Duty Role *
+              </label>
+              <input
+                type="text"
+                required
+                value={manualDutyRole}
+                onChange={(e) => setManualDutyRole(e.target.value)}
+                className="mt-1 block w-full rounded-md bg-dark-sidebar border border-dark-border px-3 py-2 text-slate-100 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/50 font-bold"
+                placeholder="Enter duty role"
+              />
+            </div>
+          )}
+
           {/* Row 6: KGID, Rank, Metal Number */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 col-span-1 md:col-span-2 lg:col-span-3">
             {formData.unit !== "IPS" && (
@@ -484,7 +544,7 @@ export default function NewEmployeePage() {
             // A. If it's a State-level unit (HQ scope), ensure "HQ" is included
             const isHqLevel = selectedUnit?.isHqLevel || false;
             const isDistrictLevelVal = selectedUnit?.isDistrictLevel || false;
-            const showUnitHq = (isStateScope) || (hasSections) || isHqLevel || (isDistrictLevelVal && unitSections.length > 0);
+            const showUnitHq = (isStateScope) || (hasSections) || isHqLevel || (isDistrictLevelVal);
 
             if (showUnitHq) {
               const alreadyHasHq = availableDistricts.some(d =>
@@ -544,9 +604,7 @@ export default function NewEmployeePage() {
 
             return (
               <div>
-                <label className="block text-sm font-medium text-slate-400">
-                  {unitSections.length > 0 ? "Section *" : "Station / Section *"}
-                </label>
+                <label className="block text-sm font-medium text-slate-400"> Station / Section * </label>
                 <select
                   required
                   value={formData.station}
@@ -560,10 +618,7 @@ export default function NewEmployeePage() {
                     {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? "Select Station / Section" : (selectedDistrict ? "Select Station / Section" : "Select District First")}
                   </option>
                   {(hasSections && (formData.district === UNIT_HQ_VALUE)) ? (
-                    [
-                      ...(unitSections.length > 0 ? unitSections : (formData.unit === "State INT" ? STATE_INT_SECTIONS : [])),
-                      "Others"
-                    ].map((section) => (
+                    ["Others"].map((section) => (
                       <option key={section} value={section}>{section}</option>
                     ))
                   ) : (
