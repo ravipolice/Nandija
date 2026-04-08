@@ -19,7 +19,8 @@ import {
   Shield,
   Award,
   FileSpreadsheet,
-  Briefcase
+  Briefcase,
+  Globe
 } from "lucide-react";
 import { signOut } from "@/lib/firebase/auth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -29,6 +30,7 @@ import { Logo } from "@/components/common/Logo";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Global Missions", href: "/missions", icon: Globe },
   { name: "PMD User Management", href: "/employees", icon: Users },
   { name: "Pending Approvals", href: "/approvals", icon: UserCheck },
   { name: "Officers", href: "/officers", icon: Shield },
