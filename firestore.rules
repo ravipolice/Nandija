@@ -181,17 +181,11 @@ service cloud.firestore {
               )
               && request.resource.data.isActive == true;
 
-      // Update/delete admin document (prevent self-deletion)
+      // Update admin document (allow self-update for UID documents during handshake)
       allow update: if isAdmin()
-              && request.resource.data.size() > 0
-              && (
-                  // If adminId is email, prevent self-deletion
-                  (isValidEmail(adminId) && adminId != request.auth.token.email)
-                  ||
-                  // If adminId is UID, prevent self-deletion
-                  (adminId != request.auth.uid)
-              );
-      
+              || (adminId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid', 'updatedAt', 'lastLoginAt']));
+
+      // Delete admin document (prevent self-deletion)
       allow delete: if isAdmin()
               && (
                   // If adminId is email, prevent self-deletion
