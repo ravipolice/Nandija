@@ -8,6 +8,7 @@ import { loginWithPin, requestOtp, verifyOtpCode, resetPin } from "@/lib/auth-he
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import { Suspense } from "react";
 
@@ -102,6 +103,21 @@ function LoginContent() {
     } else {
       // Redirect based on role and intent
       if (isAdmin) {
+        // ✅ ADMIN HANDSHAKE: Sync UID to activate security rules
+        try {
+          const adminRef = doc(db, "admins", user.uid);
+          await setDoc(adminRef, {
+            uid: user.uid,
+            email: user.email?.toLowerCase(),
+            isActive: true,
+            updatedAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
+          }, { merge: true });
+          console.log("Admin security handshake complete.");
+        } catch (syncErr) {
+          console.warn("Admin handshake failed (likely permission restriction):", syncErr);
+        }
+
         // If they specifically requested a path (e.g. /directory), let them go there
         if (redirectPath === "/directory") {
           router.push("/directory");

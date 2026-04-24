@@ -65,14 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn("Error checking employee record:", queryErr);
             }
 
-            // 2. Check Admins Collection (Override/Augment)
+            // 2. Check Admins Collection (Direct UID check - fastest/most reliable)
             try {
-              const qAdmin = query(collection(db, "admins"), where("email", "==", user.email));
-              const snapshotAdmin = await getDocs(qAdmin);
-
-              if (!snapshotAdmin.empty) {
-                const adminData = snapshotAdmin.docs[0].data();
-                if (adminData.isActive) {
+              const docSnap = await getDocs(query(collection(db, "admins"), where("uid", "==", user.uid)));
+              if (!docSnap.empty && docSnap.docs[0].data().isActive) {
+                foundAdmin = true;
+              } else {
+                // Fallback: Check Admins Collection by Email
+                const qAdmin = query(collection(db, "admins"), where("email", "==", user.email));
+                const snapshotAdmin = await getDocs(qAdmin);
+                if (!snapshotAdmin.empty && snapshotAdmin.docs[0].data().isActive) {
                   foundAdmin = true;
                 }
               }
