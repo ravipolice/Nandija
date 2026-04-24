@@ -1,19 +1,6 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  addDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  QueryConstraint,
-} from "firebase/firestore";
-import { db } from "./config";
+import { collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, Timestamp, QueryConstraint } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
+import { db, storage } from "./config";
 
 // Types
 export interface Employee {
@@ -196,6 +183,8 @@ export interface GalleryImage {
   imageUrl: string;
   title?: string;
   createdAt?: Timestamp;
+  source?: 'firebase' | 'gdrive';
+  storagePath?: string;
 }
 
 export interface UsefulLink {
@@ -239,8 +228,13 @@ const createDoc = async <T>(
     ...data,
     createdAt: Timestamp.now(),
   });
-  const docRef = await addDoc(collection(db, collectionName), cleanData);
-  return docRef.id;
+  try {
+    const docRef = await addDoc(collection(db, collectionName), cleanData);
+    return docRef.id;
+  } catch (error: any) {
+    console.error(`❌ Firestore CREATE error in [${collectionName}]:`, error.message);
+    throw error;
+  }
 };
 
 export const getDocument = async <T>(
@@ -282,12 +276,17 @@ export const updateDocument = async <T>(
   if (typeof window === "undefined" || !db) {
     throw new Error("Firestore not initialized (server-side or not available)");
   }
-  const docRef = doc(db, collectionName, id);
-  const cleanData = sanitizeData({
-    ...data,
-    updatedAt: Timestamp.now(),
-  });
-  await updateDoc(docRef, cleanData);
+  try {
+    const docRef = doc(db, collectionName, id);
+    const cleanData = sanitizeData({
+      ...data,
+      updatedAt: Timestamp.now(),
+    });
+    await updateDoc(docRef, cleanData);
+  } catch (error: any) {
+    console.error(`❌ Firestore UPDATE error in [${collectionName}] for ID [${id}]:`, error.message);
+    throw error;
+  }
 };
 
 export const deleteDocument = async (
@@ -885,12 +884,12 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
     // Keep only the most recent registration for each KGID
     const uniqueRegistrations = new Map<string, PendingRegistration>();
     rawRegistrations.forEach(reg => {
-      const kgid = reg.kgid?.trim();
+      const identifier = (reg.kgid?.trim() || reg.email?.trim() || "").toLowerCase();
       // Only include if status is pending or undefined (legacy)
-      const isPending = !reg.status || reg.status === "pending";
+      const isPending = !reg.status || reg.status.toLowerCase() === "pending";
 
-      if (kgid && isPending && !uniqueRegistrations.has(kgid)) {
-        uniqueRegistrations.set(kgid, reg);
+      if (identifier && isPending && !uniqueRegistrations.has(identifier)) {
+        uniqueRegistrations.set(identifier, reg);
       }
     });
 
@@ -971,6 +970,13 @@ export const approveRegistration = async (
 
 export const rejectRegistration = async (registrationId: string): Promise<void> => {
   await deleteDocument("pending_registrations", registrationId);
+};
+
+export const updatePendingRegistration = async (
+  id: string,
+  data: Partial<PendingRegistration>
+): Promise<void> => {
+  return updateDocument<PendingRegistration>("pending_registrations", id, data);
 };
 
 export const markPendingRegistrationAsViewed = async (registrationId: string): Promise<void> => {
@@ -1276,6 +1282,45 @@ export const getGalleryImages = async (): Promise<GalleryImage[]> => {
     return [];
   }
 }
+// Helper to convert Google Drive sharing URLs to direct image links
+export const convertDriveUrlToDirectImageUrl = (driveUrl: string | null): string => {
+  if (!driveUrl) return "";
+  
+  // If it's already a thumbnail or direct link or Firebase Storage, return as is
+  if (driveUrl.includes("drive.google.com/thumbnail") ||
+      driveUrl.includes("drive.google.com/uc") || 
+      driveUrl.includes("lh3.googleusercontent.com") ||
+      driveUrl.includes("firebasestorage.googleapis.com") || 
+      driveUrl.includes("firebasestorage.app") ||
+      driveUrl.includes("storage.googleapis.com")) {
+    return driveUrl;
+  }
+  
+  try {
+    let fileId = "";
+    
+    if (driveUrl.includes("/file/d/")) {
+      const match = driveUrl.match(/\/file\/d\/([-\w]{25,})/);
+      if (match) fileId = match[1];
+    } else if (driveUrl.includes("id=")) {
+      const match = driveUrl.match(/[?&]id=([-\w]{25,})/);
+      if (match) fileId = match[1];
+    } else {
+      // Try to find any sequence that looks like a Drive File ID
+      const match = driveUrl.match(/\/([-\w]{25,})/);
+      if (match) fileId = match[1];
+    }
+    
+    if (fileId) {
+      // Use the thumbnail API which is generally more reliable for web display than direct export
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    }
+  } catch (e) {
+    console.error("Error converting Drive URL:", e);
+  }
+  
+  return driveUrl;
+};
 
 // Helper function to normalize gallery images from Apps Script format
 function normalizeGalleryImages(images: any[]): GalleryImage[] {
@@ -1308,37 +1353,14 @@ function normalizeGalleryImages(images: any[]): GalleryImage[] {
       return null;
     }
 
-    // Fix Google Drive URL format if needed
-    // The API sometimes returns https://drive.google.com/uc?id=FILE_ID
-    // But we need https://drive.google.com/uc?export=view&id=FILE_ID for proper image display
-    if (imageUrl.includes("drive.google.com/uc")) {
-      // Extract file ID from various URL formats
-      let fileId: string | null = null;
+    // Determine source
+    const isFirebase = imageUrl.includes("storage.googleapis.com") || 
+                      imageUrl.includes("firebasestorage.app") || 
+                      !!img.storagePath;
 
-      // Pattern 1: /uc?id=FILE_ID
-      const match1 = imageUrl.match(/\/uc\?id=([-\w]{25,})/);
-      if (match1) fileId = match1[1];
-
-      // Pattern 2: /uc?export=view&id=FILE_ID (already correct)
-      if (!fileId) {
-        const match2 = imageUrl.match(/\/uc\?export=view&id=([-\w]{25,})/);
-        if (match2) fileId = match2[1];
-      }
-
-      // Pattern 3: /file/d/FILE_ID/ (full Drive URL)
-      if (!fileId) {
-        const match3 = imageUrl.match(/\/file\/d\/([-\w]{25,})/);
-        if (match3) fileId = match3[1];
-      }
-
-      // If we found a file ID, convert to proper image URL format
-      // Try Google Image CDN first (fastest, no redirects)
-      // Fallback to Drive thumbnail API if CDN doesn't work
-      if (fileId) {
-        // Use Google Image CDN - correct format: https://lh3.googleusercontent.com/d/FILE_ID
-        // This is the recommended format for Drive images (without =w1000)
-        imageUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
-      }
+    // For Drive images, convert URL to a more stable format like thumbnail API
+    if (!isFirebase) {
+      imageUrl = convertDriveUrlToDirectImageUrl(imageUrl);
     }
 
     // Get date from various possible field names (Gallery API uses uploadedDate)
@@ -1366,15 +1388,20 @@ function normalizeGalleryImages(images: any[]): GalleryImage[] {
 
     // Normalize field names - support both admin panel and mobile app formats
     // Gallery API returns dynamic headers from sheet (Title, URL, UploadedBy, UploadedDate, Description, Delete)
-    const title = img.title || img.Title || img["Title"] || img["title"] || "";
+    const title = img.title || img.Title || img["Title"] || img["title"] || img.name || img.Name || "";
+    
     const normalized: GalleryImage = {
       // Ensure imageUrl is set (check all possible field names)
       imageUrl: imageUrl,
       // Preserve title if available
       title: title,
       // Use title as ID if no id exists, or generate one
-      id: img.id || title || `img-${Date.now()}-${Math.random()}`,
+      // For Drive images, we MUST have a title for deletion to work
+      id: img.id || img.fileId || title || `img-${Date.now()}-${Math.random()}`,
       createdAt: createdAt,
+      // Add source for easier handling in UI
+      source: isFirebase ? "firebase" : "gdrive",
+      storagePath: img.storagePath
     };
 
     // Log for debugging
@@ -1402,7 +1429,25 @@ export const createGalleryImage = async (
   return createDoc<GalleryImage>("gallery", data);
 };
 
-// Delete gallery image via Apps Script API
+// Delete gallery image from Firestore and Firebase Storage
+export const deleteGalleryImageFromFirestore = async (id: string, storagePath?: string): Promise<void> => {
+  try {
+    // 1. Delete from Firestore
+    await deleteDocument("gallery", id);
+
+    // 2. Delete from Firebase Storage if path is provided
+    if (storagePath && storage) {
+      const storageRef = ref(storage, storagePath);
+      await deleteObject(storageRef);
+      console.log(`Successfully deleted file from storage: ${storagePath}`);
+    }
+  } catch (error: any) {
+    console.error("Error deleting gallery image from Firestore/Storage:", error);
+    throw new Error(`Failed to delete Firebase gallery image: ${error?.message || "Unknown error"}`);
+  }
+};
+
+// Delete gallery image via Apps Script API (Drive/Sheet)
 export const deleteGalleryImage = async (title: string, userEmail: string): Promise<void> => {
   try {
     const response = await fetch("/api/gallery/delete", {
@@ -1448,10 +1493,15 @@ export const deleteUsefulLink = async (id: string): Promise<void> => {
 
 // Statistics
 export const getEmployeeStats = async () => {
-  const employees = await getEmployees();
-  const officers = await getOfficers();
-  const districts = await getDistricts();
-  const stations = await getStations();
+  const [employees, officers, districts, stations, pendingRegistrations] = await Promise.all([
+    getEmployees(),
+    getOfficers(),
+    getDistricts(),
+    getStations(),
+    getPendingRegistrations()
+  ]);
+  
+  const pendingCount = pendingRegistrations.length;
 
   const byDistrict: Record<string, number> = {};
   const byStation: Record<string, number> = {};
@@ -1486,8 +1536,8 @@ export const getEmployeeStats = async () => {
   return {
     total: employees.length,
     officersCount: officers.length,
-    approved: employees.filter((e) => e.isApproved).length,
-    pending: employees.filter((e) => !e.isApproved).length,
+    approved: employees.filter((e) => e.isApproved !== false).length,
+    pending: pendingCount,
     byDistrict,
     byStation,
     byRank,

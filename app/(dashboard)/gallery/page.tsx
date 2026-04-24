@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGalleryImages, createGalleryImage, deleteGalleryImage, GalleryImage } from "@/lib/firebase/firestore";
+import { getGalleryImages, createGalleryImage, deleteGalleryImage, deleteGalleryImageFromFirestore, GalleryImage } from "@/lib/firebase/firestore";
 import { Plus, Image as ImageIcon, Upload, Link as LinkIcon, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -244,15 +244,66 @@ export default function GalleryPage() {
       return;
     }
 
-    const imageTitle = image.title || image.id || "this image";
-    if (!confirm(`Are you sure you want to delete "${imageTitle}"?`)) {
+    const source = image.source || getImageSource(image);
+    const imageTitle = image.title || "";
+    
+    // For Drive images, we MUST have a title. If missing, fall back to ID but warn.
+    const identifier = source === "gdrive" ? (imageTitle || image.id || "") : (image.id || "");
+
+    if (!identifier) {
+      alert("Cannot delete image: Missing identifier (title or id)");
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete "${imageTitle || "this image"}" (from ${source === "firebase" ? "Firebase" : "Google Drive"})?`)) {
       return;
     }
 
-    setDeleting(image.id || imageTitle);
+    setDeleting(image.id || identifier);
+    
     try {
-      // Use title for deletion (Apps Script uses title as identifier)
-      await deleteGalleryImage(imageTitle, user.email);
+      console.log(`🗑️ Deleting ${source} image. Identifier: ${identifier}`);
+      
+      let driveDeleted = false;
+      let driveError: string | null = null;
+
+      if (source === "firebase") {
+        // Delete from Firebase (Firestore + Storage)
+        await deleteGalleryImageFromFirestore(identifier, (image as any).storagePath);
+      } else {
+        // Delete from Google Drive via Apps Script API
+        try {
+          await deleteGalleryImage(identifier, user.email);
+          driveDeleted = true;
+        } catch (error: any) {
+          driveError = error?.message || "Drive deletion failed";
+          console.error("Drive deletion error:", driveError);
+          
+          // If the item wasn't found in Drive but we have a Firestore ID, 
+          // it might be an orphaned mirror. Allow cleanup.
+          if (image.id && (driveError.includes("Item not found") || driveError.includes("not found"))) {
+            console.warn("Item not found in Drive, but has Firestore ID. Proceeding to clean up Firestore metadata.");
+          } else {
+            // Rethrow other errors
+            throw error;
+          }
+        }
+
+        // Also check if there's a Firestore record to clean up for this Drive image
+        // (Mirrored images created by Android app or newer web app versions)
+        if (image.id) {
+          try {
+            console.log("🧹 Cleaning up associated Firestore metadata for Drive image...");
+            await deleteGalleryImageFromFirestore(image.id);
+          } catch (fError) {
+            console.warn("Failed to clean up Firestore metadata for Drive image:", fError);
+            // Don't throw here if Drive was already deleted or if we are just cleaning up
+          }
+        }
+      }
+      
+      const successMsg = driveError ? "Image metadata removed from gallery (Drive file not found)" : "Image deleted successfully";
+      toast?.success?.(successMsg) || alert(successMsg);
       await loadImages(); // Reload images after deletion
     } catch (error: any) {
       console.error("Error deleting image:", error);
@@ -463,41 +514,10 @@ export default function GalleryPage() {
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   const img = e.currentTarget;
-                  // Prevent infinite error loop - only show placeholder once
                   if (!img.dataset.failed) {
                     img.dataset.failed = "1";
-                    // Extract file ID from current URL (CDN or Drive format)
-                    let fileId: string | null = null;
-                    
-                    // Try to extract from CDN URL: lh3.googleusercontent.com/d/FILE_ID
-                    if (image.imageUrl?.includes("lh3.googleusercontent.com")) {
-                      const cdnMatch = image.imageUrl.match(/\/d\/([-\w]{25,})/);
-                      if (cdnMatch) fileId = cdnMatch[1];
-                    }
-                    
-                    // Try to extract from Drive URL: drive.google.com/uc?id=FILE_ID
-                    if (!fileId && image.imageUrl?.includes("drive.google.com")) {
-                      const driveMatch = image.imageUrl.match(/[?&]id=([-\w]{25,})/);
-                      if (driveMatch) fileId = driveMatch[1];
-                    }
-                    
-                    // Try fallback URLs if we have a file ID
-                    if (fileId) {
-                      if (!img.dataset.retried) {
-                        // First retry: Try Drive thumbnail API
-                        img.dataset.retried = "1";
-                        img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-                        return;
-                      } else if (!img.dataset.retried2) {
-                        // Second retry: Try standard Drive view URL
-                        img.dataset.retried2 = "1";
-                        img.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                        return;
-                      }
-                    }
-                    
-                    // Final fallback: placeholder
-                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect fill='%23ddd' width='300' height='300'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='20' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3EImage%3C/text%3E%3C/svg%3E";
+                    // Fallback to placeholder if the direct URL still fails
+                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect fill='%23ddd' width='300' height='300'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='20' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3EImage Broken%3C/text%3E%3C/svg%3E";
                   }
                 }}
                 onLoad={() => {

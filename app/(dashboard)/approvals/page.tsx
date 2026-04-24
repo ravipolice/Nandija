@@ -7,6 +7,7 @@ import {
   rejectRegistration,
   markPendingRegistrationAsViewed,
   PendingRegistration,
+  updatePendingRegistration,
 } from "@/lib/firebase/firestore";
 import { logAudit } from "@/lib/firebase/auditLog";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -24,7 +25,8 @@ import {
   Building2,
   MapPin,
   GraduationCap,
-  Loader2
+  Loader2,
+  Pencil
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,6 +37,7 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [editingRegistration, setEditingRegistration] = useState<PendingRegistration | null>(null);
 
   useEffect(() => {
     loadRegistrations();
@@ -110,6 +113,18 @@ export default function ApprovalsPage() {
       toast.error("Failed to reject registration");
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleUpdateRegistration = async (id: string, data: Partial<PendingRegistration>) => {
+    try {
+      await updatePendingRegistration(id, data);
+      setRegistrations(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+      toast.success("Registration updated successfully");
+      setEditingRegistration(null);
+    } catch (error) {
+      console.error("Error updating registration:", error);
+      toast.error("Failed to update registration");
     }
   };
 
@@ -216,6 +231,16 @@ export default function ApprovalsPage() {
                   </div>
                 )}
 
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingRegistration(reg)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 text-sm font-bold transition-all border border-slate-700 active:scale-95"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </button>
+                </div>
+
                 <div className="pt-4 flex gap-3">
                   <button
                     onClick={() => handleApprove(reg)}
@@ -240,11 +265,251 @@ export default function ApprovalsPage() {
         </div>
       )}
 
+      {editingRegistration && (
+        <EditRegistrationModal 
+          registration={editingRegistration} 
+          onClose={() => setEditingRegistration(null)} 
+          onSave={handleUpdateRegistration}
+        />
+      )}
+
       <div className="flex items-center gap-3 p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl">
         <ShieldAlert className="w-5 h-5 text-blue-500" />
         <p className="text-xs text-blue-500/80">
           Approving a registration will automatically create an employee record and grant the user full access to the mobile application features.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function EditRegistrationModal({ 
+  registration, 
+  onClose, 
+  onSave 
+}: { 
+  registration: PendingRegistration, 
+  onClose: () => void, 
+  onSave: (id: string, data: Partial<PendingRegistration>) => Promise<void> 
+}) {
+  // Helper to format date values for input fields
+  const formatDateForInput = (val: any) => {
+    if (!val) return "";
+    if (val instanceof Date) return val.toISOString().split('T')[0];
+    if (val.toDate && typeof val.toDate === 'function') {
+      try {
+        return val.toDate().toISOString().split('T')[0];
+      } catch (e) {
+        return String(val);
+      }
+    }
+    return String(val);
+  };
+
+  const [formData, setFormData] = useState({
+    name: registration.name,
+    email: registration.email,
+    kgid: registration.kgid,
+    rank: registration.rank || "",
+    metalNumber: registration.metalNumber || "",
+    mobile1: registration.mobile1,
+    gender: registration.gender || "",
+    bloodGroup: registration.bloodGroup || "",
+    district: registration.district,
+    unit: registration.unit || "",
+    station: registration.station,
+    dutyRole: registration.dutyRole || "",
+    dateOfBirth: formatDateForInput(registration.dateOfBirth),
+    serviceStartDate: formatDateForInput(registration.serviceStartDate),
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registration.id) return;
+    setIsSaving(true);
+    try {
+      await onSave(registration.id, formData);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-blue-400" />
+            Edit Registration
+          </h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">KGID Number</label>
+              <input
+                type="text"
+                value={formData.kgid}
+                onChange={(e) => setFormData(prev => ({ ...prev, kgid: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rank</label>
+              <input
+                type="text"
+                value={formData.rank}
+                onChange={(e) => setFormData(prev => ({ ...prev, rank: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metal Number</label>
+              <input
+                type="text"
+                value={formData.metalNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, metalNumber: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                placeholder="N/A"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mobile Number</label>
+              <input
+                type="text"
+                value={formData.mobile1}
+                onChange={(e) => setFormData(prev => ({ ...prev, mobile1: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gender</label>
+              <select
+                value={formData.gender}
+                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Blood Group</label>
+              <input
+                type="text"
+                value={formData.bloodGroup}
+                onChange={(e) => setFormData(prev => ({ ...prev, bloodGroup: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                placeholder="e.g. O+"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">District</label>
+              <input
+                type="text"
+                value={formData.district}
+                onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unit / Battalion</label>
+              <input
+                type="text"
+                value={formData.unit}
+                onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Station</label>
+              <input
+                type="text"
+                value={formData.station}
+                onChange={(e) => setFormData(prev => ({ ...prev, station: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Duty Role</label>
+              <input
+                type="text"
+                value={formData.dutyRole}
+                onChange={(e) => setFormData(prev => ({ ...prev, dutyRole: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Date of Birth</label>
+              <input
+                type="text"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                placeholder="e.g. 1990-01-01"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Service Start Date</label>
+              <input
+                type="text"
+                value={formData.serviceStartDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, serviceStartDate: e.target.value }))}
+                className="w-full bg-slate-900 border border-dark-border rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500/50"
+                placeholder="e.g. 2015-05-20"
+              />
+            </div>
+          </div>
+
+          <div className="pt-6 flex gap-3 sticky bottom-0 bg-dark-card border-t border-dark-border mt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-dark-border text-slate-300 font-bold hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save Changes
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

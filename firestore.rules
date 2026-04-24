@@ -36,11 +36,14 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         // Explicit check for known admin email to bypass complex path checks if needed
-        (hasAuthEmail() && (request.auth.token.email == "ravipolice@gmail.com" || request.auth.token.email == "dev@lm.app")) ||
+        (hasAuthEmail() && (
+          request.auth.token.email.lower() == "ravipolice@gmail.com" || 
+          request.auth.token.email.lower() == "dev@lm.app"
+        )) ||
         // Check UID document
         (request.auth.uid != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true) ||
         // Check Email document
-        (hasAuthEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) && get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.isActive == true) ||
+        (hasAuthEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower())) && get(/databases/$(database)/documents/admins/$(request.auth.token.email.lower())).data.isActive == true) ||
         // Check Employee record
         isEmployeeAdmin()
       );

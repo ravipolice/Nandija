@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { signInWithGoogle, signInWithGoogleRedirect, getGoogleRedirectResult } from "@/lib/firebase/auth";
@@ -7,12 +7,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { loginWithPin, requestOtp, verifyOtpCode, resetPin } from "@/lib/auth-helpers";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 import { Suspense } from "react";
 
 function LoginContent() {
+  const { user: authUser, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showPinLogin, setShowPinLogin] = useState(false); // Default to Google login to avoid confusion
   const searchParams = useSearchParams();
   const redirectPath = searchParams ? searchParams.get("redirect") : null;
@@ -113,12 +116,16 @@ function LoginContent() {
 
   useEffect(() => {
     const checkRedirect = async () => {
+      // Check if we are already processing a login to avoid loops
+      if (isProcessing) return;
+
       console.log("Checking Google redirect result...");
       try {
         const user = await getGoogleRedirectResult();
         if (user) {
           console.log("Found redirect user:", user.email);
           setLoading(true);
+          setIsProcessing(true);
           await processUserLogin(user);
           setLoading(false);
         } else {
@@ -128,14 +135,30 @@ function LoginContent() {
         console.error("Redirect Login Error:", err);
         setError(err.message || "Failed to sign in with Google");
         setLoading(false);
+        setIsProcessing(false);
       }
     };
     checkRedirect();
-  }, []);
+  }, [isProcessing]);
+
+  // AUTO-LOGIN: If AuthProvider already has a user, skip the buttons
+  useEffect(() => {
+    if (authUser && !isProcessing && !loading) {
+      console.log("Auto-detecting existing session for:", authUser.email);
+      setLoading(true);
+      setIsProcessing(true);
+      processUserLogin(authUser).finally(() => {
+        setLoading(false);
+      });
+    }
+  }, [authUser, isProcessing, loading]);
 
   const handleGoogleSignIn = async () => {
+    if (loading || isProcessing) return;
+
     console.log("Starting Google Sign-In popup...");
     setLoading(true);
+    setIsProcessing(true);
     setError(null);
     try {
       const user = await signInWithGoogle();
@@ -144,6 +167,8 @@ function LoginContent() {
       await processUserLogin(user);
     } catch (err: any) {
       console.error("Google Sign In Error:", err);
+      setIsProcessing(false);
+      
       // Fallback to redirect if popup is blocked
       if (err.code === 'auth/popup-blocked') {
         console.log("Popup blocked, falling back to redirect...");

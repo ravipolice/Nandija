@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const unsubscribe = onAuthChange(async (user) => {
+        setLoading(true); // Ensure loading is true while we fetch roles/data
         setUser(user);
 
         if (user) {
