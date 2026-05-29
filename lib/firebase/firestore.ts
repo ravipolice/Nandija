@@ -1022,7 +1022,7 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
 
     if (uniqueRegistrations.size === 0) return [];
 
-    // Cross-check: fetch approved employees and remove any whose kgid or email already exists
+    // Cross-check: fetch approved employees and remove any whose kgid, email, or mobile already exists
     // This handles cases where approval happened via Android app without cleaning up pending docs
     try {
       const approvedEmployees = await getDocuments<Employee>("employees", [
@@ -1035,15 +1035,25 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
       const approvedEmails = new Set(
         approvedEmployees.map(e => e.email?.trim().toLowerCase()).filter(Boolean)
       );
+      // Also match by mobile number — catches cases where KGID/email differ between pending doc and employee record
+      const approvedMobiles = new Set(
+        approvedEmployees.flatMap(e => [e.mobile1?.trim(), (e as any).mobile2?.trim()]).filter(Boolean)
+      );
 
       // Filter out already-approved users and clean up their stale pending docs
       const staleIds: string[] = [];
-      for (const [, reg] of uniqueRegistrations) {
-        const kgid = reg.kgid?.trim().toLowerCase();
+      for (const [key, reg] of uniqueRegistrations) {
+        const kgid  = reg.kgid?.trim().toLowerCase();
         const email = reg.email?.trim().toLowerCase();
-        if ((kgid && approvedKgids.has(kgid)) || (email && approvedEmails.has(email))) {
+        const mob   = reg.mobile1?.trim();
+        const isAlreadyApproved =
+          (kgid  && approvedKgids.has(kgid))   ||
+          (email && approvedEmails.has(email))  ||
+          (mob   && approvedMobiles.has(mob));
+
+        if (isAlreadyApproved) {
           if (reg.id) staleIds.push(reg.id);
-          uniqueRegistrations.delete(kgid || email || "");
+          uniqueRegistrations.delete(key);
         }
       }
 
