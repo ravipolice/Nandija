@@ -35,6 +35,35 @@ export interface Employee {
   dutyRole?: string; // New: Unit-scoped duty role
 }
 
+export interface AdminEmployee {
+  id?: string;
+  kgid: string;
+  name: string;
+  email?: string;
+  mobile1?: string;
+  mobile2?: string;
+  rank?: string;
+  metalNumber?: string;
+  displayRank?: string;
+  district?: string;
+  station?: string;
+  bloodGroup?: string;
+  photoUrl?: string;
+  photoUrlFromGoogle?: string;
+  isAdmin?: boolean;
+  isApproved?: boolean;
+  unit?: string;
+  landline?: string;
+  landline2?: string;
+  gender?: string;
+  subSection?: string;
+  dutyRole?: string;
+  isManualStation?: boolean;
+  isManualSubSection?: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 
 export interface Officer {
   id?: string;
@@ -466,6 +495,104 @@ export const deleteEmployee = async (id: string): Promise<void> => {
   return deleteDocument("employees", id);
 };
 
+// Admin Employee functions
+export const getAdminEmployees = async (): Promise<AdminEmployee[]> => {
+  return getDocuments<AdminEmployee>("admin_employees", [orderBy("name")]);
+};
+
+export const getAdminEmployee = async (id: string): Promise<AdminEmployee | null> => {
+  return getDocument<AdminEmployee>("admin_employees", id);
+};
+
+export const createAdminEmployee = async (data: Omit<AdminEmployee, "id">): Promise<string> => {
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized (server-side or not available)");
+  }
+
+  const kgid = data.kgid?.trim() || "";
+
+  // 1. Check if admin employee with same KGID already exists
+  let existingDocs: any = { empty: true };
+  if (kgid) {
+    const existingQuery = query(
+      collection(db, "admin_employees"),
+      where("kgid", "==", kgid)
+    );
+    existingDocs = await getDocs(existingQuery);
+  }
+
+  // 2. Secondary Check: If no KGID match (or KGID is empty) and we have a valid mobile number (not "NM"), check by mobile
+  const mobile1 = data.mobile1?.trim().toUpperCase();
+  if (existingDocs.empty && mobile1 && mobile1 !== "NM") {
+    const mobileQuery = query(
+      collection(db, "admin_employees"),
+      where("mobile1", "==", mobile1)
+    );
+    existingDocs = await getDocs(mobileQuery);
+  }
+
+  // Compute displayRank: rank + " " + metalNumber (if both exist)
+  const displayRank = data.rank && data.metalNumber
+    ? `${data.rank} ${data.metalNumber}`
+    : data.rank || undefined;
+
+  const payload = {
+    ...data,
+    kgid,
+    displayRank,
+    updatedAt: Timestamp.now(),
+  };
+
+  if (!existingDocs.empty) {
+    // Upsert: Update existing document
+    const docId = existingDocs.docs[0].id;
+    const existingData = existingDocs.docs[0].data() as AdminEmployee;
+
+    console.log(`Upserting admin employee matching ${existingData.kgid === kgid ? 'KGID' : 'Mobile'}: ${kgid} (ID: ${docId})`);
+
+    if (existingData.kgid && !kgid) {
+      payload.kgid = existingData.kgid;
+    }
+
+    await updateDoc(doc(db, "admin_employees", docId), sanitizeData(payload));
+    return docId;
+  }
+
+  // Create new document. If kgid is provided, use it as the document ID!
+  if (kgid) {
+    const cleanData = sanitizeData({
+      ...payload,
+      createdAt: Timestamp.now(),
+    });
+    await setDoc(doc(db, "admin_employees", kgid), cleanData);
+    return kgid;
+  } else {
+    return createDoc<AdminEmployee>("admin_employees", payload);
+  }
+};
+
+export const updateAdminEmployee = async (
+  id: string,
+  data: Partial<AdminEmployee>
+): Promise<void> => {
+  let updateData = { ...data };
+  if (data.rank !== undefined || data.metalNumber !== undefined) {
+    const current = await getAdminEmployee(id);
+    const rank = data.rank ?? current?.rank;
+    const metalNumber = data.metalNumber ?? current?.metalNumber;
+
+    updateData.displayRank = rank && metalNumber
+      ? `${rank} ${metalNumber}`
+      : rank || undefined;
+  }
+
+  return updateDocument<AdminEmployee>("admin_employees", id, updateData);
+};
+
+export const deleteAdminEmployee = async (id: string): Promise<void> => {
+  return deleteDocument("admin_employees", id);
+};
+
 // Officer functions
 export const getOfficers = async (): Promise<Officer[]> => {
   const officers = await getDocuments<Officer>("officers", [orderBy("name")]);
@@ -881,7 +1008,7 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
       orderBy("createdAt", "desc"),
     ]);
 
-    // Keep only the most recent registration for each KGID
+    // Keep only the most recent registration for each identifier (kgid or email)
     const uniqueRegistrations = new Map<string, PendingRegistration>();
     rawRegistrations.forEach(reg => {
       const identifier = (reg.kgid?.trim() || reg.email?.trim() || "").toLowerCase();
@@ -892,6 +1019,43 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
         uniqueRegistrations.set(identifier, reg);
       }
     });
+
+    if (uniqueRegistrations.size === 0) return [];
+
+    // Cross-check: fetch approved employees and remove any whose kgid or email already exists
+    // This handles cases where approval happened via Android app without cleaning up pending docs
+    try {
+      const approvedEmployees = await getDocuments<Employee>("employees", [
+        where("isApproved", "==", true),
+      ]);
+
+      const approvedKgids = new Set(
+        approvedEmployees.map(e => e.kgid?.trim().toLowerCase()).filter(Boolean)
+      );
+      const approvedEmails = new Set(
+        approvedEmployees.map(e => e.email?.trim().toLowerCase()).filter(Boolean)
+      );
+
+      // Filter out already-approved users and clean up their stale pending docs
+      const staleIds: string[] = [];
+      for (const [, reg] of uniqueRegistrations) {
+        const kgid = reg.kgid?.trim().toLowerCase();
+        const email = reg.email?.trim().toLowerCase();
+        if ((kgid && approvedKgids.has(kgid)) || (email && approvedEmails.has(email))) {
+          if (reg.id) staleIds.push(reg.id);
+          uniqueRegistrations.delete(kgid || email || "");
+        }
+      }
+
+      // Silently clean up stale pending docs in the background
+      if (staleIds.length > 0 && typeof window !== "undefined" && db) {
+        Promise.all(staleIds.map(id => deleteDoc(doc(db!, "pending_registrations", id))))
+          .catch(err => console.warn("Failed to clean up stale pending registrations:", err));
+      }
+    } catch (crossCheckError) {
+      // Don't fail the whole function if cross-check fails — just show all pending
+      console.warn("Could not cross-check approved employees:", crossCheckError);
+    }
 
     return Array.from(uniqueRegistrations.values());
   } catch (error: any) {
