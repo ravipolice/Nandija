@@ -1022,40 +1022,38 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
 
     if (uniqueRegistrations.size === 0) return [];
 
-    // Cross-check: fetch approved employees and remove any whose kgid, email, or mobile already exists
-    // This handles cases where approval happened via Android app without cleaning up pending docs
+    // Cross-check: fetch ALL employees (approved or CSV-imported) and remove anyone
+    // whose KGID or email is already present — this handles approvals done via Android
+    // app or CSV imports that don't set isApproved=true
     try {
-      const approvedEmployees = await getDocuments<Employee>("employees", [
-        where("isApproved", "==", true),
-      ]);
+      const allEmployees = await getDocuments<Employee>("employees", []);
 
-      const approvedKgids = new Set(
-        approvedEmployees.map(e => e.kgid?.trim().toLowerCase()).filter(Boolean)
+      const employeeKgids = new Set(
+        allEmployees.map(e => e.kgid?.trim().toLowerCase()).filter(Boolean)
       );
-      const approvedEmails = new Set(
-        approvedEmployees.map(e => e.email?.trim().toLowerCase()).filter(Boolean)
-      );
-      // Also match by mobile number — catches cases where KGID/email differ between pending doc and employee record
-      const approvedMobiles = new Set(
-        approvedEmployees.flatMap(e => [e.mobile1?.trim(), (e as any).mobile2?.trim()]).filter(Boolean)
+      const employeeEmails = new Set(
+        allEmployees.map(e => e.email?.trim().toLowerCase()).filter(Boolean)
       );
 
-      // Filter out already-approved users and clean up their stale pending docs
-      const staleIds: string[] = [];
+      // Collect stale keys FIRST, then delete — avoids Map mutation during iteration
+      const staleKeys: string[] = [];
+      const staleIds:  string[] = [];
+
       for (const [key, reg] of uniqueRegistrations) {
         const kgid  = reg.kgid?.trim().toLowerCase();
         const email = reg.email?.trim().toLowerCase();
-        const mob   = reg.mobile1?.trim();
-        const isAlreadyApproved =
-          (kgid  && approvedKgids.has(kgid))   ||
-          (email && approvedEmails.has(email))  ||
-          (mob   && approvedMobiles.has(mob));
+        const isAlreadyInSystem =
+          (kgid  && employeeKgids.has(kgid))  ||
+          (email && employeeEmails.has(email));
 
-        if (isAlreadyApproved) {
+        if (isAlreadyInSystem) {
+          staleKeys.push(key);
           if (reg.id) staleIds.push(reg.id);
-          uniqueRegistrations.delete(key);
         }
       }
+
+      // Safe to delete now that iteration is complete
+      staleKeys.forEach(key => uniqueRegistrations.delete(key));
 
       // Silently clean up stale pending docs in the background
       if (staleIds.length > 0 && typeof window !== "undefined" && db) {
@@ -1063,8 +1061,8 @@ export const getPendingRegistrations = async (): Promise<PendingRegistration[]> 
           .catch(err => console.warn("Failed to clean up stale pending registrations:", err));
       }
     } catch (crossCheckError) {
-      // Don't fail the whole function if cross-check fails — just show all pending
-      console.warn("Could not cross-check approved employees:", crossCheckError);
+      // Don't fail the whole function if cross-check errors — just show all pending
+      console.warn("Could not cross-check employees:", crossCheckError);
     }
 
     return Array.from(uniqueRegistrations.values());
