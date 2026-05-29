@@ -1140,8 +1140,16 @@ export const approveRegistration = async (
   await Promise.all(deletePromises);
 };
 
-export const rejectRegistration = async (registrationId: string): Promise<void> => {
-  await deleteDocument("pending_registrations", registrationId);
+export const rejectRegistration = async (registrationId: string, reason: string): Promise<void> => {
+  if (typeof window === "undefined" || !db) {
+    throw new Error("Firestore not initialized");
+  }
+  // Mark as rejected with reason — do NOT delete so the Android app can show the reason to the user
+  await updateDoc(doc(db, "pending_registrations", registrationId), {
+    status: "rejected",
+    rejectionReason: reason.trim() || "Registration rejected by administrator",
+    rejectedAt: Timestamp.now(),
+  });
 };
 
 export const updatePendingRegistration = async (

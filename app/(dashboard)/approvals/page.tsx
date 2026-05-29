@@ -38,6 +38,8 @@ export default function ApprovalsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<PendingRegistration | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; name: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     loadRegistrations();
@@ -91,12 +93,17 @@ export default function ApprovalsPage() {
     });
   };
 
-  const handleReject = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to reject registration for ${name}?`)) return;
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    const { id, name } = rejectTarget;
+    if (!rejectReason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
 
     setProcessingId(id);
     try {
-      await rejectRegistration(id);
+      await rejectRegistration(id, rejectReason.trim());
       await logAudit({
         action: "reject_registration",
         targetType: "pending_registration",
@@ -104,7 +111,7 @@ export default function ApprovalsPage() {
         targetName: name,
         performedBy: user?.uid ?? "unknown",
         performedByEmail: user?.email ?? undefined,
-        details: "Registration rejected",
+        details: `Registration rejected. Reason: ${rejectReason.trim()}`,
       });
       setRegistrations(prev => prev.filter(r => r.id !== id));
       toast.success(`Registration for ${name} rejected`);
@@ -113,7 +120,14 @@ export default function ApprovalsPage() {
       toast.error("Failed to reject registration");
     } finally {
       setProcessingId(null);
+      setRejectTarget(null);
+      setRejectReason("");
     }
+  };
+
+  const openRejectModal = (id: string, name: string) => {
+    setRejectTarget({ id, name });
+    setRejectReason("");
   };
 
   const handleUpdateRegistration = async (id: string, data: Partial<PendingRegistration>) => {
@@ -251,7 +265,7 @@ export default function ApprovalsPage() {
                     Approve
                   </button>
                   <button
-                    onClick={() => handleReject(reg.id!, reg.name)}
+                    onClick={() => openRejectModal(reg.id!, reg.name)}
                     disabled={processingId === reg.id}
                     className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-red-600/20 hover:text-red-400 disabled:opacity-50 text-slate-200 px-4 py-2.5 text-sm font-bold transition-all border border-slate-700 hover:border-red-600/30 active:scale-95"
                   >
@@ -271,6 +285,53 @@ export default function ApprovalsPage() {
           onClose={() => setEditingRegistration(null)} 
           onSave={handleUpdateRegistration}
         />
+      )}
+
+      {/* Reject Reason Modal */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-dark-card border border-red-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-dark-border flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-red-500/10">
+                <ShieldAlert className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Reject Registration</h2>
+                <p className="text-xs text-slate-500">For: <span className="text-slate-300 font-semibold">{rejectTarget.name}</span></p>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-400">This reason will be shown to the user on the mobile app when they try to sign in.</p>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rejection Reason <span className="text-red-400">*</span></label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  placeholder="e.g. KGID not found in records, Invalid details provided..."
+                  className="w-full bg-slate-900 border border-dark-border rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 resize-none transition-all text-sm"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setRejectTarget(null); setRejectReason(""); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-dark-border text-slate-300 font-bold hover:bg-slate-800 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReject}
+                  disabled={!rejectReason.trim() || processingId === rejectTarget.id}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold transition-all text-sm active:scale-95"
+                >
+                  {processingId === rejectTarget.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                  Confirm Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="flex items-center gap-3 p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl">
