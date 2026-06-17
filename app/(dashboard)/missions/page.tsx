@@ -39,6 +39,11 @@ export default function MissionsDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [regionFilter, setRegionFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Resident' | 'Concurrent'>('All');
+
+  const toggleStatusFilter = (target: 'Resident' | 'Concurrent') => {
+    setStatusFilter(prev => prev === target ? 'All' : target);
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -89,9 +94,13 @@ export default function MissionsDashboard() {
         m.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRegion = regionFilter === 'All' || m.region === regionFilter;
       const matchesType = typeFilter === 'All' || m.type === typeFilter;
-      return matchesSearch && matchesRegion && matchesType;
+      const matchesStatus = 
+        statusFilter === 'All' || 
+        (statusFilter === 'Resident' && m.status === 'Resident') ||
+        (statusFilter === 'Concurrent' && m.status !== 'Resident');
+      return matchesSearch && matchesRegion && matchesType && matchesStatus;
     });
-  }, [missions, searchTerm, regionFilter, typeFilter]);
+  }, [missions, searchTerm, regionFilter, typeFilter, statusFilter]);
 
   const regionData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -166,6 +175,13 @@ export default function MissionsDashboard() {
           icon={<Globe className="w-5 h-5" />} 
           label="Global Nodes"
           color="blue"
+          onClick={() => {
+            setStatusFilter('All');
+            setSearchTerm('');
+            setRegionFilter('All');
+            setTypeFilter('All');
+          }}
+          isActive={statusFilter === 'All' && searchTerm === '' && regionFilter === 'All' && typeFilter === 'All'}
         />
         <StatCard 
           title="Resident Missions" 
@@ -173,6 +189,8 @@ export default function MissionsDashboard() {
           icon={<ShieldCheck className="w-5 h-5" />} 
           label="Diplomatic Presence"
           color="emerald"
+          onClick={() => toggleStatusFilter('Resident')}
+          isActive={statusFilter === 'Resident'}
         />
         <StatCard 
           title="Concurrent Missions" 
@@ -180,6 +198,8 @@ export default function MissionsDashboard() {
           icon={<Network className="w-5 h-5" />} 
           label="Non-Resident Accreditation"
           color="amber"
+          onClick={() => toggleStatusFilter('Concurrent')}
+          isActive={statusFilter === 'Concurrent'}
         />
         <StatCard 
           title="Global Regions" 
@@ -187,6 +207,10 @@ export default function MissionsDashboard() {
           icon={<MapPin className="w-5 h-5" />} 
           label="Geographic Spread"
           color="purple"
+          onClick={() => {
+            document.getElementById('regions-chart-card')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          isActive={regionFilter !== 'All'}
         />
       </div>
 
@@ -208,17 +232,42 @@ export default function MissionsDashboard() {
 
       {/* Visual Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ChartCard title="Missions by Region" icon={<PieChart className="w-5 h-5" />}>
-          <DonutChart data={regionData} total={stats.total} />
-        </ChartCard>
+        <div id="regions-chart-card">
+          <ChartCard title="Missions by Region" icon={<PieChart className="w-5 h-5" />}>
+            <DonutChart 
+              data={regionData} 
+              total={stats.total} 
+              selectedRegion={regionFilter}
+              onRegionSelect={(region) => {
+                const newRegion = region === regionFilter ? 'All' : region;
+                setRegionFilter(newRegion);
+                setTimeout(() => {
+                  document.getElementById('registry-explorer')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+            />
+          </ChartCard>
+        </div>
 
-        <ChartCard title="Missions by Classification" icon={<BarChart3 className="w-5 h-5" />}>
-          <ModernBarChart data={typeData} />
-        </ChartCard>
+        <div id="classification-chart-card">
+          <ChartCard title="Missions by Classification" icon={<BarChart3 className="w-5 h-5" />}>
+            <ModernBarChart 
+              data={typeData} 
+              selectedType={typeFilter}
+              onTypeSelect={(type) => {
+                const newType = type === typeFilter ? 'All' : type;
+                setTypeFilter(newType);
+                setTimeout(() => {
+                  document.getElementById('registry-explorer')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+            />
+          </ChartCard>
+        </div>
       </div>
 
       {/* Database Explorer */}
-      <div className="space-y-4">
+      <div className="space-y-4" id="registry-explorer">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Search className="w-5 h-5 text-primary" />
@@ -361,7 +410,23 @@ export default function MissionsDashboard() {
   );
 }
 
-function StatCard({ title, value, icon, label, color }: { title: string, value: number, icon: React.ReactNode, label: string, color: 'blue' | 'emerald' | 'amber' | 'purple' }) {
+function StatCard({ 
+  title, 
+  value, 
+  icon, 
+  label, 
+  color, 
+  onClick, 
+  isActive 
+}: { 
+  title: string, 
+  value: number, 
+  icon: React.ReactNode, 
+  label: string, 
+  color: 'blue' | 'emerald' | 'amber' | 'purple',
+  onClick?: () => void,
+  isActive?: boolean
+}) {
   const colors = {
     blue: "from-blue-500/20 to-indigo-500/5 text-blue-500 border-blue-500/20",
     emerald: "from-emerald-500/20 to-teal-500/5 text-emerald-500 border-emerald-500/20",
@@ -369,17 +434,33 @@ function StatCard({ title, value, icon, label, color }: { title: string, value: 
     purple: "from-purple-500/20 to-fuchsia-500/5 text-purple-500 border-purple-500/20"
   };
 
+  const activeClasses = {
+    blue: "border-blue-500/80 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/5 bg-gradient-to-br from-blue-500/30 to-indigo-500/10",
+    emerald: "border-emerald-500/80 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/5 bg-gradient-to-br from-emerald-500/30 to-teal-500/10",
+    amber: "border-amber-500/80 ring-2 ring-amber-500/20 shadow-lg shadow-amber-500/5 bg-gradient-to-br from-amber-500/30 to-orange-500/10",
+    purple: "border-purple-500/80 ring-2 ring-purple-500/20 shadow-lg shadow-purple-500/5 bg-gradient-to-br from-purple-500/30 to-fuchsia-500/10"
+  };
+
   return (
-    <div className={cn(
-      "relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6 shadow-sm transition-all hover:shadow-md group",
-      colors[color]
-    )}>
+    <div 
+      onClick={onClick}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6 shadow-sm transition-all hover:shadow-md group select-none",
+        onClick ? "cursor-pointer hover:border-foreground/30 active:scale-[0.98]" : "",
+        isActive ? activeClasses[color] : colors[color]
+      )}
+    >
       <div className="relative z-10 space-y-2">
         <div className="flex items-center justify-between">
           <div className="p-2 rounded-xl bg-white/10 backdrop-blur-md">
             {icon}
           </div>
-          <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-all -translate-y-1 translate-x-1" />
+          {onClick && (
+            <ArrowUpRight className={cn(
+              "w-4 h-4 opacity-0 group-hover:opacity-60 transition-all -translate-y-1 translate-x-1",
+              isActive && "opacity-100 text-foreground"
+            )} />
+          )}
         </div>
         <div className="space-y-1">
           <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
@@ -413,14 +494,25 @@ function ChartCard({ title, icon, children }: { title: string, icon: React.React
   );
 }
 
-function ModernBarChart({ data }: { data: [string, number][] }) {
+function ModernBarChart({ 
+  data, 
+  selectedType, 
+  onTypeSelect 
+}: { 
+  data: [string, number][],
+  selectedType: string,
+  onTypeSelect: (type: string) => void
+}) {
   const max = Math.max(...data.map(d => d[1]));
   
   return (
-    <div className="flex flex-col justify-end h-[300px] w-full gap-2 mt-4">
+    <div className="flex flex-col justify-end h-[300px] w-full gap-2 mt-4 select-none">
       <div className="flex items-end justify-between h-full gap-2">
         {data.slice(0, 8).map(([label, value], i) => { // show top 8
           const heightPct = Math.max((value / max) * 100, 2);
+          const isSelected = selectedType === label;
+          const isAnySelected = selectedType !== 'All';
+          
           const colorClass = [
             "from-indigo-500 to-purple-500",
             "from-cyan-500 to-blue-500",
@@ -430,15 +522,27 @@ function ModernBarChart({ data }: { data: [string, number][] }) {
           ][i % 5];
           
           return (
-            <div key={label} className="relative flex flex-col items-center flex-1 group h-full justify-end">
+            <div 
+              key={label} 
+              onClick={() => onTypeSelect(label)}
+              className="relative flex flex-col items-center flex-1 group h-full justify-end cursor-pointer active:scale-95 transition-transform"
+            >
               <div 
-                className={cn("w-full rounded-t-sm transition-all duration-1000 ease-in-out bg-gradient-to-t opacity-90 group-hover:opacity-100 group-hover:shadow-[0_0_15px_rgba(var(--primary),0.3)]", colorClass)}
+                className={cn(
+                  "w-full rounded-t-lg transition-all duration-300 bg-gradient-to-t", 
+                  colorClass,
+                  isSelected ? "opacity-100 ring-2 ring-foreground/20 shadow-lg" : 
+                  isAnySelected ? "opacity-30 group-hover:opacity-60" : "opacity-90 group-hover:opacity-100"
+                )}
                 style={{ height: `${heightPct}%`, minHeight: '10%' }}
               />
               <div className="absolute top-0 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10 pointer-events-none">
                 <span className="font-bold">{value}</span> {label}
               </div>
-              <span className="text-[10px] text-muted-foreground mt-2 truncate w-full text-center group-hover:text-foreground transition-colors" title={label}>
+              <span className={cn(
+                "text-[10px] mt-2 truncate w-full text-center transition-colors font-medium",
+                isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground"
+              )} title={label}>
                 {label.length > 10 ? label.substring(0, 8) + '..' : label}
               </span>
             </div>
@@ -449,7 +553,17 @@ function ModernBarChart({ data }: { data: [string, number][] }) {
   );
 }
 
-function DonutChart({ data, total }: { data: [string, number][], total: number }) {
+function DonutChart({ 
+  data, 
+  total, 
+  selectedRegion, 
+  onRegionSelect 
+}: { 
+  data: [string, number][], 
+  total: number,
+  selectedRegion: string,
+  onRegionSelect: (region: string) => void
+}) {
   // SVG Donut calculation
   let currentAngle = 0;
   const radius = 50;
@@ -467,7 +581,7 @@ function DonutChart({ data, total }: { data: [string, number][], total: number }
   ];
   
   return (
-    <div className="flex flex-col md:flex-row items-center gap-8 h-full justify-center mt-4">
+    <div className="flex flex-col md:flex-row items-center gap-8 h-full justify-center mt-4 select-none">
       <div className="relative w-48 h-48 flex-shrink-0">
         <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
           {data.map(([label, value], i) => {
@@ -475,6 +589,10 @@ function DonutChart({ data, total }: { data: [string, number][], total: number }
             const strokeDasharray = `${percentage * circumference} ${circumference}`;
             const strokeDashoffset = currentAngle;
             currentAngle -= percentage * circumference;
+            const isSelected = selectedRegion === label;
+            const isAnySelected = selectedRegion !== 'All';
+            const strokeWidth = isSelected ? 20 : 16;
+            const opacity = isSelected ? 1 : isAnySelected ? 0.25 : 1;
             
             return (
               <circle
@@ -484,11 +602,12 @@ function DonutChart({ data, total }: { data: [string, number][], total: number }
                 r={radius}
                 fill="transparent"
                 stroke={colors[i % colors.length]}
-                strokeWidth="16"
+                strokeWidth={strokeWidth}
                 strokeDasharray={strokeDasharray}
                 strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-1000 ease-in-out hover:opacity-80"
-                style={{ strokeLinecap: 'butt' }}
+                onClick={() => onRegionSelect(label)}
+                className="transition-all duration-300 cursor-pointer"
+                style={{ strokeLinecap: 'butt', opacity }}
               >
                 <title>{`${label}: ${value} (${(percentage * 100).toFixed(1)}%)`}</title>
               </circle>
@@ -504,23 +623,45 @@ function DonutChart({ data, total }: { data: [string, number][], total: number }
       
       <div className="flex-1 w-full max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
         <div className="space-y-3">
-          {data.map(([label, value], i) => (
-            <div key={label} className="flex items-center justify-between group cursor-default">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full transition-transform group-hover:scale-125" 
-                  style={{ backgroundColor: colors[i % colors.length] }} 
-                />
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+          {data.map(([label, value], i) => {
+            const isSelected = selectedRegion === label;
+            const isAnySelected = selectedRegion !== 'All';
+            
+            return (
+              <div 
+                key={label} 
+                onClick={() => onRegionSelect(label)}
+                className={cn(
+                  "flex items-center justify-between group cursor-pointer p-1 rounded-md transition-colors hover:bg-muted/50",
+                  isSelected && "bg-muted font-semibold"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={cn(
+                      "w-3 h-3 rounded-full transition-transform group-hover:scale-125",
+                      isSelected && "scale-110"
+                    )}
+                    style={{ backgroundColor: colors[i % colors.length] }} 
+                  />
+                  <span className={cn(
+                    "text-sm transition-colors",
+                    isSelected ? "text-foreground font-bold" : 
+                    isAnySelected ? "text-muted-foreground/40 group-hover:text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                  )}>{label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-sm font-bold",
+                    isAnySelected && !isSelected ? "text-foreground/40" : "text-foreground"
+                  )}>{value}</span>
+                  <span className="text-[10px] text-muted-foreground w-8 text-right opacity-50 group-hover:opacity-100">
+                    {((value / total) * 100).toFixed(0)}%
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold">{value}</span>
-                <span className="text-[10px] text-muted-foreground w-8 text-right opacity-50 group-hover:opacity-100">
-                  {((value / total) * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
