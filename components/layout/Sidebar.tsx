@@ -32,6 +32,7 @@ const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Global Missions", href: "/missions", icon: Globe },
   { name: "PMD User Management", href: "/employees", icon: Users },
+  { name: "Admin Employees", href: "/admin-employees", icon: Users },
   { name: "Pending Approvals", href: "/approvals", icon: UserCheck },
   { name: "Officers", href: "/officers", icon: Shield },
   { name: "Ranks", href: "/ranks", icon: Award },

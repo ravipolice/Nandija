@@ -77,7 +77,7 @@ export default function RegistrationSettingsPage() {
     const isVisible = (fieldId: string) => !hiddenFields.includes(fieldId);
 
     return (
-        <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
+        <div className="p-6 space-y-8 animate-in fade-in duration-500 w-full">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-dark-card/30 p-6 rounded-2xl border border-dark-border backdrop-blur-md">
                 <div className="space-y-1">

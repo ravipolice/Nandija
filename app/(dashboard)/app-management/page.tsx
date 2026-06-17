@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAppConfig, updateAppConfig, AppConfig } from "@/lib/firebase/app-config";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Download, Save, Smartphone, Upload, ExternalLink, Keyboard } from "lucide-react";
+import { Save, Smartphone, Upload, Keyboard } from "lucide-react";
 
 export default function AppManagementPage() {
     const { user } = useAuth();
@@ -192,7 +192,7 @@ export default function AppManagementPage() {
     }
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
+        <div className="p-6 w-full">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">App Management</h1>
                 <p className="mt-2 text-slate-400">Manage the official Android application links and direct downloads.</p>

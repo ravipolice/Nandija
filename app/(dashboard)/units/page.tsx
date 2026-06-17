@@ -8,6 +8,15 @@ import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronD
 import { DEFAULT_UNITS, ALL_BATTALIONS } from "@/lib/constants";
 
 
+const SCOPE_LABELS: { [key: string]: string } = {
+    hq: "HQ Level",
+    district: "District HQ (No Stations)",
+    district_stations: "Districts (With Stations)",
+    battalion: "Battalion",
+    commissionerate: "Commissionerate"
+};
+
+
 interface MultiSelectProps {
     label: string;
     options: { id: string; label: string }[];
@@ -38,18 +47,28 @@ const MultiSelectBox = ({ label, options, selectedIds, onToggle, placeholder, re
     );
 
     const selectedOptions = options.filter(opt => selectedIds.includes(opt.id));
+    const maxVisiblePills = 6;
+    const visibleOptions = selectedOptions.slice(0, maxVisiblePills);
+    const hiddenCount = selectedOptions.length - maxVisiblePills;
 
     return (
         <div className="space-y-2" ref={dropdownRef}>
-            <label className="block text-sm font-medium text-slate-400">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
+            <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-slate-400">
+                    {label} {required && <span className="text-red-500">*</span>}
+                </label>
+                {selectedIds.length > 0 && (
+                    <span className="text-[10px] text-purple-400 font-medium bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20 animate-in fade-in duration-200">
+                        {selectedIds.length} selected
+                    </span>
+                )}
+            </div>
             <div
                 className={`min-h-[48px] p-1.5 rounded-xl border bg-dark-sidebar/30 transition-all cursor-text flex flex-wrap gap-2 items-center ${isOpen ? "border-purple-500 ring-2 ring-purple-500/20" : "border-dark-border hover:border-slate-600"
                     }`}
                 onClick={() => setIsOpen(true)}
             >
-                {selectedOptions.map(opt => (
+                {visibleOptions.map(opt => (
                     <span key={opt.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-xs font-medium text-purple-300 animate-in zoom-in-95 duration-200">
                         {opt.label}
                         <button
@@ -61,6 +80,11 @@ const MultiSelectBox = ({ label, options, selectedIds, onToggle, placeholder, re
                         </button>
                     </span>
                 ))}
+                {hiddenCount > 0 && (
+                    <span className="text-xs text-slate-500 font-semibold px-2.5 py-1 bg-slate-800/60 rounded-lg border border-dark-border">
+                        + {hiddenCount} more...
+                    </span>
+                )}
 
                 <input
                     type="text"
@@ -89,6 +113,35 @@ const MultiSelectBox = ({ label, options, selectedIds, onToggle, placeholder, re
             {isOpen && (
                 <div className="relative">
                     <div className="absolute z-[60] mt-1 w-full rounded-xl bg-dark-card border border-dark-border shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        {filteredOptions.length > 0 && (
+                            <div className="flex items-center justify-between p-2 border-b border-dark-border bg-slate-800/10 text-xs text-slate-500">
+                                <span>{filteredOptions.length} options found</span>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            filteredOptions.forEach(opt => {
+                                                if (!selectedIds.includes(opt.id)) onToggle(opt.id);
+                                            });
+                                        }}
+                                        className="text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            filteredOptions.forEach(opt => {
+                                                if (selectedIds.includes(opt.id)) onToggle(opt.id);
+                                            });
+                                        }}
+                                        className="text-slate-500 hover:text-slate-400 font-semibold transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <div className="max-h-60 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                             {filteredOptions.length > 0 ? (
                                 filteredOptions.map(opt => (
@@ -144,12 +197,18 @@ export default function UnitsPage() {
     const [migrating, setMigrating] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+
+    const editingIdRef = useRef(editingId);
+    editingIdRef.current = editingId;
+
     // Resizable columns state
     const [columnWidths, setColumnWidths] = useState({
         status: 80,
         privacy: 140,
-        name: 400,
-        scopes: 180,
+        name: 320,
+        scopes: 240,
         areas: 160,
         dutyRoles: 250,
         actions: 100
@@ -330,50 +389,80 @@ export default function UnitsPage() {
     };
 
     const toggleScope = (scopeId: string) => {
-        const current = formData.scopes || [];
-        setFormData({
-            ...formData,
-            scopes: current.includes(scopeId) ? current.filter(s => s !== scopeId) : [...current, scopeId]
+        setFormData(prev => {
+            const current = prev.scopes || [];
+            let newScopes = current.includes(scopeId) ? current.filter(s => s !== scopeId) : [...current, scopeId];
+            
+            // Enforce mutually exclusive rules if adding a scope
+            if (!current.includes(scopeId)) {
+                // District HQ (no stations) and Districts (with stations) are mutually exclusive
+                if (scopeId === "district") {
+                    newScopes = newScopes.filter(s => s !== "district_stations");
+                } else if (scopeId === "district_stations") {
+                    newScopes = newScopes.filter(s => s !== "district");
+                }
+            }
+
+            // Only reset mapped areas if the regional scopes changed (adding/removing HQ does not clear regional selections)
+            const getRegionalScopes = (list: string[]) => list.filter(s => ["district", "district_stations", "battalion", "commissionerate"].includes(s));
+            const currentReg = getRegionalScopes(current);
+            const newReg = getRegionalScopes(newScopes);
+            const regionalScopesChanged = currentReg.length !== newReg.length || currentReg.some((s, i) => s !== newReg[i]);
+
+            return {
+                ...prev,
+                scopes: newScopes,
+                mappedAreaIds: regionalScopesChanged ? [] : (prev.mappedAreaIds || [])
+            };
         });
     };
 
     const toggleMappedArea = (areaId: string) => {
-        const current = formData.mappedAreaIds || [];
-        setFormData({
-            ...formData,
-            mappedAreaIds: current.includes(areaId) ? current.filter(id => id !== areaId) : [...current, areaId]
+        setFormData(prev => {
+            const current = prev.mappedAreaIds || [];
+            return {
+                ...prev,
+                mappedAreaIds: current.includes(areaId) ? current.filter(id => id !== areaId) : [...current, areaId]
+            };
         });
     };
 
     const toggleApplicableRank = (rankId: string) => {
-        const current = formData.applicableRanks || [];
-        setFormData({
-            ...formData,
-            applicableRanks: current.includes(rankId) ? current.filter(id => id !== rankId) : [...current, rankId]
+        setFormData(prev => {
+            const current = prev.applicableRanks || [];
+            return {
+                ...prev,
+                applicableRanks: current.includes(rankId) ? current.filter(id => id !== rankId) : [...current, rankId]
+            };
         });
     };
 
     const toggleDutyRole = (role: string) => {
-        const current = formData.dutyRoles || [];
-        setFormData({
-            ...formData,
-            dutyRoles: current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+        setFormData(prev => {
+            const current = prev.dutyRoles || [];
+            return {
+                ...prev,
+                dutyRoles: current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+            };
         });
     };
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const scopes = formData.scopes || [];
+        const currentFormData = formDataRef.current;
+        const currentEditingId = editingIdRef.current;
+        const scopes = currentFormData.scopes || [];
 
-        if (!formData.name?.trim()) {
-            alert("âŒ Unit Name is required.");
+        if (!currentFormData.name?.trim()) {
+            alert("Unit Name is required.");
             return;
         }
 
-        const requiresArea = scopes.some(s => ["district", "battalion", "commissionerate", "district_stations"].includes(s));
-        if (requiresArea && (!formData.mappedAreaIds || formData.mappedAreaIds.length === 0)) {
-            alert("âŒ Selected scope(s) require selecting specific areas.");
+        const requiresArea = scopes.some(s => ["battalion", "commissionerate", "district_stations"].includes(s));
+        console.log("DEBUG SUBMIT:", { scopes, requiresArea, mappedAreaIds: currentFormData.mappedAreaIds });
+        if (requiresArea && (!currentFormData.mappedAreaIds || currentFormData.mappedAreaIds.length === 0)) {
+            alert(`Selected scope(s) require selecting specific areas. (DEBUG - scopes: ${JSON.stringify(scopes)}, mappedAreaIds: ${JSON.stringify(currentFormData.mappedAreaIds)})`);
             return;
         }
 
@@ -381,9 +470,15 @@ export default function UnitsPage() {
         try {
             // Computed legacy fields
             let derivedMappingType: Unit["mappingType"] = "none";
-            if (scopes.some(s => ["district", "battalion", "district_stations"].includes(s))) derivedMappingType = "subset";
-            else if (scopes.includes("commissionerate")) derivedMappingType = "commissionerate";
-            else if (scopes.includes("hq") && scopes.length === 1) derivedMappingType = "state";
+            if (scopes.some(s => ["battalion", "district_stations"].includes(s))) {
+                derivedMappingType = "subset";
+            } else if (scopes.includes("district")) {
+                derivedMappingType = "district";
+            } else if (scopes.includes("commissionerate")) {
+                derivedMappingType = "commissionerate";
+            } else if (scopes.includes("hq") && scopes.length === 1) {
+                derivedMappingType = "state";
+            }
 
             let mappedAreaType: Unit["mappedAreaType"] = "DISTRICT";
             if (scopes.includes("battalion")) mappedAreaType = "BATTALION";
@@ -391,24 +486,24 @@ export default function UnitsPage() {
             else if (scopes.includes("hq")) mappedAreaType = "HQ";
 
             const payload = {
-                name: formData.name?.trim() || "",
-                isActive: formData.isActive,
+                name: currentFormData.name?.trim() || "",
+                isActive: currentFormData.isActive,
                 scopes: scopes,
-                mappedAreaIds: requiresArea ? formData.mappedAreaIds : [],
+                mappedAreaIds: requiresArea ? currentFormData.mappedAreaIds : [],
                 mappingType: derivedMappingType,
                 mappedAreaType: mappedAreaType,
-                mappedDistricts: requiresArea ? formData.mappedAreaIds : [],
+                mappedDistricts: requiresArea ? currentFormData.mappedAreaIds : [],
                 isHqLevel: scopes.includes("hq"),
                 isDistrictLevel: scopes.includes("district"),
-                applicableRanks: formData.applicableRanks || [],
-                dutyRoles: formData.dutyRoles || [],
-                stationKeyword: formData.stationKeyword?.trim() || "",
-                hideFromRegistration: formData.hideFromRegistration || false,
-                hiddenFields: formData.hiddenFields || []
+                applicableRanks: currentFormData.applicableRanks || [],
+                dutyRoles: currentFormData.dutyRoles || [],
+                stationKeyword: currentFormData.stationKeyword?.trim() || "",
+                hideFromRegistration: currentFormData.hideFromRegistration || false,
+                hiddenFields: currentFormData.hiddenFields || []
             };
 
-            if (editingId) {
-                await updateUnit(editingId, payload);
+            if (currentEditingId) {
+                await updateUnit(currentEditingId, payload);
             } else {
                 await createUnit(payload);
             }
@@ -461,7 +556,7 @@ export default function UnitsPage() {
         const scopes = formData.scopes || [];
         const options: { id: string; label: string }[] = [];
 
-        if (scopes.includes("district") || scopes.includes("district_stations")) {
+        if (scopes.includes("district_stations")) {
             districts.filter(d => !d.name.toUpperCase().endsWith(" CITY") && !ALL_BATTALIONS.includes(d.name))
                 .forEach(d => options.push({ id: d.name, label: d.name }));
         }
@@ -638,7 +733,7 @@ export default function UnitsPage() {
 
     return (
         <div className="p-6">
-            {/* Page Header â€” matches Ranks page */}
+            {/* Page Header - matches Ranks page */}
             <div className="mb-6 flex items-center justify-between">
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Units</h1>
                 <div className="flex items-center gap-2">
@@ -785,8 +880,8 @@ export default function UnitsPage() {
                                                     <div className="flex flex-wrap gap-1">
                                                         {(unit.scopes || []).length > 0
                                                             ? unit.scopes?.map(s => (
-                                                                <span key={s} className="inline-flex rounded-full bg-purple-500/20 px-2 text-xs font-semibold text-purple-300">
-                                                                    {s.replace("_", " ")}
+                                                                <span key={s} className="inline-flex rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-semibold text-purple-300">
+                                                                    {SCOPE_LABELS[s] || s.replace("_", " ")}
                                                                 </span>
                                                             ))
                                                             : <span className="text-slate-500 text-xs">Global</span>}

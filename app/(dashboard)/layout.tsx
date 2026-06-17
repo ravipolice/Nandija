@@ -59,7 +59,7 @@ export default function DashboardLayout({
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
-          <div className="max-w-screen-2xl mx-auto">
+          <div className="w-full">
             {children}
           </div>
         </main>

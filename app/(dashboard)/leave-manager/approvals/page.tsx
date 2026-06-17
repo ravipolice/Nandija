@@ -52,7 +52,7 @@ export default function ApprovalsPage() {
     }
 
     return (
-        <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto">
+        <div className="p-6 space-y-8 animate-in fade-in duration-500 w-full">
             <div className="space-y-1">
                 <h1 className="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
                     <UserCheck className="w-8 h-8 text-purple-400" />

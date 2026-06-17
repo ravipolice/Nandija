@@ -220,13 +220,13 @@ export default function MissionsDashboard() {
             Live Command Center for India's Diplomatic Footprint
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-card/50 backdrop-blur-sm p-1 rounded-lg border border-border/50">
-          <div className="px-3 py-1 bg-primary/10 rounded-md">
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Sync Status</span>
+        <div className="flex items-center gap-3 bg-card/50 backdrop-blur-sm p-1 rounded-lg border border-border/50 flex-shrink-0">
+          <div className="px-3 py-1 bg-primary/10 rounded-md flex-shrink-0">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider whitespace-nowrap">Sync Status</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3">
+          <div className="flex items-center gap-1.5 px-3 flex-shrink-0">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm font-medium">Real-time Data</span>
+            <span className="text-sm font-medium whitespace-nowrap">Real-time Data</span>
           </div>
         </div>
       </div>

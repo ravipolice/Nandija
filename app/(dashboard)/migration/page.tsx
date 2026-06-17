@@ -258,7 +258,7 @@ export default function MigrationPage() {
     const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
 
     return (
-        <div className="p-8 max-w-4xl mx-auto text-slate-200">
+        <div className="p-8 w-full text-slate-200">
             <h1 className="text-3xl font-bold mb-6">System Maintenance</h1>
 
             {/* Duplicate Cleanup Section */}

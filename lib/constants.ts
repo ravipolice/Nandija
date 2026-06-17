@@ -105,7 +105,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "APMC Yard PS", "Bagewadi PS", "Belagavi City CEN Crime PS", "Belagavi City Women PS", "Belagavi Rural PS",
     "Belgaum North Traffic PS", "Belgaum South Traffic PS", "Camp PS", "Kakati PS", "Khadebazar PS",
     "Malamaruthi PS", "Marihal PS", "Market PS", "Shahapura PS", "Tilakwadi PS", "Udyambag PS",
-    "Control Room Belagavi City", "DPO Belagavi City", "Computer Sec Belagavi City", "DAR Belagavi City",
+    "Control Room Belagavi City", "DPO Belagavi City", "Computer Sec Belagavi City", "CAR Belagavi City",
     "FPB Belagavi City", "MCU Belagavi City", "DCRB Belagavi City", "DSB Belagavi City", "SMMC Belagavi City",
     "State INT Belagavi City", "DCRE Belagavi City", "Lokayukta Belagavi City", "ESCOM Belagavi City"
   ],
@@ -161,7 +161,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Viveknagar PS", "Vyalikaval PS", "West CEN Crime PS", "Whitefield CEN Crime PS", "Whitefield PS",
     "Whitefield Traffic PS", "Wilsongarden PS", "Wilsongarden Traffic PS", "Yelahanka New Town PS",
     "Yelahanka PS", "Yelahanka Traffic PS", "Yeshwanthapura PS", "Yeshwanthapura Traffic PS",
-    "Control Room Bengaluru City", "DPO Bengaluru City", "Computer Sec Bengaluru City", "DAR Bengaluru City",
+    "Control Room Bengaluru City", "DPO Bengaluru City", "Computer Sec Bengaluru City", "CAR Bengaluru City",
     "FPB Bengaluru City", "MCU Bengaluru City", "DCRB Bengaluru City", "DSB Bengaluru City", "SMMC Bengaluru City",
     "State INT Bengaluru City", "DCRE Bengaluru City", "Lokayukta Bengaluru City", "ESCOM Bengaluru City"
   ],
@@ -297,7 +297,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Hubballi North Traffic PS", "Hubballi South Traffic PS", "Hubballi Sub Urban PS",
     "Hubballi Town PS", "Kamaripeth PS", "Kasabapeth PS", "Keshavapur PS", "Old Hubballi PS",
     "Vidyagiri PS", "Vidyanagar PS",
-    "Control Room Hubballi Dharwad City", "DPO Hubballi Dharwad City", "Computer Sec Hubballi Dharwad City", "DAR Hubballi Dharwad City",
+    "Control Room Hubballi Dharwad City", "DPO Hubballi Dharwad City", "Computer Sec Hubballi Dharwad City", "CAR Hubballi Dharwad City",
     "FPB Hubballi Dharwad City", "MCU Hubballi Dharwad City", "DCRB Hubballi Dharwad City", "DSB Hubballi Dharwad City", "SMMC Hubballi Dharwad City",
     "State INT Hubballi Dharwad City", "DCRE Hubballi Dharwad City", "Lokayukta Hubballi Dharwad City", "ESCOM Hubballi Dharwad City"
   ],
@@ -325,7 +325,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Ashoknagar PS", "Brahmapur PS", "Chowk PS", "Ferhatabad PS", "Kalaburagi City CENCrime PS",
     "Kalaburagi City Women PS", "Kalaburagi Traffic I PS", "Kalaburagi Traffic II PS", "MB Nagar PS",
     "Ragavendranagar PS", "Roza PS", "Station Bazar PS", "Sub Urban PS", "University PS",
-    "Control Room Kalaburagi City", "DPO Kalaburagi City", "Computer Sec Kalaburagi City", "DAR Kalaburagi City",
+    "Control Room Kalaburagi City", "DPO Kalaburagi City", "Computer Sec Kalaburagi City", "CAR Kalaburagi City",
     "FPB Kalaburagi City", "MCU Kalaburagi City", "DCRB Kalaburagi City", "DSB Kalaburagi City", "SMMC Kalaburagi City",
     "State INT Kalaburagi City", "DCRE Kalaburagi City", "Lokayukta Kalaburagi City", "ESCOM Kalaburagi City"
   ],
@@ -375,7 +375,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Mangalore North PS", "Mangalore Rural PS", "Mangalore South PS", "Mangalore West Traffic PS",
     "Mangalore Women PS", "Moodabidre PS", "Mulki PS", "Surathkal PS", "Traffic North Police Station",
     "Traffic South Police Station", "Ullal PS", "Urva PS",
-    "Control Room Mangaluru City", "DPO Mangaluru City", "Computer Sec Mangaluru City", "DAR Mangaluru City",
+    "Control Room Mangaluru City", "DPO Mangaluru City", "Computer Sec Mangaluru City", "CAR Mangaluru City",
     "FPB Mangaluru City", "MCU Mangaluru City", "DCRB Mangaluru City", "DSB Mangaluru City", "SMMC Mangaluru City",
     "State INT Mangaluru City", "DCRE Mangaluru City", "Lokayukta Mangaluru City", "ESCOM Mangaluru City"
   ],
@@ -386,7 +386,7 @@ export const STATIONS_BY_DISTRICT: Record<string, string[]> = {
     "Metagalli PS", "Mysuru City Women PS", "Narasimharaja PS", "Narasimharaja Traffic PS",
     "Nazarbad PS", "Saraswathipuram PS", "Siddarthanagar Traffic PS", "Udayagiri PS",
     "V V Puram Traffic PS", "V.V. Puram PS", "Vidyaranyarpuram PS", "Vijayanagar PS",
-    "Control Room Mysuru City", "DPO Mysuru City", "Computer Sec Mysuru City", "DAR Mysuru City",
+    "Control Room Mysuru City", "DPO Mysuru City", "Computer Sec Mysuru City", "CAR Mysuru City",
     "FPB Mysuru City", "MCU Mysuru City", "DCRB Mysuru City", "DSB Mysuru City", "SMMC Mysuru City",
     "State INT Mysuru City", "DCRE Mysuru City", "Lokayukta Mysuru City", "ESCOM Mysuru City"
   ],

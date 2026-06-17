@@ -302,7 +302,7 @@ export default function ConverterPage() {
     return (
         <div className="p-6">
             <h1 className="mb-6 text-3xl font-bold text-gray-900">Document Converter</h1>
-            <div className="mx-auto max-w-4xl rounded-lg bg-white p-8 shadow-md">
+            <div className="w-full rounded-lg bg-white p-8 shadow-md">
                 <div className="mb-6 text-center">
                     <h2 className="text-xl font-semibold text-gray-700">Convert Documents to Excel</h2>
                     <p className="text-sm text-gray-500">Supports PDF, Word, Excel, CSV, TSV, HTML, and Images (OCR)</p>

@@ -5,7 +5,7 @@ import { User } from "firebase/auth";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/config";
 import { Employee } from "@/lib/firebase/firestore";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -65,16 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn("Error checking employee record:", queryErr);
             }
 
-            // 2. Check Admins Collection (Direct UID check - fastest/most reliable)
+            // 2. Check Admins Collection (Direct lookup - bypasses list rules)
             try {
-              const docSnap = await getDocs(query(collection(db, "admins"), where("uid", "==", user.uid)));
-              if (!docSnap.empty && docSnap.docs[0].data().isActive) {
+              // First check by UID (most common)
+              const uidDocSnap = await getDoc(doc(db, "admins", user.uid));
+              if (uidDocSnap.exists() && uidDocSnap.data().isActive) {
                 foundAdmin = true;
-              } else {
-                // Fallback: Check Admins Collection by Email
-                const qAdmin = query(collection(db, "admins"), where("email", "==", user.email));
-                const snapshotAdmin = await getDocs(qAdmin);
-                if (!snapshotAdmin.empty && snapshotAdmin.docs[0].data().isActive) {
+              } else if (user.email) {
+                // Fallback: Check by Email (legacy/manual setup)
+                const emailDocSnap = await getDoc(doc(db, "admins", user.email.toLowerCase()));
+                if (emailDocSnap.exists() && emailDocSnap.data().isActive) {
                   foundAdmin = true;
                 }
               }

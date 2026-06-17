@@ -110,7 +110,7 @@ export interface Unit {
   name: string;
   isActive?: boolean;
   // New fields for Hybrid Unit-District Mapping
-  mappingType?: "all" | "state" | "single" | "subset" | "none" | "commissionerate";
+  mappingType?: "all" | "state" | "single" | "subset" | "none" | "commissionerate" | "district";
   scopes?: string[]; // Multi-scope selection
   mappedDistricts?: string[]; // Legacy field
   mappedAreaType?: "BATTALION" | "DISTRICT" | "CITY" | "RANGE" | "HQ";

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { createEmployee, createOfficer } from "@/lib/firebase/firestore";
+import { useState, useEffect } from "react";
+import { createEmployee, createOfficer, createAdminEmployee } from "@/lib/firebase/firestore";
 import Papa from "papaparse";
 import { Upload, FileText, Users, Shield, Download } from "lucide-react";
 
@@ -39,7 +39,29 @@ interface OfficerCSVRow {
   landline2?: string;
 }
 
-type UploadType = "employee" | "officer";
+interface AdminEmployeeCSVRow {
+  kgid: string;
+  name: string;
+  email?: string;
+  mobile1?: string;
+  mobile2?: string;
+  rank?: string;
+  metalNumber?: string;
+  district?: string;
+  station?: string;
+  bloodGroup?: string;
+  photoUrl?: string;
+  isAdmin?: string;
+  isApproved?: string;
+  unit?: string;
+  landline?: string;
+  landline2?: string;
+  gender?: string;
+  subSection?: string;
+  dutyRole?: string;
+}
+
+type UploadType = "employee" | "officer" | "admin_employee";
 
 export default function UploadPage() {
   const [uploadType, setUploadType] = useState<UploadType>("employee");
@@ -51,6 +73,61 @@ export default function UploadPage() {
     errors: string[];
   } | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type") as UploadType;
+    if (type === "employee" || type === "officer" || type === "admin_employee") {
+      setUploadType(type);
+    }
+  }, []);
+
+  const handleAdminEmployeeUpload = async (rows: AdminEmployeeCSVRow[]) => {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        const kgid = String(row.kgid ?? "").trim();
+        const name = String(row.name ?? "").trim();
+        const district = String(row.district ?? "").trim();
+        const station = String(row.station ?? "").trim();
+
+        await createAdminEmployee({
+          kgid,
+          name,
+          email: String(row.email ?? "").trim(),
+          mobile1: String(row.mobile1 ?? "").trim(),
+          mobile2: String(row.mobile2 ?? "").trim(),
+          rank: String(row.rank ?? "").trim(),
+          metalNumber: String(row.metalNumber ?? "").trim(),
+          district,
+          station,
+          bloodGroup: String(row.bloodGroup ?? "").trim(),
+          photoUrl: String(row.photoUrl ?? "").trim(),
+          isAdmin: String(row.isAdmin ?? "").toLowerCase() === "true",
+          isApproved: String(row.isApproved ?? "").toLowerCase() !== "false",
+          unit: String(row.unit ?? "").trim(),
+          landline: String(row.landline ?? "").trim(),
+          landline2: String(row.landline2 ?? "").trim(),
+          gender: String(row.gender ?? "").trim() || "Male",
+          subSection: String(row.subSection ?? "").trim(),
+          dutyRole: String(row.dutyRole ?? "").trim(),
+        });
+
+        success++;
+      } catch (error: any) {
+        failed++;
+        errors.push(`Row ${i + 2}: ${error.message || "Unknown error"}`);
+      }
+
+      setProgress(Math.round(((i + 1) / rows.length) * 100));
+    }
+
+    return { success, failed, errors };
+  };
+
   const handleEmployeeUpload = async (rows: EmployeeCSVRow[]) => {
     let success = 0;
     let failed = 0;
@@ -59,30 +136,28 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        // Relaxing validation for admin bulk upload
-        // If critical fields are missing, we use defaults instead of failing
-        const kgid = row.kgid?.trim() || "";
-        const name = row.name?.trim() || "N/A";
-        const district = row.district?.trim() || "UNKNOWN";
-        const station = row.station?.trim() || "UNKNOWN";
+        const kgid = String(row.kgid ?? "").trim();
+        const name = String(row.name ?? "").trim();
+        const district = String(row.district ?? "").trim();
+        const station = String(row.station ?? "").trim();
 
         await createEmployee({
           kgid,
           name,
-          email: row.email?.trim() || "",
-          mobile1: row.mobile1?.trim() || "NM",
-          mobile2: row.mobile2?.trim() || "",
-          rank: row.rank?.trim() || "",
-          metalNumber: row.metalNumber?.trim() || "",
+          email: String(row.email ?? "").trim(),
+          mobile1: String(row.mobile1 ?? "").trim(),
+          mobile2: String(row.mobile2 ?? "").trim(),
+          rank: String(row.rank ?? "").trim(),
+          metalNumber: String(row.metalNumber ?? "").trim(),
           district,
           station,
-          bloodGroup: row.bloodGroup?.trim() || "",
-          photoUrl: row.photoUrl?.trim() || "",
-          isAdmin: row.isAdmin?.toLowerCase() === "true",
-          isApproved: row.isApproved?.toLowerCase() !== "false",
-          unit: row.unit?.trim() || "",
-          landline: row.landline?.trim() || "",
-          landline2: row.landline2?.trim() || "",
+          bloodGroup: String(row.bloodGroup ?? "").trim(),
+          photoUrl: String(row.photoUrl ?? "").trim(),
+          isAdmin: String(row.isAdmin ?? "").toLowerCase() === "true",
+          isApproved: String(row.isApproved ?? "").toLowerCase() !== "false",
+          unit: String(row.unit ?? "").trim(),
+          landline: String(row.landline ?? "").trim(),
+          landline2: String(row.landline2 ?? "").trim(),
         });
 
         success++;
@@ -105,24 +180,23 @@ export default function UploadPage() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        // Relaxing validation for admin bulk upload
-        const agid = row.agid?.trim() || "";
-        const name = row.name?.trim() || "N/A";
-        const district = row.district?.trim() || "UNKNOWN";
-        const station = row.station?.trim() || "UNKNOWN";
+        const agid = String(row.agid ?? "").trim();
+        const name = String(row.name ?? "").trim();
+        const district = String(row.district ?? "").trim();
+        const station = String(row.station ?? "").trim();
 
         await createOfficer({
           agid,
-          rank: row.rank?.trim() || "",
+          rank: String(row.rank ?? "").trim(),
           name,
-          mobile: row.mobile?.trim() || "NM",
-          email: row.email?.trim() || "",
+          mobile: String(row.mobile ?? "").trim(),
+          email: String(row.email ?? "").trim(),
           district,
           office: station,
-          unit: row.unit?.trim() || "",
-          mobile2: row.mobile2?.trim() || "",
-          landline: row.landline?.trim() || "",
-          landline2: row.landline2?.trim() || "",
+          unit: String(row.unit ?? "").trim(),
+          mobile2: String(row.mobile2 ?? "").trim(),
+          landline: String(row.landline ?? "").trim(),
+          landline2: String(row.landline2 ?? "").trim(),
         });
 
         success++;
@@ -178,7 +252,7 @@ export default function UploadPage() {
               Object.keys(row).forEach(key => {
                 const cleanKey = headerMap[key];
                 if (cleanKey) {
-                  normalized[cleanKey] = row[key]?.trim() || "";
+                  normalized[cleanKey] = String(row[key] ?? "").trim();
                 }
               });
               return normalized;
@@ -213,6 +287,34 @@ export default function UploadPage() {
             })) as EmployeeCSVRow[];
 
             uploadResults = await handleEmployeeUpload(mappedRows);
+          } else if (uploadType === "admin_employee") {
+            const rawData = parseResults.data as any[];
+            const normalizedData = normalizeData(rawData);
+
+            // Map with aliases
+            const mappedRows = normalizedData.map((row: any) => ({
+              kgid: row.kgid || row.kgid_no || row.id || "",
+              name: row.name || row.employee_name || row.emp_name || "",
+              email: row.email || row.email_id || "",
+              mobile1: row.mobile1 || row.mobile || row.phone || row.phone_number || "",
+              mobile2: row.mobile2 || row.alt_mobile || "",
+              rank: row.rank || row.designation || "",
+              metalNumber: row.metalnumber || row.metal_number || row.badge_number || "",
+              district: row.district || row.place || row.unit_name || "",
+              station: row.station || row.police_station || row.ps || "",
+              bloodGroup: row.bloodgroup || row.blood_group || "",
+              photoUrl: row.photourl || row.photo_url || row.photo || "",
+              isAdmin: row.isadmin || "false",
+              isApproved: row.isapproved || "true",
+              unit: row.unit || "",
+              landline: row.landline || "",
+              landline2: row.landline2 || "",
+              gender: row.gender || "Male",
+              subSection: row.subsection || row.sub_section || "",
+              dutyRole: row.dutyrole || row.duty_role || "",
+            })) as AdminEmployeeCSVRow[];
+
+            uploadResults = await handleAdminEmployeeUpload(mappedRows);
           } else {
             const rawData = parseResults.data as any[];
             const normalizedData = normalizeData(rawData);
@@ -272,6 +374,16 @@ export default function UploadPage() {
           Upload Employees
         </button>
         <button
+          onClick={() => setUploadType("admin_employee")}
+          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${uploadType === "admin_employee"
+            ? "bg-primary-600 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+        >
+          <Users className="h-5 w-5" />
+          Upload Admin Employees
+        </button>
+        <button
           onClick={() => setUploadType("officer")}
           className={`flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-colors ${uploadType === "officer"
             ? "bg-primary-600 text-white"
@@ -288,16 +400,24 @@ export default function UploadPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="mb-2 text-xl font-semibold">
-                Upload {uploadType === "employee" ? "Employee" : "Officer"} CSV
+                Upload {uploadType === "employee" ? "Employee" : uploadType === "admin_employee" ? "Admin Employee" : "Officer"} CSV
               </h2>
               <p className="text-sm text-gray-600">
                 {uploadType === "employee"
                   ? "Upload a CSV file with employee data. Required columns: kgid, name, mobile1, district, station"
+                  : uploadType === "admin_employee"
+                  ? "Upload a CSV file with admin employee data. Required columns: kgid, name, mobile1, district, station"
                   : "Upload a CSV file with officer data. Required columns: agid, name, mobile, district, station"}
               </p>
             </div>
             <a
-              href={`/templates/${uploadType === "employee" ? "employee_template.csv" : "officer_template.csv"}`}
+              href={`/templates/${
+                uploadType === "employee" 
+                  ? "employee_template.csv" 
+                  : uploadType === "admin_employee"
+                  ? "admin_employee_template.csv"
+                  : "officer_template.csv"
+              }`}
               download
               className="flex items-center gap-2 rounded-lg border border-primary-600 bg-white px-4 py-2 text-primary-600 transition-colors hover:bg-primary-50"
             >
@@ -394,6 +514,19 @@ export default function UploadPage() {
               <p className="text-sm text-gray-600">
                 Optional columns: email, mobile1, mobile2, rank, metalNumber, bloodGroup,
                 photoUrl, isAdmin, isApproved, unit, landline, landline2
+              </p>
+            </>
+          ) : uploadType === "admin_employee" ? (
+            <>
+              <p className="mb-2 text-sm text-gray-600">
+                Required columns: <code className="rounded bg-white px-1">kgid</code>,{" "}
+                <code className="rounded bg-white px-1">name</code>,{" "}
+                <code className="rounded bg-white px-1">district</code>,{" "}
+                <code className="rounded bg-white px-1">station</code>
+              </p>
+              <p className="text-sm text-gray-600">
+                Optional columns: email, mobile1, mobile2, rank, metalNumber, bloodGroup,
+                photoUrl, isAdmin, isApproved, unit, landline, landline2, gender, subSection, dutyRole
               </p>
             </>
           ) : (

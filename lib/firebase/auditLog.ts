@@ -30,7 +30,7 @@ const AUDIT_COLLECTION = "audit_log";
  */
 export async function logAudit(entry: Omit<AuditEntry, "performedAt">): Promise<void> {
   try {
-    await addDoc(collection(db, AUDIT_COLLECTION), {
+    await addDoc(collection(db!, AUDIT_COLLECTION), {
       ...entry,
       performedAt: Timestamp.now(),
     });

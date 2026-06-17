@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getGalleryImages, createGalleryImage, deleteGalleryImage, deleteGalleryImageFromFirestore, GalleryImage } from "@/lib/firebase/firestore";
 import { Plus, Image as ImageIcon, Upload, Link as LinkIcon, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { toast } from "sonner";
 
 type UploadMethod = "url" | "file";
 type UploadTarget = "gdrive" | "firebase";
@@ -264,7 +265,6 @@ export default function GalleryPage() {
     try {
       console.log(`🗑️ Deleting ${source} image. Identifier: ${identifier}`);
       
-      let driveDeleted = false;
       let driveError: string | null = null;
 
       if (source === "firebase") {
@@ -274,14 +274,13 @@ export default function GalleryPage() {
         // Delete from Google Drive via Apps Script API
         try {
           await deleteGalleryImage(identifier, user.email);
-          driveDeleted = true;
         } catch (error: any) {
           driveError = error?.message || "Drive deletion failed";
           console.error("Drive deletion error:", driveError);
           
           // If the item wasn't found in Drive but we have a Firestore ID, 
           // it might be an orphaned mirror. Allow cleanup.
-          if (image.id && (driveError.includes("Item not found") || driveError.includes("not found"))) {
+          if (image.id && driveError && (driveError.includes("Item not found") || driveError.includes("not found"))) {
             console.warn("Item not found in Drive, but has Firestore ID. Proceeding to clean up Firestore metadata.");
           } else {
             // Rethrow other errors
@@ -303,7 +302,7 @@ export default function GalleryPage() {
       }
       
       const successMsg = driveError ? "Image metadata removed from gallery (Drive file not found)" : "Image deleted successfully";
-      toast?.success?.(successMsg) || alert(successMsg);
+      toast.success(successMsg);
       await loadImages(); // Reload images after deletion
     } catch (error: any) {
       console.error("Error deleting image:", error);

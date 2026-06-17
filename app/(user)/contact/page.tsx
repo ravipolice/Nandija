@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Phone, Code, Server, Database, Globe } from "lucide-react";
+import { Mail, Phone, Code, Globe } from "lucide-react";
 
 export default function ContactPage() {
     return (

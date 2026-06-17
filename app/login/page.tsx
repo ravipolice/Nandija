@@ -8,12 +8,12 @@ import { loginWithPin, requestOtp, verifyOtpCode, resetPin } from "@/lib/auth-he
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import { Suspense } from "react";
 
 function LoginContent() {
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,11 +80,9 @@ function LoginContent() {
     if (!isAdmin) {
       // Check admins collection as fallback
       try {
-        const adminsRef = collection(db, "admins");
-        const qAdmin = query(adminsRef, where("email", "==", user.email), limit(1));
-        const adminSnapshot = await getDocs(qAdmin);
-        if (!adminSnapshot.empty) {
-          const adminData = adminSnapshot.docs[0].data();
+        const adminDocSnap = await getDoc(doc(db, "admins", user.email?.toLowerCase() || ""));
+        if (adminDocSnap.exists()) {
+          const adminData = adminDocSnap.data();
           if (adminData.isActive) {
             isFound = true;
             isAdmin = true;
