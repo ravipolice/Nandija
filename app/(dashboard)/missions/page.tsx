@@ -12,7 +12,10 @@ import {
   ExternalLink,
   ShieldCheck,
   AlertCircle,
-  Network
+  Network,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -58,6 +61,20 @@ export default function MissionsDashboard() {
       return next;
     });
   };
+
+  const [sortBy, setSortBy] = useState<'country' | 'type' | 'region' | 'status' | 'coli'>('country');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: 'country' | 'type' | 'region' | 'status' | 'coli') => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+
 
   useEffect(() => {
     async function fetchData() {
@@ -118,6 +135,36 @@ export default function MissionsDashboard() {
       return matchesSearch && matchesRegion && matchesType && matchesStatus && matchesClassification;
     });
   }, [missions, searchTerm, regionFilter, typeFilter, statusFilter, classificationFilter]);
+
+  const sortedMissions = useMemo(() => {
+    const sorted = [...filteredMissions];
+    sorted.sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (sortBy === 'country') {
+        valA = `${a.country} ${a.city}`.toLowerCase();
+        valB = `${b.country} ${b.city}`.toLowerCase();
+      } else if (sortBy === 'type') {
+        valA = (a.type || '').toLowerCase();
+        valB = (b.type || '').toLowerCase();
+      } else if (sortBy === 'region') {
+        valA = (a.region || '').toLowerCase();
+        valB = (b.region || '').toLowerCase();
+      } else if (sortBy === 'status') {
+        valA = (a.status || '').toLowerCase();
+        valB = (b.status || '').toLowerCase();
+      } else if (sortBy === 'coli') {
+        valA = parseFloat(a.costOfLiving || '0') || 0;
+        valB = parseFloat(b.costOfLiving || '0') || 0;
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [filteredMissions, sortBy, sortOrder]);
 
   const regionData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -347,18 +394,43 @@ export default function MissionsDashboard() {
         <div className="rounded-xl border border-border overflow-hidden bg-card shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
+              <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border select-none">
                 <tr>
-                  <th className="px-6 py-4">Country & Mission</th>
-                  <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Region</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Lifestyle</th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('country')}>
+                    <div className="flex items-center gap-1.5">
+                      Country & Mission
+                      <SortIcon field="country" currentField={sortBy} order={sortOrder} />
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('type')}>
+                    <div className="flex items-center gap-1.5">
+                      Type
+                      <SortIcon field="type" currentField={sortBy} order={sortOrder} />
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('region')}>
+                    <div className="flex items-center gap-1.5">
+                      Region
+                      <SortIcon field="region" currentField={sortBy} order={sortOrder} />
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('status')}>
+                    <div className="flex items-center gap-1.5">
+                      Status
+                      <SortIcon field="status" currentField={sortBy} order={sortOrder} />
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('coli')}>
+                    <div className="flex items-center gap-1.5">
+                      Lifestyle
+                      <SortIcon field="coli" currentField={sortBy} order={sortOrder} />
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredMissions.map((m, idx) => (
+                {sortedMissions.map((m, idx) => (
                   <tr key={`${m.country}-${m.city}-${idx}`} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -707,4 +779,21 @@ function DonutChart({
       </div>
     </div>
   );
+}
+
+function SortIcon({ 
+  field, 
+  currentField, 
+  order 
+}: { 
+  field: 'country' | 'type' | 'region' | 'status' | 'coli', 
+  currentField: 'country' | 'type' | 'region' | 'status' | 'coli', 
+  order: 'asc' | 'desc' 
+}) {
+  if (currentField !== field) {
+    return <ArrowUpDown className="w-3 h-3 opacity-30 hover:opacity-100 transition-opacity" />;
+  }
+  return order === 'asc' 
+    ? <ChevronUp className="w-3 h-3 text-primary font-bold" /> 
+    : <ChevronDown className="w-3 h-3 text-primary font-bold" />;
 }
