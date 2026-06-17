@@ -40,9 +40,23 @@ export default function MissionsDashboard() {
   const [regionFilter, setRegionFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Resident' | 'Concurrent'>('All');
+  const [classificationFilter, setClassificationFilter] = useState<'All' | 'embassy' | 'high commission' | 'consulate'>('All');
 
   const toggleStatusFilter = (target: 'Resident' | 'Concurrent') => {
     setStatusFilter(prev => prev === target ? 'All' : target);
+  };
+
+  const toggleClassificationFilter = (target: 'embassy' | 'high commission' | 'consulate') => {
+    setClassificationFilter(prev => {
+      const next = prev === target ? 'All' : target;
+      if (next !== 'All') {
+        setTypeFilter('All');
+      }
+      setTimeout(() => {
+        document.getElementById('registry-explorer')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -98,9 +112,12 @@ export default function MissionsDashboard() {
         statusFilter === 'All' || 
         (statusFilter === 'Resident' && m.status === 'Resident') ||
         (statusFilter === 'Concurrent' && m.status !== 'Resident');
-      return matchesSearch && matchesRegion && matchesType && matchesStatus;
+      const matchesClassification = 
+        classificationFilter === 'All' || 
+        (m.type?.toLowerCase().includes(classificationFilter));
+      return matchesSearch && matchesRegion && matchesType && matchesStatus && matchesClassification;
     });
-  }, [missions, searchTerm, regionFilter, typeFilter, statusFilter]);
+  }, [missions, searchTerm, regionFilter, typeFilter, statusFilter, classificationFilter]);
 
   const regionData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -180,8 +197,9 @@ export default function MissionsDashboard() {
             setSearchTerm('');
             setRegionFilter('All');
             setTypeFilter('All');
+            setClassificationFilter('All');
           }}
-          isActive={statusFilter === 'All' && searchTerm === '' && regionFilter === 'All' && typeFilter === 'All'}
+          isActive={statusFilter === 'All' && searchTerm === '' && regionFilter === 'All' && typeFilter === 'All' && classificationFilter === 'All'}
         />
         <StatCard 
           title="Resident Missions" 
@@ -215,18 +233,38 @@ export default function MissionsDashboard() {
       </div>
 
       {/* Sub-grid for detailed mission breakdown */}
-      <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-card border border-border mt-2 shadow-sm">
-        <div className="flex flex-col items-center justify-center border-r border-border/50">
+      <div className="grid grid-cols-3 gap-2 p-2 rounded-xl bg-card border border-border mt-2 shadow-sm select-none">
+        <div 
+          onClick={() => toggleClassificationFilter('embassy')}
+          className={cn(
+            "flex flex-col items-center justify-center py-3 rounded-lg cursor-pointer transition-all active:scale-[0.98] hover:bg-amber-500/5",
+            classificationFilter === 'embassy' ? "bg-amber-500/10 ring-1 ring-amber-500/20" : ""
+          )}
+        >
           <span className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">{stats.embassies}</span>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Embassies</span>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-1">Embassies</span>
         </div>
-        <div className="flex flex-col items-center justify-center border-r border-border/50">
+        
+        <div 
+          onClick={() => toggleClassificationFilter('high commission')}
+          className={cn(
+            "flex flex-col items-center justify-center py-3 rounded-lg cursor-pointer transition-all active:scale-[0.98] hover:bg-indigo-500/5 border-x border-border/50",
+            classificationFilter === 'high commission' ? "bg-indigo-500/10 ring-1 ring-indigo-500/20 border-transparent" : ""
+          )}
+        >
           <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-600 bg-clip-text text-transparent">{stats.highCommissions}</span>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">High Commissions</span>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-1">High Commissions</span>
         </div>
-        <div className="flex flex-col items-center justify-center">
+        
+        <div 
+          onClick={() => toggleClassificationFilter('consulate')}
+          className={cn(
+            "flex flex-col items-center justify-center py-3 rounded-lg cursor-pointer transition-all active:scale-[0.98] hover:bg-cyan-500/5",
+            classificationFilter === 'consulate' ? "bg-cyan-500/10 ring-1 ring-cyan-500/20" : ""
+          )}
+        >
           <span className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">{stats.consulates}</span>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Consulates</span>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-1">Consulates</span>
         </div>
       </div>
 
@@ -295,7 +333,10 @@ export default function MissionsDashboard() {
             <select 
               className="bg-card border border-border rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-primary/20"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setClassificationFilter('All');
+              }}
             >
               <option value="All">All Types</option>
               {typeData.map(([type]) => <option key={type} value={type}>{type}</option>)}
