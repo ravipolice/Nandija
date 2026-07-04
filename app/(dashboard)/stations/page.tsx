@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getStations, getDistricts, createStation, updateStation, deleteStation, Station, District } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 
 type ColumnKey = "name" | "district" | "stdCode" | "status" | "actions";
 
@@ -17,10 +17,59 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
+  
+  // Sorting State
+  type SortField = "name" | "district" | "stdCode" | "isActive";
+  type SortDirection = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1.5 text-slate-600 inline-block" />;
+    return sortDirection === "asc" 
+      ? <ChevronUp className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" /> 
+      : <ChevronDown className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" />;
+  };
+
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+
+  const sortedStations = useMemo(() => {
+    let result = selectedDistrict
+      ? stations.filter((s) => s.district === selectedDistrict)
+      : stations;
+    
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let comparison = 0;
+        if (sortField === "name") {
+          comparison = (a.name || "").localeCompare(b.name || "");
+        } else if (sortField === "district") {
+          comparison = (a.district || "").localeCompare(b.district || "");
+        } else if (sortField === "stdCode") {
+          comparison = (a.stdCode || "").localeCompare(b.stdCode || "");
+        } else if (sortField === "isActive") {
+          const aVal = a.isActive !== false ? 1 : 0;
+          const bVal = b.isActive !== false ? 1 : 0;
+          comparison = aVal - bVal;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    }
+    return result;
+  }, [stations, selectedDistrict, sortField, sortDirection]);
+
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedDistrict, setSelectedDistrict] = useState("");
   const [formData, setFormData] = useState({ name: "", stdCode: "" });
   const [submitting, setSubmitting] = useState(false);
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
@@ -30,7 +79,7 @@ export default function StationsPage() {
     }
     return defaultColumnWidths;
   });
-  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const [, setResizingColumn] = useState<ColumnKey | null>(null);
 
   useEffect(() => {
     loadData();
@@ -169,9 +218,6 @@ export default function StationsPage() {
     }
   };
 
-  const filteredStations = selectedDistrict
-    ? stations.filter((s) => s.district === selectedDistrict)
-    : stations;
 
   if (loading) {
     return (
@@ -286,51 +332,75 @@ export default function StationsPage() {
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('name')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.name }}
               >
-                Name
+                <div className="flex items-center">
+                  Name
+                  {renderSortIcon('name')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "name")}
-                  style={{ cursor: resizingColumn === "name" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "name"); }}
+                  style={{ cursor: "col-resize" }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('district')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.district }}
               >
-                District
+                <div className="flex items-center">
+                  District
+                  {renderSortIcon('district')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "district")}
-                  style={{ cursor: resizingColumn === "district" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "district"); }}
+                  style={{ cursor: "col-resize" }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('stdCode')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.stdCode }}
               >
-                STD Code
+                <div className="flex items-center">
+                  STD Code
+                  {renderSortIcon('stdCode')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "stdCode")}
-                  style={{ cursor: resizingColumn === "stdCode" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "stdCode"); }}
+                  style={{ cursor: "col-resize" }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('isActive')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.status }}
               >
-                Status
+                <div className="flex items-center">
+                  Status
+                  {renderSortIcon('isActive')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "status")}
-                  style={{ cursor: resizingColumn === "status" ? "col-resize" : "col-resize" }}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "status"); }}
+                  style={{ cursor: "col-resize" }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative select-none"
                 style={{ width: columnWidths.actions }}
               >
                 Actions
@@ -338,7 +408,7 @@ export default function StationsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
-            {filteredStations.map((station) => (
+            {sortedStations.map((station) => (
               <>
                 {editingId === station.id ? (
                   <tr key={station.id} className="bg-dark-sidebar">
@@ -446,7 +516,7 @@ export default function StationsPage() {
             ))}
           </tbody>
         </table>
-        {filteredStations.length === 0 && (
+        {sortedStations.length === 0 && (
           <div className="py-12 text-center text-slate-400">
             No stations found
           </div>

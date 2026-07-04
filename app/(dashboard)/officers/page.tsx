@@ -18,7 +18,7 @@ import {
   Unit,
   getSubSections,
 } from "@/lib/firebase/firestore";
-import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search, Eye, EyeOff, FileSpreadsheet, FileJson } from "lucide-react";
+import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Search, Eye, EyeOff, FileSpreadsheet, FileJson, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { format } from "date-fns";
@@ -59,6 +59,8 @@ export default function OfficersPage() {
 
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("officerColumnWidths");
@@ -245,6 +247,7 @@ export default function OfficersPage() {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
   const handleMouseDown = (e: React.MouseEvent, column: ColumnKey) => {
@@ -275,62 +278,77 @@ export default function OfficersPage() {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  const sortedOfficers = [...officers].sort((a, b) => {
-    let aValue: string = "";
-    let bValue: string = "";
+  const sortedOfficers = useMemo(() => {
+    return [...officers].sort((a, b) => {
+      let aValue: string = "";
+      let bValue: string = "";
 
-    switch (sortField) {
-      case "rank":
-        aValue = a.rank || "";
-        bValue = b.rank || "";
-        break;
-      case "agid":
-        aValue = a.agid || "";
-        bValue = b.agid || "";
-        break;
-      case "name":
-        aValue = a.name || "";
-        bValue = b.name || "";
-        break;
-      case "mobile":
-        aValue = a.mobile || "";
-        bValue = b.mobile || "";
-        break;
-      case "email":
-        aValue = a.email || "";
-        bValue = b.email || "";
-        break;
-      case "landline":
-        aValue = a.landline || "";
-        bValue = b.landline || "";
-        break;
-      case "district":
-        aValue = a.district || "";
-        bValue = b.district || "";
-        break;
-      case "office":
-        aValue = a.office || "";
-        bValue = b.office || "";
-        break;
-      case "unit":
-        bValue = b.unit || "";
-        break;
-      case "dutyRole":
-        aValue = a.dutyRole || "";
-        bValue = b.dutyRole || "";
-        break;
-    }
+      switch (sortField) {
+        case "rank":
+          aValue = a.rank || "";
+          bValue = b.rank || "";
+          break;
+        case "agid":
+          aValue = a.agid || "";
+          bValue = b.agid || "";
+          break;
+        case "name":
+          aValue = a.name || "";
+          bValue = b.name || "";
+          break;
+        case "mobile":
+          aValue = a.mobile || "";
+          bValue = b.mobile || "";
+          break;
+        case "email":
+          aValue = a.email || "";
+          bValue = b.email || "";
+          break;
+        case "landline":
+          aValue = a.landline || "";
+          bValue = b.landline || "";
+          break;
+        case "district":
+          aValue = a.district || "";
+          bValue = b.district || "";
+          break;
+        case "office":
+          aValue = a.office || "";
+          bValue = b.office || "";
+          break;
+        case "unit":
+          aValue = a.unit || "";
+          bValue = b.unit || "";
+          break;
+        case "dutyRole":
+          aValue = a.dutyRole || "";
+          bValue = b.dutyRole || "";
+          break;
+      }
 
-    const comparison = aValue.localeCompare(bValue);
-    return sortDirection === "asc" ? comparison : -comparison;
-  });
+      const comparison = aValue.localeCompare(bValue);
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [officers, sortField, sortDirection]);
 
-  const filteredOfficers = sortedOfficers.filter((officer) => {
-    if (!searchTerm.trim()) return true;
-    const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-    // Smart Search using pre-calculated blob
-    return terms.every(term => officer.searchBlob.includes(term));
-  });
+  const filteredOfficers = useMemo(() => {
+    return sortedOfficers.filter((officer) => {
+      if (!searchTerm.trim()) return true;
+      const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+      // Smart Search using pre-calculated blob
+      return terms.every(term => officer.searchBlob.includes(term));
+    });
+  }, [sortedOfficers, searchTerm]);
+
+  const paginatedOfficers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredOfficers.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredOfficers, currentPage, itemsPerPage]);
+
+  const totalEntries = filteredOfficers.length;
+  const totalPages = Math.ceil(totalEntries / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalEntries);
 
   // Duty Role filtering logic
   const filteredDutyRoles = useMemo(() => {
@@ -501,7 +519,10 @@ export default function OfficersPage() {
             type="text"
             placeholder="Search officers..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full rounded-lg bg-dark-card border border-dark-border py-2 pl-10 pr-4 text-slate-100 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
           />
         </div>
@@ -722,8 +743,9 @@ export default function OfficersPage() {
         </div>
       )}
 
-      <div className="overflow-auto rounded-lg bg-dark-card border border-dark-border shadow-lg h-[calc(100vh-220px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
+      <div className="flex flex-col rounded-lg bg-dark-card border border-dark-border shadow-lg h-[calc(100vh-220px)]">
+        <div className="flex-1 overflow-auto custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
           <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
             <tr>
               <th
@@ -922,7 +944,7 @@ export default function OfficersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-border">
-            {filteredOfficers.map((officer) => (
+            {paginatedOfficers.map((officer) => (
               <tr key={officer.id} className={`${officer.isHidden ? 'opacity-50' : ''} hover:bg-dark-accent-light/30 transition-colors`}>
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-blue-400">
                   {officer.agid}
@@ -989,6 +1011,88 @@ export default function OfficersPage() {
             ))}
           </tbody>
         </table>
+        
+        {filteredOfficers.length === 0 && (
+          <div className="p-20 text-center text-slate-500 flex flex-col items-center gap-3 bg-dark-card">
+            <Search className="w-12 h-12 opacity-20" />
+            <p>No officers found matching your search.</p>
+          </div>
+        )}
+        </div>
+
+        {totalEntries > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-dark-border bg-slate-900/20 text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <span>Showing</span>
+              <span className="font-semibold text-slate-200">{startIndex + 1}</span>
+              <span>to</span>
+              <span className="font-semibold text-slate-200">{endIndex}</span>
+              <span>of</span>
+              <span className="font-semibold text-slate-200">{totalEntries}</span>
+              <span>officers</span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-6">
+              {/* Items per page selection */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Rows per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setItemsPerPage(val);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-dark-sidebar border border-dark-border rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:border-primary-500 transition-colors"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                </select>
+              </div>
+
+              {/* Page navigation buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-3 py-1 bg-dark-sidebar/60 border border-dark-border rounded-lg text-xs font-semibold text-slate-300 min-w-[70px] text-center">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

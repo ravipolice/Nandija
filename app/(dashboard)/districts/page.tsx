@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getDistricts, createDistrict, updateDistrict, deleteDistrict, District,
   getDocuments, updateDocument
 } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2, RefreshCw, Eraser, PenLine, Check, X } from "lucide-react";
+import { Plus, Edit, Trash2, RefreshCw, Eraser, PenLine, Check, X, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 import { DISTRICTS } from "@/lib/constants";
 import { where } from "firebase/firestore";
 
@@ -21,6 +21,51 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
 
 export default function DistrictsPage() {
   const [districts, setDistricts] = useState<District[]>([]);
+  
+  // Sorting State
+  type SortField = "name" | "shortCode" | "range" | "isActive";
+  type SortDirection = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1.5 text-slate-600 inline-block" />;
+    return sortDirection === "asc" 
+      ? <ChevronUp className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" /> 
+      : <ChevronDown className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" />;
+  };
+
+  const sortedDistricts = useMemo(() => {
+    let result = [...districts];
+    if (sortField) {
+      result.sort((a, b) => {
+        let comparison = 0;
+        if (sortField === "name") {
+          comparison = (a.name || "").localeCompare(b.name || "");
+        } else if (sortField === "shortCode") {
+          comparison = (a.shortCode || "").localeCompare(b.shortCode || "");
+        } else if (sortField === "range") {
+          comparison = (a.range || "").localeCompare(b.range || "");
+        } else if (sortField === "isActive") {
+          const aVal = a.isActive !== false ? 1 : 0;
+          const bVal = b.isActive !== false ? 1 : 0;
+          comparison = aVal - bVal;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    }
+    return result;
+  }, [districts, sortField, sortDirection]);
+
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -500,47 +545,71 @@ export default function DistrictsPage() {
           <thead className="bg-dark-sidebar border-b border-dark-border">
             <tr>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('name')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.name }}
               >
-                Name
+                <div className="flex items-center">
+                  Name
+                  {renderSortIcon('name')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "name")}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "name"); }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('shortCode')}
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.shortCode }}
               >
-                Short Code
+                <div className="flex items-center">
+                  Short Code
+                  {renderSortIcon('shortCode')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "shortCode")}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "shortCode"); }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('range')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.range }}
               >
-                Range
+                <div className="flex items-center">
+                  Range
+                  {renderSortIcon('range')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "range")}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "range"); }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                onClick={() => handleSort('isActive')}
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                 style={{ width: columnWidths.status }}
               >
-                Status
+                <div className="flex items-center">
+                  Status
+                  {renderSortIcon('isActive')}
+                </div>
                 <div
-                  onMouseDown={(e) => handleMouseDown(e, "status")}
-                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                />
+                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "status"); }}
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                >
+                  <div className="w-[1px] h-full bg-purple-500/50" />
+                </div>
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative"
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative select-none"
                 style={{ width: columnWidths.actions }}
               >
                 Actions
@@ -548,7 +617,7 @@ export default function DistrictsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-border bg-dark-card">
-            {districts.map((district) => (
+            {sortedDistricts.map((district) => (
               editingId === district.id ? (
                 // ── Full inline edit row ──────────────────────────────────
                 <tr key={district.id} className="bg-dark-sidebar">
@@ -712,7 +781,7 @@ export default function DistrictsPage() {
             ))}
           </tbody>
         </table>
-        {districts.length === 0 && (
+        {sortedDistricts.length === 0 && (
           <div className="py-12 text-center text-slate-400">
             No districts found
           </div>

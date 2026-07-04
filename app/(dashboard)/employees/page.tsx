@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getEmployees, deleteEmployee, updateEmployee, Employee } from "@/lib/firebase/firestore";
 import {
   Users,
@@ -19,7 +19,11 @@ import {
   ShieldAlert,
   Phone,
   Building2,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import Link from "next/link";
 import Papa from "papaparse";
@@ -39,6 +43,8 @@ export default function EmployeesPage() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   useEffect(() => {
     loadData();
@@ -156,23 +162,36 @@ export default function EmployeesPage() {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
-  const filteredEmployees = employees
-    .filter((emp) => {
-      if (!searchTerm.trim()) return true;
-      const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-      return terms.every(term => emp.searchBlob.toLowerCase().includes(term));
-    })
-    .sort((a, b) => {
-      let aVal: any = a[sortField] || "";
-      let bVal: any = b[sortField] || "";
+  const filteredEmployees = useMemo(() => {
+    return employees
+      .filter((emp) => {
+        if (!searchTerm.trim()) return true;
+        const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        return terms.every(term => emp.searchBlob.toLowerCase().includes(term));
+      })
+      .sort((a, b) => {
+        let aVal: any = a[sortField] || "";
+        let bVal: any = b[sortField] || "";
 
-      if (typeof aVal === "string") {
-        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      return sortDirection === "asc" ? (aVal === bVal ? 0 : aVal ? -1 : 1) : (aVal === bVal ? 0 : aVal ? 1 : -1);
-    });
+        if (typeof aVal === "string") {
+          return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        }
+        return sortDirection === "asc" ? (aVal === bVal ? 0 : aVal ? -1 : 1) : (aVal === bVal ? 0 : aVal ? 1 : -1);
+      });
+  }, [employees, searchTerm, sortField, sortDirection]);
+
+  const paginatedEmployees = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredEmployees, currentPage, itemsPerPage]);
+
+  const totalEntries = filteredEmployees.length;
+  const totalPages = Math.ceil(totalEntries / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalEntries);
 
   if (loading && employees.length === 0) {
     return (
@@ -236,7 +255,10 @@ export default function EmployeesPage() {
           type="text"
           placeholder="Search by name, KGID, phone, station or rank..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
           className="w-full bg-dark-card border border-dark-border rounded-xl py-3 pl-11 pr-4 text-slate-200 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all shadow-inner"
         />
       </div>
@@ -260,7 +282,7 @@ export default function EmployeesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border/50">
-              {filteredEmployees.map((emp) => (
+              {paginatedEmployees.map((emp) => (
                 <tr key={emp.id} className={`hover:bg-slate-800/30 transition-colors group ${emp.isHidden ? 'opacity-50 grayscale' : ''}`}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4 relative">
@@ -380,6 +402,80 @@ export default function EmployeesPage() {
           <div className="p-20 text-center text-slate-500 flex flex-col items-center gap-3">
             <Users className="w-12 h-12 opacity-20" />
             <p>No employees found matching your search.</p>
+          </div>
+        )}
+        
+        {totalEntries > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-dark-border bg-slate-900/20 text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <span>Showing</span>
+              <span className="font-semibold text-slate-200">{startIndex + 1}</span>
+              <span>to</span>
+              <span className="font-semibold text-slate-200">{endIndex}</span>
+              <span>of</span>
+              <span className="font-semibold text-slate-200">{totalEntries}</span>
+              <span>users</span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-6">
+              {/* Items per page selection */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Rows per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setItemsPerPage(val);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-dark-sidebar border border-dark-border rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                </select>
+              </div>
+
+              {/* Page navigation buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-3 py-1 bg-dark-sidebar/60 border border-dark-border rounded-lg text-xs font-semibold text-slate-300 min-w-[70px] text-center">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-dark-border bg-dark-sidebar/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition-all"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

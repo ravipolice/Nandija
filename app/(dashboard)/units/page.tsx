@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, Fragment } from "react";
 import { getUnits, createUnit, updateUnit, deleteUnit, Unit, getDistricts, District, getRanks, Rank, getSubSections } from "@/lib/firebase/firestore";
 import { getAppConfig } from "@/lib/firebase/app-config";
 import Link from "next/link";
-import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown, Layers, LayoutGrid, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Check, RefreshCw, Search, Shield, ChevronDown, ChevronUp, ArrowUpDown, Layers, LayoutGrid, Briefcase } from 'lucide-react';
 import { DEFAULT_UNITS, ALL_BATTALIONS } from "@/lib/constants";
 
 
@@ -197,6 +197,28 @@ export default function UnitsPage() {
     const [migrating, setMigrating] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Sorting State
+    type SortField = "status" | "privacy" | "name";
+    type SortDirection = "asc" | "desc";
+    const [sortField, setSortField] = useState<SortField>("name");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortField(field);
+            setSortDirection("asc");
+        }
+    };
+
+    const renderSortIcon = (field: SortField) => {
+        if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1.5 text-slate-600 inline-block" />;
+        return sortDirection === "asc" 
+            ? <ChevronUp className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" /> 
+            : <ChevronDown className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" />;
+    };
+
     const formDataRef = useRef(formData);
     formDataRef.current = formData;
 
@@ -255,11 +277,30 @@ export default function UnitsPage() {
 
 
     const filteredUnits = useMemo(() => {
-        return units.filter(unit =>
+        let result = units.filter(unit =>
             unit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             unit.scopes?.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
         );
-    }, [units, searchQuery]);
+
+        if (sortField) {
+            result = [...result].sort((a, b) => {
+                let comparison = 0;
+                if (sortField === "name") {
+                    comparison = (a.name || "").localeCompare(b.name || "");
+                } else if (sortField === "status") {
+                    const aVal = a.isActive !== false ? 1 : 0;
+                    const bVal = b.isActive !== false ? 1 : 0;
+                    comparison = aVal - bVal;
+                } else if (sortField === "privacy") {
+                    const aVal = a.hideFromRegistration ? 1 : 0;
+                    const bVal = b.hideFromRegistration ? 1 : 0;
+                    comparison = aVal - bVal;
+                }
+                return sortDirection === "asc" ? comparison : -comparison;
+            });
+        }
+        return result;
+    }, [units, searchQuery, sortField, sortDirection]);
 
     useEffect(() => {
         loadUnits();
@@ -783,61 +824,76 @@ export default function UnitsPage() {
                     <table className="w-full min-w-full" style={{ tableLayout: 'fixed' }}>
                         <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.status }}>
-                                    Status
+                                <th onClick={() => handleSort('status')} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none cursor-pointer hover:text-slate-200 transition-colors" style={{ width: columnWidths.status }}>
+                                    <div className="flex items-center">
+                                        Status
+                                        {renderSortIcon('status')}
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'status')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'status'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.privacy }}>
-                                    Hide in Reg Form
+                                <th onClick={() => handleSort('privacy')} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none cursor-pointer hover:text-slate-200 transition-colors" style={{ width: columnWidths.privacy }}>
+                                    <div className="flex items-center">
+                                        Hide in Reg Form
+                                        {renderSortIcon('privacy')}
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'privacy')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'privacy'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.name }}>
-                                    Unit Name
+                                <th onClick={() => handleSort('name')} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none cursor-pointer hover:text-slate-200 transition-colors" style={{ width: columnWidths.name }}>
+                                    <div className="flex items-center">
+                                        Unit Name
+                                        {renderSortIcon('name')}
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'name')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'name'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.scopes }}>
-                                    Scopes
+                                    <div>
+                                        Scopes
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'scopes')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'scopes'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.areas }}>
-                                    Areas / Ranks
+                                    <div>
+                                        Areas / Ranks
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'areas')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'areas'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar relative group/th select-none" style={{ width: columnWidths.dutyRoles }}>
-                                    Duty Roles
+                                    <div>
+                                        Duty Roles
+                                    </div>
                                     <div
-                                        onMouseDown={(e) => handleMouseDown(e, 'dutyRoles')}
+                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'dutyRoles'); }}
                                         className="absolute right-0 top-0 h-full w-4 -mr-2 cursor-col-resize z-20 flex justify-center group-hover/th:opacity-100 opacity-[0.15] transition-opacity"
                                     >
                                         <div className="w-[1px] h-full bg-purple-500/50" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar" style={{ width: columnWidths.actions }}>Actions</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 bg-dark-sidebar select-none" style={{ width: columnWidths.actions }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-dark-border bg-dark-card">

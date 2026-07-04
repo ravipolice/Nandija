@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useMemo } from "react";
 import { getRanks, createRank, updateRank, deleteRank, Rank } from "@/lib/firebase/firestore";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 
 type ColumnKey = "rank_id" | "rank_label" | "staffType" | "category" | "requiresMetal" | "status" | "actions";
 
@@ -18,6 +18,57 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
 
 export default function RanksPage() {
   const [ranks, setRanks] = useState<Rank[]>([]);
+  
+  // Sorting State
+  type SortField = "rank_id" | "rank_label" | "staffType" | "category" | "requiresMetalNumber" | "isActive";
+  type SortDirection = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("rank_id");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1.5 text-slate-600 inline-block" />;
+    return sortDirection === "asc" 
+      ? <ChevronUp className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" /> 
+      : <ChevronDown className="w-3.5 h-3.5 ml-1.5 text-purple-400 inline-block" />;
+  };
+
+  const sortedRanks = useMemo(() => {
+    let result = [...ranks];
+    if (sortField) {
+      result.sort((a, b) => {
+        let comparison = 0;
+        if (sortField === "rank_id") {
+          comparison = (a.rank_id || "").localeCompare(b.rank_id || "");
+        } else if (sortField === "rank_label") {
+          comparison = (a.rank_label || "").localeCompare(b.rank_label || "");
+        } else if (sortField === "staffType") {
+          comparison = (a.staffType || "POLICE").localeCompare(b.staffType || "POLICE");
+        } else if (sortField === "category") {
+          comparison = (a.category || "").localeCompare(b.category || "");
+        } else if (sortField === "requiresMetalNumber") {
+          const aVal = a.requiresMetalNumber ? 1 : 0;
+          const bVal = b.requiresMetalNumber ? 1 : 0;
+          comparison = aVal - bVal;
+        } else if (sortField === "isActive") {
+          const aVal = a.isActive ? 1 : 0;
+          const bVal = b.isActive ? 1 : 0;
+          comparison = aVal - bVal;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    }
+    return result;
+  }, [ranks, sortField, sortDirection]);
+
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingRankId, setEditingRankId] = useState<string | null>(null);
@@ -39,7 +90,7 @@ export default function RanksPage() {
     }
     return defaultColumnWidths;
   });
-  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const [, setResizingColumn] = useState<ColumnKey | null>(null);
 
   useEffect(() => {
     loadRanks();
@@ -346,73 +397,109 @@ export default function RanksPage() {
             <thead className="bg-dark-sidebar border-b border-dark-border sticky top-0 z-10">
               <tr>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('rank_id')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.rank_id }}
                 >
-                  Rank ID
+                  <div className="flex items-center">
+                    Rank ID
+                    {renderSortIcon('rank_id')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "rank_id")}
-                    style={{ cursor: resizingColumn === "rank_id" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "rank_id"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('rank_label')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.rank_label }}
                 >
-                  Rank Label
+                  <div className="flex items-center">
+                    Rank Label
+                    {renderSortIcon('rank_label')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "rank_label")}
-                    style={{ cursor: resizingColumn === "rank_label" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "rank_label"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('staffType')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.staffType }}
                 >
-                  Staff
+                  <div className="flex items-center">
+                    Staff
+                    {renderSortIcon('staffType')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "staffType")}
-                    style={{ cursor: resizingColumn === "staffType" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "staffType"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('category')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.category }}
                 >
-                  Category
+                  <div className="flex items-center">
+                    Category
+                    {renderSortIcon('category')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "category")}
-                    style={{ cursor: resizingColumn === "category" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "category"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('requiresMetalNumber')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.requiresMetal }}
                 >
-                  Metal #
+                  <div className="flex items-center">
+                    Metal #
+                    {renderSortIcon('requiresMetalNumber')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "requiresMetal")}
-                    style={{ cursor: resizingColumn === "requiresMetal" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "requiresMetal"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  onClick={() => handleSort('isActive')}
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm cursor-pointer hover:text-slate-200 transition-colors select-none group/th"
                   style={{ width: columnWidths.status }}
                 >
-                  Status
+                  <div className="flex items-center">
+                    Status
+                    {renderSortIcon('isActive')}
+                  </div>
                   <div
-                    onMouseDown={(e) => handleMouseDown(e, "status")}
-                    style={{ cursor: resizingColumn === "status" ? "col-resize" : "col-resize" }}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500"
-                  />
+                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "status"); }}
+                    style={{ cursor: "col-resize" }}
+                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500 opacity-[0.15] group-hover/th:opacity-100 transition-opacity"
+                  >
+                    <div className="w-[1px] h-full bg-purple-500/50" />
+                  </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm"
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400 relative bg-dark-sidebar shadow-sm select-none"
                   style={{ width: columnWidths.actions }}
                 >
                   Actions
@@ -420,7 +507,7 @@ export default function RanksPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border bg-dark-card">
-              {ranks.map((rank) => (
+              {sortedRanks.map((rank) => (
                 <Fragment key={rank.rank_id}>
                   {editingRankId === rank.rank_id ? (
                     <tr key={rank.rank_id} className="bg-dark-sidebar">
